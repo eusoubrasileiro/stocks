@@ -1,11 +1,11 @@
 // Download 1 minute time frame data for specified symbols 
-// write on a binary file?
+// write on a binary file the mqlrates array
 #property copyright "Andre L. Ferreira June 2018" 
 #property version   "1.00"
 #property script_show_inputs 
 //--- input parameters 
-input string InpFileName="data.bin"; 
-input string InpDirectoryName=""; 
+//input string InpFileName="data.bin"; 
+//nput string InpDirectoryName=""; 
 
 //--- global variables   
 int    count=0;  
@@ -46,7 +46,7 @@ void WriteSymbol(string symbol, MqlRates &rates[]){
     
     for(int i=0; i<100; i++) 
     { 
-    // you can better use the unix time number directly (unix time) and read it from python??
+    // you can better use the unix time number directly (unix time) and read it from python
         out=i+":"+TimeToString(rates[i].time);  
         out=out+" "+StringFormat(format, 
             rates[i].open, 
@@ -58,30 +58,15 @@ void WriteSymbol(string symbol, MqlRates &rates[]){
         Print(out); 
     }  
 
-    
-    //for(int i=0; i<size; i++) 
-    //{
-    //        symbol_data[i][0] = rates[i].time;
-    //        symbol_data[i][1] = rates[i].open; 
-    //        symbol_data[i][2] = rates[i].high; 
-    //        symbol_data[i][3] = rates[i].low; 
-    //        symbol_data[i][4] = rates[i].close; 
-    //        symbol_data[i][5] = rates[i].tick_volume;
-    //        symbol_data[i][6] = rates[i].real_volume;
-    //} 
-    
     WriteData(symbol, rates); 
 } 
 
-
-  //+------------------------------------------------------------------+ 
-//| Write n elements of the array to file                            | 
-//+------------------------------------------------------------------+ 
 void WriteData(string symbol, MqlRates &arr[]){
     int n = ArraySize(arr); 
 //--- open the file 
    ResetLastError(); 
-   int handle=FileOpen(symbol+'_'+InpFileName,FILE_READ|FILE_WRITE|FILE_BIN); 
+   StringAdd(symbol,".mt5bin");
+   int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN); 
    if(handle!=INVALID_HANDLE) 
      { 
       //--- write array data to the end of the file 

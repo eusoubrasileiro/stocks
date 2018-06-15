@@ -1,13 +1,15 @@
 """
-Load *.CSV data exported from Metatrader 5 symbols
+Load *.mt5bin data exported from Metatrader 5 as binary Mqlrates Array
+The entire data for PETR4 for example has 65 MB from 2008 to 2018.
 
 Minute data.
 
 There might be missing minutes, no workaround found to recover every minute. 
 There will be allways some minute bar missing.
 
-"""
+$DOL data starts only on 2013 in XP servers
 
+"""
 
 import pandas as pd
 from scipy import stats
@@ -43,37 +45,24 @@ def Report_Missing(df):
     print('percentage of missing minute data {: .2%}'.format(missing_count/len(df)))
 
 
-def Load_MetaCSV_Clean(filename, report_missing=True):
-    """Load Metatrader 5 csv file data"""
-    df = pd.read_csv(filename, sep='<>', delimiter='\t')
-    df.columns = df.columns.str.replace('<', '').str.replace('>', '').str.strip()
-    df['DATETIME'] = df['DATE']+' '+df['TIME']
-    df.drop(columns=['TIME', 'DATE'], inplace=True)
-    df.DATETIME = df.DATETIME.apply(lambda x: datetime.datetime.strptime(x, "%Y.%m.%d %H:%M:%S"))
-    df.set_index('DATETIME', inplace=True)
-
-    if report_missing:
-        Report_Missing(df)
-
-    return df
-
 """path to data already loaded"""
 path_data_bundle = ""
-"""path to *.csv metatrader 5 minute data"""
-path_csv_data = ""
+"""path to *.bin metatrader5 - 1 minute data"""
+path_bin_data = ""
 """ all symbols loaded (stocks or currency) """
 SYMBOLS = None 
-""" all symbols loaded stored here """
+""" pandas dataframe all symbols loaded stored here """
 masterdf = None
 
 
-def Set_Data_Path(pathdatabundle, pathcsvdata):
-    global path_csv_data
+def Set_Data_Path(_path_data_bundle, _path_bin_data):
+    """ set data and binary data path before loading or if already loaded """
+    global path_bin_data
     global path_data_bundle
     global masterdf
     global SYMBOLS
-    path_data_bundle = pathdatabundle
-    path_csv_data = pathcsvdata
+    path_data_bundle = _path_data_bundle
+    path_bin_data = _path_bin_data
 
     ### Try to load already created data from data bundle folder
     masterdf_filepath = os.path.join(path_data_bundle,'masterdf.pickle')
@@ -85,7 +74,7 @@ def Set_Data_Path(pathdatabundle, pathcsvdata):
         print('master data loaded size (minutes)', len(masterdf))
 
     else:
-        print('must load metatrader 5 *.csv files')
+        print('must load metatrader 5 *.mt5bin files')
         return
 
     file = Path(symbols_filepath)
@@ -97,10 +86,40 @@ def Set_Data_Path(pathdatabundle, pathcsvdata):
         print('couldnt find symbols file')
 
 
+## MQL5 MqlRates struct all data comes as a an array of that
+
+#struct MqlRates 
+#  { 
+#   datetime time;         // Hora inicial do período 8 bytes
+#   double   open;         // Preço de abertura 
+#   double   high;         // O preço mais alto do período 
+#   double   low;          // O preço mais baixo do período 
+#   double   close;        // Preço de fechamento 
+#  long     tick_volume;  // Volume de Tick 
+#   int      spread;       // Spread 
+#   long     real_volume;  // Volume de negociação 
+#  };
+
+def Load_Meta5_Binary(filename):
+    dtype = np.dtype([
+        ("time", np.int64),
+        ("O", np.float64),
+        ("H", np.float64),
+        ("L", np.float64),
+        ("C", np.float64),
+        ("TV", np.int64),
+        ("S", np.int32),
+        ("RV", np.int64)
+    ])
+    data = np.fromfile(filename, dtype=dtype)
+    df = pd.DataFrame(data)
+    ## convert from unix time (meta5) 8 bytes to datetime utc
+    df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
+    return df.set_index('time') # set index as datetime
 
 def  Load_Meta5_Data(verbose=True):
         """
-        Load All *.csv files in the current path_csv_data folder
+        Load All *.bin files in the current path_bin_data folder
         Print all symbols loaded.
         """
 
@@ -111,14 +130,14 @@ def  Load_Meta5_Data(verbose=True):
             print('Data already loaded')
             return masterdf
 
-        # move to path_csv_data
-        os.chdir(path_csv_data)
+        # move to path_bin_data
+        os.chdir(path_bin_data)
         # parse and fix all saved data from metatrader on this (.) folder turning then
         # each in a dataframe
         dfsymbols=[]
-        for filename in glob.glob('*'):
-            symbol = filename.split('_M1')[0]
-            dfsymbols.append((symbol, Load_MetaCSV_Clean(filename)))    
+        for filename in glob.glob('*.mt5bin'):
+            symbol = filename.split('.mt5bin')[0] # need to fix this from meta5 script
+            dfsymbols.append((symbol, Load_Meta5_Binary(filename)))    
 
         SYMBOLS = pd.Series([pair[0] for pair in dfsymbols])
 
@@ -145,7 +164,7 @@ def  Load_Meta5_Data(verbose=True):
         #masterdf.drop('SPREAD', axis=1, level=1).head(1)
 
         masterdf = pd.concat([dfsymbol[1] for dfsymbol in dfsymbols], axis=1)
-        masterdf.drop('SPREAD', axis=1, inplace=True) # useless so far
+        masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
 
         if verbose:
                 print('Symbols lodaded:')
@@ -163,7 +182,8 @@ def  Load_Meta5_Data(verbose=True):
 def get_symbol(symbol):
     """
     get the corresponding collumns for that symbol
-    consider the following collumns for each symbol [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
+    consider the following collumns for each symbol
+     [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
     """
     global masterdf
     ifirst_collumn = SYMBOLS[SYMBOLS==symbol].index[0]*6
@@ -184,7 +204,8 @@ def FixedColumnNames():
     # new collumn names otherwise create_indicators break 
     # [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL] 
     # O-H-L-C-T-V colum suffixes
-    newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0] for i in range(len(SYMBOLS)) for j in range(6) ]
+    newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0] 
+            for i in range(len(SYMBOLS)) for j in range(6) ]
     df.columns = newnames
     # we will work with close price just because we want.. no reason whatsoever
     # just add one collum with the target variable

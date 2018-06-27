@@ -65,7 +65,7 @@ void WriteData(string symbol, MqlRates &arr[]){
     int n = ArraySize(arr); 
 //--- open the file 
    ResetLastError(); 
-   StringAdd(symbol,".mt5bin");
+   StringAdd(symbol,"M1.mt5bin");
    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN); 
    if(handle!=INVALID_HANDLE) 
      { 

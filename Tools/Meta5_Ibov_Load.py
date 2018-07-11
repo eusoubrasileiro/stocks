@@ -117,7 +117,7 @@ def Load_Meta5_Binary(filename):
     df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
     return df.set_index('time') # set index as datetime
 
-def  Load_Meta5_Data(verbose=True):
+def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
         """
         Load All *.bin files in the current path_bin_data folder
         Print all symbols loaded.
@@ -132,27 +132,28 @@ def  Load_Meta5_Data(verbose=True):
 
         # move to path_bin_data
         os.chdir(path_bin_data)
-        # parse and fix all saved data from metatrader on this (.) folder turning then
-        # each in a dataframe
-        dfsymbols=[]
-        for filename in glob.glob('*.mt5bin'):
-            symbol = filename.split('.mt5bin')[0] # need to fix this from meta5 script
-            dfsymbols.append((symbol, Load_Meta5_Binary(filename)))    
 
-        SYMBOLS = pd.Series([pair[0] for pair in dfsymbols])
-
-        # get only the intersecting indexes == time records
-        indexes = [pd.DataFrame(index=dfsymbol[1].index) for dfsymbol in dfsymbols]
+        # read all suffixed files in this folder
+        symbols = []
+        dfsymbols = []
+        for filename in glob.glob('*'+suffix):
+            dfsymbols.append(Load_Meta5_Binary(filename))
+            symbol = filename.split(suffix)[0] 
+            symbols.append(symbol)
+            
+        SYMBOLS = pd.Series(symbols)
+        indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
+        # get the intersecting indexes
+        # remove if exist (some case there are) duplicated indexes
         inner_index = indexes[0]
         for index in indexes[1:]:
             inner_index = inner_index.join(index, how='inner')
-        #print([len(index) for index in indexes])
+        inner_index = inner_index.index.drop_duplicates()
         # apply inner_index on all data -- all indexes not in the inner list of indexes are dropped
-        for symbol, dfsymbol in dfsymbols:
-            dfsymbol.drop(dfsymbol.index[~dfsymbol.index.isin(inner_index.index)], inplace=True)
-        #print([len(dfsymbol[1]) for dfsymbol in dfsymbols])
-
-
+        for i in range(len(symbols)):
+            dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
+            dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
+        
         ### The Master DataFrame with 
         #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
         #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
@@ -163,12 +164,14 @@ def  Load_Meta5_Data(verbose=True):
         #masterdf.drop([0, 1], axis=0, level=0)
         #masterdf.drop('SPREAD', axis=1, level=1).head(1)
 
-        masterdf = pd.concat([dfsymbol[1] for dfsymbol in dfsymbols], axis=1)
-        masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+        masterdf = pd.concat(dfsymbols, axis=1)     
+        masterdf.drop('S', axis=1, inplace=True
+        ) # useless so far S=Spread
 
         if verbose:
                 print('Symbols lodaded:')
                 print(SYMBOLS)
+                Report_Missing(masterdf)
 
         # move to data_bundle_path and save data
         os.chdir(path_data_bundle)	

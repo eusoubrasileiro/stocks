@@ -44,6 +44,11 @@ def Report_Missing(df):
             missing_count += expectedminutes-currentminutes
     print('percentage of missing minute data {: .2%}'.format(missing_count/len(df)))
 
+def RemoveDays(df, minutes):
+    """remove days with less than minutes data"""
+    
+    
+        
 
 """path to data already loaded"""
 path_data_bundle = ""

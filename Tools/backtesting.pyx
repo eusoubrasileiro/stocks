@@ -25,9 +25,8 @@ from cython.parallel cimport prange
 # to do that way yet
 # missing day start day end ... but i will receive
 
-cdef double expected_var = 0.008 # 3* = profit 1* = stop
-
-cdef int ExpTime=2*60
+# define the expire time
+#cdef int exptime
 
 ### open collumns
 cdef int EP=0 # enter price
@@ -219,7 +218,7 @@ cpdef tryCloseOrders(int io, double[:,:] obook, int ic, double[:,:] cbook,
 @cython.wraparound(False)
 @cython.nonecheck(False)
 cpdef tryClosebyTime(int io, double[:,:] obook, int ic, double[:,:] cbook,
-             int time, int end_day, double high, double low, int expire_time=ExpTime):
+             int time, int end_day, double high, double low, exptime):
     """
     evalue if order should be closed (on obook)
     io, ic are indexes of the last entry on each book
@@ -248,15 +247,15 @@ cpdef tryClosebyTime(int io, double[:,:] obook, int ic, double[:,:] cbook,
             ic += 1 # one more on closed book
             io -= 1 # one less on open book
         # this order expired by time : more than (60'++) minutes passed
-        elif time - int(obook[i, OT]) >  expire_time:
-            # worst case scenario
-            close_price = low if obook[i, DR] == 1 else high
-            # open book, closed book, time, close_price
-            CloseOrder(io, obook, i, cbook[ic, :], time, close_price, 1)
-            # money back (will be incremented)
-            money += cbook[ic, MB] # money back
-            ic += 1 # one more on closed book
-            io -= 1 # one less on open book
+        elif time - int(obook[i, OT]) >  exptime:
+                # worst case scenario
+                close_price = low if obook[i, DR] == 1 else high
+                # open book, closed book, time, close_price
+                CloseOrder(io, obook, i, cbook[ic, :], time, close_price, 1)
+                # money back (will be incremented)
+                money += cbook[ic, MB] # money back
+                ic += 1 # one more on closed book
+                io -= 1 # one less on open book
 
     return money, io, ic
 
@@ -302,19 +301,26 @@ cpdef actualMoney(int io, double[:,:] open_book, double money,
                                 open_book[i,QT], open_book[i,DR])
     return money
 
+
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
 cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
                double[:,:] book_orders_open, double[:,:] book_orders_closed,
-               double money=60000, int restrict=1):
+               double money=60000, int restrict=1,
+               double expected_var=0.008, double exp_time=2*60):
     """
     guess_book contains : {time index, direction, index endday, index startday}
     array of orders to be placed at {time index},
 
     the first and last {time index} must be
     syncronized and included in the array  of rates
+
+    expected variation in percent implies 3* = profit 1* = stop
     """
+    # set the global variable
+    #exptime = exp_time
+
     cdef int n = rates.shape[0]
     cdef double H, L
     cdef int iday_end
@@ -347,7 +353,7 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
                                 book_orders_closed, i, H, L) # close by hit stop/gain
             money += moneyback # money back to the pouch
             moneyback, iro, irc = tryClosebyTime(iro, book_orders_open, irc,
-                                book_orders_closed, i, iday_end, H, L) # close by expiring time or day
+                                book_orders_closed, i, iday_end, H, L, exp_time) # close by expiring time or day
             money += moneyback # money back to the pouch
 
             if irc > pirc and restrict > 0: # one or more orders were closed
@@ -409,3 +415,31 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
 
 
     return moneyprogress, irc, iro
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+cpdef argnextGT(int[:] array, int i, int value):
+    """
+    find the next number in array starting from index i
+    that's Greater or Equal `value` return it's index
+    """
+    cdef int j
+    for j in range(i, array.size):
+        if array[j] > value:
+            return j
+    return array.size # not found return size
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+cpdef argnextLE(int[:] array, int i, int value):
+    """
+    find the next number in array starting from index i
+    that's Less or Equal `value` return it's index
+    """
+    cdef int j
+    for j in range(i, array.size):
+        if array[j] <= value:
+            return j + i
+    return 0 # not found return 0

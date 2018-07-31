@@ -4,7 +4,7 @@ The entire data for PETR4 for example has 65 MB from 2008 to 2018.
 
 Minute data.
 
-There might be missing minutes, no workaround found to recover every minute. 
+There might be missing minutes, no workaround found to recover every minute.
 There will be allways some minute bar missing.
 
 $DOL data starts only on 2013 in XP servers
@@ -27,10 +27,10 @@ def Report_Missing(df):
     datetimes['time'] = datetimes.datetime.apply(lambda x: x.time())
     #datetimes.head(1)
     date_last_trade_time = datetimes.groupby('date').max().apply(
-    (lambda x: datetime.datetime.combine(x[0], x[1])), 
+    (lambda x: datetime.datetime.combine(x[0], x[1])),
     axis=1)
     date_first_trade_time = datetimes.groupby('date').min().apply(
-    (lambda x: datetime.datetime.combine(x[0], x[1])), 
+    (lambda x: datetime.datetime.combine(x[0], x[1])),
     axis=1)
     missing_count = 0
     for first_trade_time, last_trade_time in zip(date_first_trade_time, date_last_trade_time):
@@ -39,23 +39,31 @@ def Report_Missing(df):
         currentminutes = len(df[df.index.isin(timerange)])
         expectedminutes = len(timerange)
         if currentminutes < expectedminutes:
-            #raise Exception('Missing data at ', first_trade_time.date(), ' missing ', 
+            #raise Exception('Missing data at ', first_trade_time.date(), ' missing ',
             #                expectedminutes-currentminutes, ' minutes')
             missing_count += expectedminutes-currentminutes
     print('percentage of missing minute data {: .2%}'.format(missing_count/len(df)))
 
-def RemoveDays(df, minutes):
+
+def RemoveDays(minutes=4*60):
     """remove days with less than minutes data"""
-    
-    
-        
+    global masterdf
+    masterdf['data'] = masterdf.index.date
+    days = []
+    for day, group in masterdf.groupby(masterdf.data):
+        if len(group) < minutes: # len is number of minutes
+            continue
+        days.append(day)
+    masterdf = masterdf.loc[masterdf.data.isin(days)]
+    masterdf.drop('data', axis=1, inplace=True)
+
 
 """path to data already loaded"""
 path_data_bundle = ""
 """path to *.bin metatrader5 - 1 minute data"""
 path_bin_data = ""
 """ all symbols loaded (stocks or currency) """
-SYMBOLS = None 
+SYMBOLS = None
 """ pandas dataframe all symbols loaded stored here """
 masterdf = None
 
@@ -93,16 +101,16 @@ def Set_Data_Path(_path_data_bundle, _path_bin_data):
 
 ## MQL5 MqlRates struct all data comes as a an array of that
 
-#struct MqlRates 
-#  { 
+#struct MqlRates
+#  {
 #   datetime time;         // Hora inicial do período 8 bytes
-#   double   open;         // Preço de abertura 
-#   double   high;         // O preço mais alto do período 
-#   double   low;          // O preço mais baixo do período 
-#   double   close;        // Preço de fechamento 
-#  long     tick_volume;  // Volume de Tick 
-#   int      spread;       // Spread 
-#   long     real_volume;  // Volume de negociação 
+#   double   open;         // Preço de abertura
+#   double   high;         // O preço mais alto do período
+#   double   low;          // O preço mais baixo do período
+#   double   close;        // Preço de fechamento
+#  long     tick_volume;  // Volume de Tick
+#   int      spread;       // Spread
+#   long     real_volume;  // Volume de negociação
 #  };
 
 def Load_Meta5_Binary(filename):
@@ -143,9 +151,9 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
         dfsymbols = []
         for filename in glob.glob('*'+suffix):
             dfsymbols.append(Load_Meta5_Binary(filename))
-            symbol = filename.split(suffix)[0] 
+            symbol = filename.split(suffix)[0]
             symbols.append(symbol)
-            
+
         SYMBOLS = pd.Series(symbols)
         indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
         # get the intersecting indexes
@@ -158,8 +166,8 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
         for i in range(len(symbols)):
             dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
             dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
-        
-        ### The Master DataFrame with 
+
+        ### The Master DataFrame with
         #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
         #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
         #index = pd.MultiIndex.from_product(iterables, names=['SYMBOL', 'ATRIB',])
@@ -169,9 +177,10 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
         #masterdf.drop([0, 1], axis=0, level=0)
         #masterdf.drop('SPREAD', axis=1, level=1).head(1)
 
-        masterdf = pd.concat(dfsymbols, axis=1)     
-        masterdf.drop('S', axis=1, inplace=True
-        ) # useless so far S=Spread
+        masterdf = pd.concat(dfsymbols, axis=1)
+        masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+
+        RemoveDays() # remove useless days for training less than xx minutes
 
         if verbose:
                 print('Symbols lodaded:')
@@ -179,7 +188,7 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
                 Report_Missing(masterdf)
 
         # move to data_bundle_path and save data
-        os.chdir(path_data_bundle)	
+        os.chdir(path_data_bundle)
         SYMBOLS.to_pickle('SYMBOLS.pickle')
         masterdf.to_pickle('masterdf.pickle')
 
@@ -208,11 +217,11 @@ def FixedColumnNames():
     global masterdf
 
     df = masterdf.copy()
-    #df = df[:int(len(df)*percentdata*0.01)] 
-    # new collumn names otherwise create_indicators break 
-    # [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL] 
+    #df = df[:int(len(df)*percentdata*0.01)]
+    # new collumn names otherwise create_indicators break
+    # [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
     # O-H-L-C-T-V colum suffixes
-    newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0] 
+    newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0]
             for i in range(len(SYMBOLS)) for j in range(6) ]
     df.columns = newnames
     # we will work with close price just because we want.. no reason whatsoever

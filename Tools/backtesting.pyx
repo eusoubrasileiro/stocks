@@ -324,6 +324,7 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
     cdef int n = rates.shape[0]
     cdef double H, L
     cdef int iday_end
+    cdef int norder_day=0
     # system variables
     # keeep track of money evolution
     cdef double[:]  moneyprogress = numpy.zeros(n)
@@ -342,7 +343,7 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
         # get the current price (allways worst case scenario), and the end of the day
         H, L, iday_end, iday_start = rates[i, :]
 
-        if i < iday_start+2*60: # no orders in the first 30 minutes
+        if i < iday_start+2*60: # no orders in the first 2 hours minutes
             # track money evolution
             moneyprogress[i] = actualMoney(iro, book_orders_open, money, H, L)
             continue
@@ -380,11 +381,13 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
         if i == (iday_end-90):
             # go to the next guess after this day
             iguess = nextGuess(guess_book[:,1], iguess, iday_end+1)
+            norder_day = 0
         # is there any order to be done at this time_index
-        elif i == guess_book[iguess, 1]:
+        elif i == guess_book[iguess, 1] and norder_day < 15:
             # order spree? no more than one order open at once
             if iro > 2 and restrict > 0:
                 continue
+
             #if iro > 0 and i-int(book_orders_open[iro-1, OT]) < 30 and restrict > 0:
             #    continue
 
@@ -403,6 +406,7 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
                             expected_var*3, expected_var, i)
                 iro +=1 # new entry on book
                 money -= moneyspent
+                norder_day += 1
 
         # Close orders that suffer hit stop in the same minute
         if iro > 0:

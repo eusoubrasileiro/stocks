@@ -327,7 +327,7 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
     cdef int norder_day=0
     # system variables
     # keeep track of money evolution
-    cdef double[:]  moneyprogress = numpy.zeros(n)
+    cdef double[::1]  moneyprogress = numpy.zeros(n) # contigous C array
     cdef int iro = 0 # real book of orders open index "i"
     cdef int irc = 0 # real book of orders close index "i"
     # control variables
@@ -417,8 +417,8 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
         # track money evolution
         moneyprogress[i] = actualMoney(iro, book_orders_open, money, H, L)
 
-
-    return moneyprogress, irc, iro
+    # convet memory view back to a numpy array
+    return numpy.asarray(moneyprogress), irc, iro
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

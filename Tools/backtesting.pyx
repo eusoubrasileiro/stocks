@@ -102,7 +102,7 @@ cpdef MoneyBack(double enter_price, double close_price,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef ExecuteOrder(int nk, double[:,:] book, double price, int quantity, int direction,
+cpdef ExecuteOrder(int nk, double[:,::1] book, double price, int quantity, int direction,
             double dgain, double dstop, int time, double cost_order=12):
     """
     place order on book:book at position k
@@ -124,7 +124,7 @@ cpdef ExecuteOrder(int nk, double[:,:] book, double price, int quantity, int dir
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef CloseOrder(int io, double[:, :] obook, int irow, double[:] cbook,
+cpdef CloseOrder(int io, double[:, ::1] obook, int irow, double[:] cbook,
                  int time, double close_price, int bytime=0):
     """
     close order at row irow in the open book of orders with io valid entries
@@ -157,7 +157,7 @@ cpdef CloseOrder(int io, double[:, :] obook, int irow, double[:] cbook,
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef tryCloseOrder(int io, double[:,:] obook, int irow, double[:] cbook,
+cpdef tryCloseOrder(int io, double[:,::1] obook, int irow, double[::1] cbook,
                  int time, double high, double low):
     """
     Try to close row specifying one order from the open book.
@@ -192,7 +192,7 @@ cpdef tryCloseOrder(int io, double[:,:] obook, int irow, double[:] cbook,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef tryCloseOrders(int io, double[:,:] obook, int ic, double[:,:] cbook,
+cpdef tryCloseOrders(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
              int time, double high, double low):
     """
     evalue if order should be closed (on obook)
@@ -217,8 +217,8 @@ cpdef tryCloseOrders(int io, double[:,:] obook, int ic, double[:,:] cbook,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef tryClosebyTime(int io, double[:,:] obook, int ic, double[:,:] cbook,
-             int time, int end_day, double high, double low, exptime):
+cpdef tryClosebyTime(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
+             int time, int end_day, double high, double low, double exptime):
     """
     evalue if order should be closed (on obook)
     io, ic are indexes of the last entry on each book
@@ -287,7 +287,7 @@ cpdef nextGuess(int[:] guess_time, int iguess, int time):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef actualMoney(int io, double[:,:] open_book, double money,
+cpdef actualMoney(int io, double[:,::1] open_book, double money,
                   double H, double L, double cost_order=12):
     """"calculate actual money on open orders + pouch / pocket"""
     cdef int i
@@ -306,7 +306,7 @@ cpdef actualMoney(int io, double[:,:] open_book, double money,
 @cython.nonecheck(False)
 @cython.wraparound(False)
 cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
-               double[:,:] book_orders_open, double[:,:] book_orders_closed,
+               double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
                double money=60000, int restrict=1,
                double expected_var=0.008, double exp_time=2*60):
     """
@@ -357,21 +357,21 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
                                 book_orders_closed, i, iday_end, H, L, exp_time) # close by expiring time or day
             money += moneyback # money back to the pouch
 
-            if irc > pirc and restrict > 0: # one or more orders were closed
-                # five sucessive orders failed
-                if irc > 4 and isEqual(book_orders_closed[irc-5:irc, SS], -1) == 1:
-                    print('i  ', i, 'skipped! too many losses!')
-                    iguess = nextGuess(guess_book[:,1], iguess, iday_end+1)
-                # four sucessive orders failed
-                if irc > 3 and isEqual(book_orders_closed[irc-4:irc, SS], -1) == 1:
-                    # make a waiting pause due to sucessive wrong orders
-                    # wait 60 minutes
-                    iguess = nextGuess(guess_book[:,1], iguess, i+60)
-                # two sucessive orders failed
-                if irc > 1 and isEqual(book_orders_closed[irc-2:irc, SS], -1) == 1:
-                    # make a waiting pause due to sucessive wrong orders
-                    # wait 30 minutes
-                    iguess = nextGuess(guess_book[:,1], iguess, i+30)
+            # if irc > pirc and restrict > 0: # one or more orders were closed
+            #     # five sucessive orders failed
+            #     if irc > 4 and isEqual(book_orders_closed[irc-5:irc, SS], -1) == 1:
+            #         print('i  ', i, 'skipped! too many losses!')
+            #         iguess = nextGuess(guess_book[:,1], iguess, iday_end+1)
+            #     # four sucessive orders failed
+            #     if irc > 3 and isEqual(book_orders_closed[irc-4:irc, SS], -1) == 1:
+            #         # make a waiting pause due to sucessive wrong orders
+            #         # wait 60 minutes
+            #         iguess = nextGuess(guess_book[:,1], iguess, i+60)
+            #     # two sucessive orders failed
+            #     if irc > 1 and isEqual(book_orders_closed[irc-2:irc, SS], -1) == 1:
+            #         # make a waiting pause due to sucessive wrong orders
+            #         # wait 30 minutes
+            #         iguess = nextGuess(guess_book[:,1], iguess, i+30)
 
             # try adjust stop making it go closer to the
             # target
@@ -383,10 +383,10 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
             iguess = nextGuess(guess_book[:,1], iguess, iday_end+1)
             norder_day = 0
         # is there any order to be done at this time_index
-        elif i == guess_book[iguess, 1] and norder_day < 15:
-            # order spree? no more than one order open at once
-            if iro > 2 and restrict > 0:
-                continue
+        elif i == guess_book[iguess, 1]:
+            # # order spree? no more than one order open at once
+            # if iro > 2 and restrict > 0:
+            #     continue
 
             #if iro > 0 and i-int(book_orders_open[iro-1, OT]) < 30 and restrict > 0:
             #    continue

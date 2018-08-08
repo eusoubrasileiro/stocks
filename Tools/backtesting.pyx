@@ -9,16 +9,13 @@ from cpython cimport array
 #ctypedef numpy.float_t double
 from cython.parallel cimport prange
 
-#__all__ = [
-#    '_apply_damping',
-#    '_step_elastic_sh',
-#    '_step_elastic_psv',
-#    '_xz2ps',
-#    '_nonreflexive_sh_boundary_conditions',
-#    '_nonreflexive_psv_boundary_conditions',
-#    '_nonreflexive_scalar_boundary_conditions',
-#    '_step_scalar',
-#    ]
+# remember about functions:
+# cdef --- called only internnaly C function
+# def --- called by Python not as many optmizations as above
+# cpdef --- an hybrid faster than def
+
+## [:, ::1] means contigous array in C order
+## so it must respect convention from C for multidimension
 
 # is not fully object oriented / for loop based on
 # a tick event. not seeing reason (performance)
@@ -49,7 +46,7 @@ cdef int MB=9 # money back
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef Nstocks(double enterprice, double exgain,
+cdef Nstocks(double enterprice, double exgain,
             double minp=300, double costorder=15., double ir=0.2):
     """Needed number of stocks based on:
 
@@ -71,6 +68,7 @@ cpdef Nstocks(double enterprice, double exgain,
 
     This guarantees a `MinP` per order"""
     # round stocks to 100's
+    cdef int ceil
     ceil = int(int((minp+costorder*2)/((1-ir)*enterprice*exgain))/100)
     # numpy ceil avoid using it for perfomance
     return ceil*100
@@ -78,7 +76,7 @@ cpdef Nstocks(double enterprice, double exgain,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef MoneyBack(double enter_price, double close_price,
+cdef MoneyBack(double enter_price, double close_price,
             double quantity, double direction, double ir=0.2, double cost_order=12):
     """
     Money back after an order is closed day trade
@@ -92,6 +90,7 @@ cpdef MoneyBack(double enter_price, double close_price,
     """
     # delta money (profit or loss) (positive or negative)
     # already deduce cost of order
+    cdef double dm
     dm = ((close_price-enter_price)*
     quantity*direction-cost_order)
     if dm > 0: # deduce taxes day trade 20%
@@ -102,7 +101,7 @@ cpdef MoneyBack(double enter_price, double close_price,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef ExecuteOrder(int nk, double[:,::1] book, double price, int quantity, int direction,
+cdef ExecuteOrder(int nk, double[:,::1] book, double price, int quantity, int direction,
             double dgain, double dstop, int time, double cost_order=12):
     """
     place order on book:book at position k
@@ -124,7 +123,7 @@ cpdef ExecuteOrder(int nk, double[:,::1] book, double price, int quantity, int d
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef CloseOrder(int io, double[:, ::1] obook, int irow, double[:] cbook,
+cdef CloseOrder(int io, double[:, ::1] obook, int irow, double[::1] cbook,
                  int time, double close_price, int bytime=0):
     """
     close order at row irow in the open book of orders with io valid entries
@@ -133,7 +132,7 @@ cpdef CloseOrder(int io, double[:, ::1] obook, int irow, double[:] cbook,
 
     bytime : order was closed due time stop
     """
-
+    cdef double moneyback = 0
     # copy to closed book + fill 3 collumns more
     cbook[:] = obook[irow, :]
     cbook[CP] = close_price # close price
@@ -157,7 +156,7 @@ cpdef CloseOrder(int io, double[:, ::1] obook, int irow, double[:] cbook,
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef tryCloseOrder(int io, double[:,::1] obook, int irow, double[::1] cbook,
+cdef tryCloseOrder(int io, double[:,::1] obook, int irow, double[::1] cbook,
                  int time, double high, double low):
     """
     Try to close row specifying one order from the open book.
@@ -192,7 +191,7 @@ cpdef tryCloseOrder(int io, double[:,::1] obook, int irow, double[::1] cbook,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef tryCloseOrders(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
+cdef tryCloseOrders(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
              int time, double high, double low):
     """
     evalue if order should be closed (on obook)
@@ -217,7 +216,7 @@ cpdef tryCloseOrders(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef tryClosebyTime(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
+cdef tryClosebyTime(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
              int time, int end_day, double high, double low, double exptime):
     """
     evalue if order should be closed (on obook)
@@ -262,9 +261,10 @@ cpdef tryClosebyTime(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef isEqual(double[:] x, double value):
+cdef isEqual(double[::1] x, double value):
     cdef int i
-    for i in range(x.size):
+    cdef int n = x.size
+    for i in range(n):
         if x[i] != value:
             return -1
     return 1
@@ -272,14 +272,14 @@ cpdef isEqual(double[:] x, double value):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef nextGuess(int[:] guess_time, int iguess, int time):
+cdef nextGuess(int[:, ::1] guess_time, int iguess, int time):
     """"find the first time_index bigger or
-    equal than `time`"""
+    equal than `time` in the guess book"""
     cdef int t
-    n = guess_time.size
+    cdef int n = guess_time.shape[0]
     # find the next time index after index time
     for t in range(iguess, n):
-        if guess_time[t] >= time:
+        if guess_time[t, 1] >= time:
             return t
     # couldn\'t find any. time to stop simulation
     return -1
@@ -287,7 +287,7 @@ cpdef nextGuess(int[:] guess_time, int iguess, int time):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-cpdef actualMoney(int io, double[:,::1] open_book, double money,
+cdef actualMoney(int io, double[:,::1] open_book, double money,
                   double H, double L, double cost_order=12):
     """"calculate actual money on open orders + pouch / pocket"""
     cdef int i
@@ -305,7 +305,7 @@ cpdef actualMoney(int io, double[:,::1] open_book, double money,
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
+cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
                double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
                double money=60000, int restrict=1,
                double expected_var=0.008, double exp_time=2*60):
@@ -322,9 +322,11 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
     #exptime = exp_time
 
     cdef int n = rates.shape[0]
-    cdef double H, L
-    cdef int iday_end
-    cdef int norder_day=0
+    cdef double H, L, moneyspent, moneyback
+    cdef int iday_end, iday_start
+    cdef int norder_day=0 # number of orders already executed on this day
+    cdef int quantity=0
+    cdef int buy=0
     # system variables
     # keeep track of money evolution
     cdef double[::1]  moneyprogress = numpy.zeros(n) # contigous C array
@@ -338,10 +340,10 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
     for i in range(n):#len(rates)):
 
         # get the next guess based on this "i" time_index (might be the same)
-        iguess = nextGuess(guess_book[:,1], iguess, i)
+        iguess = nextGuess(guess_book, iguess, i)
 
         # get the current price (allways worst case scenario), and the end of the day
-        H, L, iday_end, iday_start = rates[i, :]
+        H, L, iday_end, iday_start = rates[i, 0], rates[i, 1], int(rates[i, 2]), int(rates[i, 3])
 
         if i < iday_start+2*60: # no orders in the first 2 hours minutes
             # track money evolution
@@ -380,10 +382,10 @@ cpdef Simulate(double[:,:] rates, int[:,:] guess_book,
         # it is not time to place orders anymore (end of session is near)
         if i == (iday_end-90):
             # go to the next guess after this day
-            iguess = nextGuess(guess_book[:,1], iguess, iday_end+1)
+            iguess = nextGuess(guess_book, iguess, iday_end+1)
             norder_day = 0
         # is there any order to be done at this time_index
-        elif i == guess_book[iguess, 1]:
+        elif i == guess_book[iguess, 1] and norder_day < 15:
             # # order spree? no more than one order open at once
             # if iro > 2 and restrict > 0:
             #     continue

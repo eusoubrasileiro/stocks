@@ -130,10 +130,11 @@ def Load_Meta5_Binary(filename):
     df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
     return df.set_index('time') # set index as datetime
 
-def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
+def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True):
         """
         Load All *.bin files in the current path_bin_data folder
         Print all symbols loaded.
+        cleandays remove days with less than x-hours of trading
         """
 
         global SYMBOLS
@@ -180,7 +181,8 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin'):
         masterdf = pd.concat(dfsymbols, axis=1)
         masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
 
-        RemoveDays() # remove useless days for training less than xx minutes
+        if cleandays:
+            RemoveDays() # remove useless days for training less than xx minutes
 
         if verbose:
                 print('Symbols lodaded:')

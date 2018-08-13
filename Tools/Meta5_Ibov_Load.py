@@ -155,6 +155,10 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True):
             symbol = filename.split(suffix)[0]
             symbols.append(symbol)
 
+        if len(symbols) < 9: # 9 symbols
+            print("Couldn't load data: missing *{:} files!".format(suffix))
+            return
+
         SYMBOLS = pd.Series(symbols)
         indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
         # get the intersecting indexes

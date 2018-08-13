@@ -217,7 +217,7 @@ cdef tryCloseOrders(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
 @cython.wraparound(False)
 @cython.nonecheck(False)
 cdef tryClosebyTime(int io, double[:,::1] obook, int ic, double[:,::1] cbook,
-             int time, int end_day, double high, double low, double exptime):
+             int time, int end_day, double high, double low, int exptime):
     """
     evalue if order should be closed (on obook)
     io, ic are indexes of the last entry on each book
@@ -308,7 +308,7 @@ cdef actualMoney(int io, double[:,::1] open_book, double money,
 cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
                double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
                double money=60000, int restrict=1,
-               double expected_var=0.008, double exp_time=2*60):
+               double expected_var=0.008, int exp_time=2*60):
     """
     guess_book contains : {time index, direction, index endday, index startday}
     array of orders to be placed at {time index},

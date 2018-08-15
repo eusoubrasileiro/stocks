@@ -12,6 +12,7 @@ from util import progressbar
 import Meta5_Ibov_Load as meta5load
 import torch as th
 import torch.nn.functional as F
+import copy
 
 def createTargetVector(X, targetsymbol, view=True):
     span=120 # best long trend guide until now
@@ -118,13 +119,6 @@ X[:] = scaler.transform(X)
 ###########################
 # Training and prediction
 ###########################
-from torch.optim import lr_scheduler
-
-X = X.values.astype(np.float32) # due Float tensors
-y = Y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
-
-device = th.device("cuda" if th.cuda.is_available() else "cpu")
-input_size = X.shape[1]
 
 def TorchModelPredict(model, X):
     y_prob = model(X)
@@ -246,7 +240,7 @@ def TorchNNTrainPredict(X, y, X_p, input_size, verbose=False, device='cuda'):
                                                    input_size, device=device, verbose=False)
     # accurary of the model if higher than 90% we can predict
     if verbose:
-        print(i, " error t. : ", errort, " error v.: ",errorv)
+        print(" error t. : ", errort, " error v.: ",errorv)
     # we cannot predict unless the model is 90%+ accurate
     # accurate on validation. on training we accept 70%+
     if errorv > 0.1 or errort > 0.3:
@@ -265,8 +259,28 @@ def TorchNNTrainPredict(X, y, X_p, input_size, verbose=False, device='cuda'):
             buy = -1
 
     del clfmodel # cleanup memory gac can get it back
-    return buy, score
+    return buy, errorv
 
-buy, score = TorchNNTrainPredict(X, y, Xp, input_size, verbose=True, device=device)
+from torch.optim import lr_scheduler
 
-print(buy, score)
+X = X.values.astype(np.float32) # due Float tensors
+Xp = Xp.values.astype(np.float32)
+y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
+input_size = X.shape[1]
+
+device = th.device("cuda" if th.cuda.is_available() else "cpu")
+
+X = th.tensor(X)
+X = X.to(device)
+y = th.tensor(y)
+y = y.to(device)
+Xp = th.tensor(Xp)
+Xp = X.to(device)
+
+result = TorchNNTrainPredict(X, y, Xp, input_size, verbose=True, device=device)
+
+if result is None:
+    print('no prediction')
+else:
+    buy, score = result
+    print(buy, score)

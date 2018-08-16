@@ -284,3 +284,24 @@ if result is None:
 else:
     buy, score = result
     print(buy, score)
+
+import pandas as pd
+import datetime
+import calendar
+import time
+import struct
+
+#### SAVE PREDICTION
+# time.time()
+# np.int64(time.time()) # utc time stamp int64 or long for mql5 datetime
+
+# converting a datetime.datetime to a int64
+# x = datetime.datetime.utcfromtimestamp(data)
+# calendar.timegm(x.timetuple())
+
+# Writing a prediction for mql5 read
+# https://docs.python.org/2/library/struct.html
+with open('prediction.bin','wb') as f:
+    # struct of long and int 8+4 = 12 bytes
+    dbytes = struct.pack('li', y, -1)
+    f.write(dbytes)

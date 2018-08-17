@@ -16,7 +16,7 @@ int OnInit()
         EventSetTimer(1);
         // when testing doesn't need to save data
         // read all predictions at once
-
+        TestReadPredictions();
     }
     
     return(INIT_SUCCEEDED);
@@ -102,7 +102,6 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
 //| Timer function -- Every 1 minutes
 void OnTimer(){
     prediction pnow;
-    bool status;
     datetime dayend, daybegin;
     datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
 
@@ -117,22 +116,24 @@ void OnTimer(){
     if(timenow < daybegin)
         return;
     // we can work
-    if(!TESTING){ // when testing doesn't need to save data
+    if(!TESTING){ // not testing
         SaveDataNow(timenow);
         Sleep(5000); // sleep enough time for the python worker make
+        //a new prediction file
+        // read prediction file... with date and time
+        if(!GetPrediction(pnow)) // something wrong there was no prediction
+            return;
+        // same prediction or there was no prediction
+        if(pnow.direction == plast.direction && pnow.time == plast.time)
+            return;
     }
-    else{ // when testing sleep few
-        Sleep(10);
-
+    else{ // when testing 
+        // when testing doesn't need to save data
+        Sleep(10); //sleep few 10 ms
+        if(!TestGetPrediction(pnow, timenow)) // not time to place an order
+            return;
     }
-
-    //a new prediction file
-    // read prediction file... with date and time
-    if(!GetPrediction(pnow)) // something wrong there was no prediction
-        return;
-    // same prediction or there was no prediction
-    if(pnow.direction == plast.direction && pnow.time == plast.time)
-        return;
+    
     // place
     PlaceOrderNow(pnow.direction);
 

@@ -3,7 +3,7 @@
 void WriteSymbol(string symbol, MqlRates &arr[]){
     ResetLastError();
     StringAdd(symbol,"RTM1.mt5bin");
-    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN);
+    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON);
     if(handle!=INVALID_HANDLE){
         //FileSeek(handle,0,SEEK_END);        //--- write array data in the end of the file
         FileWriteArray(handle, arr, 0, WHOLE_ARRAY);

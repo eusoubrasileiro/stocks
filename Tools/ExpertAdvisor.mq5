@@ -13,12 +13,14 @@ int OnInit()
         SaveDataNow(timenow);
     }
     else{ // when testing doesnt need to wait 1 minute
-        EventSetTimer(1);
+        EventSetTimer(60);
         // when testing doesn't need to save data
         // read all predictions at once
         TestReadPredictions();
     }
-    
+
+    Print("Begining now: ", timenow);
+
     return(INIT_SUCCEEDED);
 }
 
@@ -37,6 +39,9 @@ bool PlaceOrderNow(int direction){
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
         request.type      = ORDER_TYPE_SELL;                        // order type
     }
+    // stop loss and take profit 3:1
+    request.tp =request.price*(1+direction*expect_var*3);
+    request.sl = request.price*(1-direction*expect_var);
     request.volume    = nstocks(request.price);                // volume in 100s lot
     request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
@@ -127,13 +132,13 @@ void OnTimer(){
         if(pnow.direction == plast.direction && pnow.time == plast.time)
             return;
     }
-    else{ // when testing 
+    else{ // when testing
         // when testing doesn't need to save data
-        Sleep(10); //sleep few 10 ms
+        //Sleep(10); //sleep few 10 ms
         if(!TestGetPrediction(pnow, timenow)) // not time to place an order
             return;
     }
-    
+
     // place
     PlaceOrderNow(pnow.direction);
 

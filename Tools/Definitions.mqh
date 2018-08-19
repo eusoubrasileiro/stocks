@@ -16,3 +16,5 @@ prediction predictions[];
 int ipred = 0;
 // last prediction
 prediction plast={0};
+//expected variation of price 3:1 for sl, tp
+const double expect_var=0.01;

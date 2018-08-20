@@ -20,23 +20,26 @@ void SaveDataNow(datetime timenow){
     // nwindow = nvalidation+nforecast+ntraining = 5*8*60 (2400) + 120 + 120 = 2640
     // additionally it is needed +3*60 = 180 samples due EMA of crossed features
     // rounding up 3200 to consider minutes lost
-    int nwindow=3200; // minimal needed data for training validating and predicting now
+    // asks much more than needed something to be researched!!
+    int nwindow=6400; // minimal needed data for training validating and predicting now
     MqlRates mqlrates[];
     ArraySetAsSeries(mqlrates, true);
     int nsymbols = ArraySize(symbols);
-    int copied;
+    int copied, error;
 
     for(int i=0; i<nsymbols; i++)
     {
         for(int try=0; try<3; try++) // number of 3 trials of download before giving up
         {
             // -1 if it has not complet it yet
-            copied = CopyRates(symbols[i], PERIOD_M1, timenow-nwindow*60, 0, mqlrates);
-            Print("copied ", string(copied));
-            if(copied < nwindow) //  sleep time(1 seconds) for downloading the data
-            Sleep(1000);
+            copied = CopyRates(symbols[i], PERIOD_M1, 0,  nwindow, mqlrates);
+            if(copied < nwindow){ //  sleep time(1 seconds) for downloading the data
+                Sleep(1000);
+                // 4401 Request history not found, no data yet
+                error =  GetLastError();
+            }
         }
-        if(copied == -1)
+        if(copied == -1 && copied < nwindow-7) // do not write file if is missing 7 minutes to the window
         {
             Print("Failed to get history data for the symbol ", symbols[i]);
             continue;

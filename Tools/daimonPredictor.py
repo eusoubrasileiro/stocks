@@ -225,20 +225,40 @@ def TorchNNTrainPredict(X, y, X_p, input_size, verbose=False, device='cuda'):
     del clfmodel # cleanup memory gac can get it back
     return buy, errorv
 
-while(True):
-    # meta5filepath = "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Files"
-    # meta5filepath = "/home/andre/PycharmProjects/stocks/data"
-    meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+import time
 
+# meta5filepath = "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Files"
+# meta5filepath = "/home/andre/PycharmProjects/stocks/data"
+meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+os.chdir(meta5filepath)
+# don't want it to be reused
+try:
+    os.remove('masterdf.pickle')
+    os.remove('SYMBOLS.pickle')
+except:
+    pass
+
+while(True):
     try:
-        os.chdir(meta5filepath)
         meta5load.Set_Data_Path(meta5filepath, meta5filepath)
         masterdf = meta5load.Load_Meta5_Data(suffix='RTM1.mt5bin', cleandays=False) # suffix='RTM1.mt5bin'
         X = meta5load.FixedColumnNames()
-        print('Just read minute data file')
+        print('Just Read Minute Data File Len:', len(X))
+        print("last minute: ", X.index.values[-1])
+        # don't want it to be reused
+        meta5load.masterdf = None
+        meta5load.SYMBOLS = None
+        time.sleep(3) # wait 3 seconds
+        os.chdir(meta5filepath)
+        os.remove('masterdf.pickle')
+        os.remove('SYMBOLS.pickle')
         #X = X[:3200]
-    except:
+    except Exception as e:
+        print(e)
         continue
+
+    if len(X) < (3200-7): # cannot make indicators or predictions with
+        continue # so few data
 
     X, y, Xp = createTargetVector(X, targetsymbol='PETR4_C')
 

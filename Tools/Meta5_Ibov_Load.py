@@ -140,7 +140,7 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True):
         global SYMBOLS
         global masterdf
 
-        if (not(masterdf is None)) or (not(SYMBOLS is None)):
+        if (not(masterdf is None)) and (not(SYMBOLS is None)):
             print('Data already loaded')
             return masterdf
 

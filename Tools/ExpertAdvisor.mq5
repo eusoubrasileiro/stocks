@@ -4,7 +4,7 @@
 #include "Testing.mqh"
 
 //| Expert initialization function
-int OnInit()
+int OnInit()    
 {
     datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
     //--- create timer
@@ -114,12 +114,7 @@ void OnTimer(){
     daybegin = dayBegin(timenow); // 2 hours after openning
     // check to see if we should close any order
     ClosePositionsbyTime(timenow, dayend, 3600*2); // 2 hours expire time
-    // do not place orders 1:30 before the end of the day
-    if(timenow > dayend - (90*60))
-        return;
-    // do not place orders in the begin of the day
-    if(timenow < daybegin)
-        return;
+
     // we can work
     if(!TESTING){ // not testing
         SaveDataNow(timenow);
@@ -141,6 +136,13 @@ void OnTimer(){
         if(pnow.direction == plast.direction && pnow.time == plast.time)
             return;   
     }
+    // moved to here so we can check if something is wrong
+    // do not place orders 1:30 before the end of the day
+    if(timenow > dayend - (90*60))
+        return;
+    // do not place orders in the begin of the day
+    if(timenow < daybegin)
+        return;
 
     // place
     PlaceOrderNow(pnow.direction);

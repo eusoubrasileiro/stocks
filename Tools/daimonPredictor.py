@@ -84,42 +84,6 @@ def createCrossedFeatures(df, span=60):
         df[quotes[i]+'_'+quotes[i+1]] = df[quotes[i]]+df[quotes[i+1]]
     return df
 
-#meta5filepath = "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Files"
-meta5filepath = "/home/andre/PycharmProjects/stocks/data"
-os.chdir(meta5filepath)
-meta5load.Set_Data_Path(meta5filepath, meta5filepath)
-masterdf = meta5load.Load_Meta5_Data(suffix='M1.mt5bin', cleandays=False) # suffix='RTM1.mt5bin'
-X = meta5load.FixedColumnNames()
-X = X[:3200]
-
-X, y, Xp = createTargetVector(X, targetsymbol='PETR4_C')
-
-# bucketize some features and clip outliers of all the data
-for col in X:
-    # bucketize volumes and tick volume but before make log of them
-    if col.endswith('R') or col.endswith('T'):
-        X[col] = bucketize_volume(X[col].values)
-    # remove outliers of the rest of the data
-    else:
-        X[col] = clip_outliers(X[col])
-X = createCrossedFeatures(X)
-X.dropna(inplace=True) # remove nans due ema's etc.
-y = y[X.index] # update training vector
-# select only columns with more than 95% uncorrelated
-# use file with name of collumns previouly backtested
-with open('collumns_selected.txt', 'r') as f:
-    collumns = f.read()
-select_collumns = collumns.split(' ')[:-1]
-X = X[select_collumns]
-
-scaler = StandardScaler()
-scaler.fit(X)
-X[:] = scaler.transform(X)
-
-###########################
-# Training and prediction
-###########################
-
 def TorchModelPredict(model, X):
     y_prob = model(X)
     y_pred = th.argmax(y_prob, 1)
@@ -261,47 +225,99 @@ def TorchNNTrainPredict(X, y, X_p, input_size, verbose=False, device='cuda'):
     del clfmodel # cleanup memory gac can get it back
     return buy, errorv
 
-from torch.optim import lr_scheduler
+while(True):
+    # meta5filepath = "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Files"
+    # meta5filepath = "/home/andre/PycharmProjects/stocks/data"
+    meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 
-X = X.values.astype(np.float32) # due Float tensors
-Xp = Xp.values.astype(np.float32)
-y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
-input_size = X.shape[1]
+    try:
+        os.chdir(meta5filepath)
+        meta5load.Set_Data_Path(meta5filepath, meta5filepath)
+        masterdf = meta5load.Load_Meta5_Data(suffix='RTM1.mt5bin', cleandays=False) # suffix='RTM1.mt5bin'
+        X = meta5load.FixedColumnNames()
+        print('Just read minute data file')
+        #X = X[:3200]
+    except:
+        continue
 
-device = th.device("cuda" if th.cuda.is_available() else "cpu")
+    X, y, Xp = createTargetVector(X, targetsymbol='PETR4_C')
 
-X = th.tensor(X)
-X = X.to(device)
-y = th.tensor(y)
-y = y.to(device)
-Xp = th.tensor(Xp)
-Xp = X.to(device)
+    # bucketize some features and clip outliers of all the data
+    for col in X:
+        # bucketize volumes and tick volume but before make log of them
+        if col.endswith('R') or col.endswith('T'):
+            X[col] = bucketize_volume(X[col].values)
+        # remove outliers of the rest of the data
+        else:
+            X[col] = clip_outliers(X[col])
 
-result = TorchNNTrainPredict(X, y, Xp, input_size, verbose=True, device=device)
+    X = createCrossedFeatures(X)
+    X.dropna(inplace=True) # remove nans due ema's etc.
+    y = y[X.index] # update training vector
+    # select only columns with more than 95% uncorrelated
+    # use file with name of collumns previouly backtested
+    with open('collumns_selected.txt', 'r') as f:
+        collumns = f.read()
+    select_collumns = collumns.split(' ')[:-1]
+    X = X[select_collumns]
 
-if result is None:
-    print('no prediction')
-else:
-    buy, score = result
-    print(buy, score)
+    scaler = StandardScaler()
+    scaler.fit(X)
+    X[:] = scaler.transform(X)
 
-import pandas as pd
-import datetime
-import calendar
-import time
-import struct
+    ###########################
+    # Training and prediction
+    ###########################
 
-#### SAVE PREDICTION
-# time.time()
-# np.int64(time.time()) # utc time stamp int64 or long for mql5 datetime
+    from torch.optim import lr_scheduler
 
-# converting a datetime.datetime to a int64
-# x = datetime.datetime.utcfromtimestamp(data)
-# calendar.timegm(x.timetuple())
+    times = Xp.index # same times, last time will saved for prediction
+    X = X.values.astype(np.float32) # due Float tensors
+    Xp = Xp.values.astype(np.float32)
+    y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
+    input_size = X.shape[1]
 
-# Writing a prediction for mql5 read
-# https://docs.python.org/2/library/struct.html
-with open('prediction.bin','wb') as f:
-    # struct of long and int 8+4 = 12 bytes
-    dbytes = struct.pack('li', y, -1)
-    f.write(dbytes)
+    device = th.device("cuda" if th.cuda.is_available() else "cpu")
+
+    X = th.tensor(X)
+    X = X.to(device)
+    y = th.tensor(y)
+    y = y.to(device)
+    Xp = th.tensor(Xp)
+    Xp = X.to(device)
+
+    result = TorchNNTrainPredict(X, y, Xp, input_size, verbose=True, device=device)
+
+    buy = 0
+    if result is None:
+        print('No Prediction')
+        continue
+    else:
+        buy, score = result
+        print(buy, score, times.values[-1])
+
+    import pandas as pd
+    import datetime
+    import calendar
+    import time
+    import struct
+
+    #### SAVE PREDICTION
+    # create long datetime
+    times = times.map(lambda x: calendar.timegm(x.timetuple()))
+    times = times.values.astype(np.int64)
+    #buy = buy.astype(np.int32)
+
+    # save on the metatrader 5 files path that can be read by the expert advisor
+    os.chdir('/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files')
+
+    try:
+        # Writing a prediction for mql5 read
+        # https://docs.python.org/2/library/struct.html
+        with open('prediction.bin','wb') as f:
+            # struct of ulong and int 8+4 = 12 bytes
+            dbytes = struct.pack('<Qi', times[-1], buy)
+            f.write(dbytes)
+        print('Just wrote prediction')
+    except:
+        continue

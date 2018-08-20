@@ -96,7 +96,7 @@ datetime dayEnd(datetime timenow){
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
     // calculate begin of the day
-    endofday = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);     
+    endofday = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
     return endofday+16*3600+45*60;// 16:45 min
 }
 
@@ -108,6 +108,6 @@ datetime dayBegin(datetime timenow){
     TimeToStruct(timenow, mqltime);
     // no orders on the first 2 hours, starts at 10 but cannot place orders until 12
     // calculate begin of the day
-    daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec); 
-    return daybegin+12*3600; 
+    daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
+    return daybegin+12*3600;
 }

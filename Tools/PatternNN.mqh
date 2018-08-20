@@ -5,7 +5,6 @@ void WriteSymbol(string symbol, MqlRates &arr[]){
     StringAdd(symbol,"RTM1.mt5bin");
     int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON);
     if(handle!=INVALID_HANDLE){
-        //FileSeek(handle,0,SEEK_END);        //--- write array data in the end of the file
         FileWriteArray(handle, arr, 0, WHOLE_ARRAY);
         FileClose(handle);
     }
@@ -53,12 +52,14 @@ bool GetPrediction(prediction &pred){
     // if the prediction date is equal the last ignore
     // return the prediction direction or 0 if it's the same as the last'
     string fname = "prediction.bin";
-
+    //FILE_COMMON location of the file in a shared folder for all client terminals \Terminal\Common\Files
+    ///home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
     for(int try=0; try<5; try++){ // try 5 times
-        int handle=FileOpen(fname, FILE_READ|FILE_BIN);
+        int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
         if(handle!=INVALID_HANDLE){
-            pred.time = (datetime) FileReadLong(handle);
-            pred.direction = (int) FileReadInteger(handle, 4);
+//            pred.time = (datetime) FileReadLong(handle);
+//            pred.direction = (int) FileReadInteger(handle, 4);
+            FileReadStruct(handle, pred);
             FileClose(handle);
             Print("prediction datetime: ", pred.time, " direction: ", pred.direction);
             return true;
@@ -94,11 +95,9 @@ datetime dayEnd(datetime timenow){
     datetime endofday;
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
-    mqltime.hour = 16;
-    mqltime.min = 45;
-    mqltime.sec = 0;
-    endofday = StructToTime(mqltime);
-    return endofday;
+    // calculate begin of the day
+    endofday = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);     
+    return endofday+16*3600+45*60;// 16:45 min
 }
 
 datetime dayBegin(datetime timenow){
@@ -108,9 +107,7 @@ datetime dayBegin(datetime timenow){
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
     // no orders on the first 2 hours, starts at 10 but cannot place orders until 12
-    mqltime.hour = 12;
-    mqltime.min = 0;
-    mqltime.sec = 0;
-    daybegin = StructToTime(mqltime);
-    return daybegin;
+    // calculate begin of the day
+    daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec); 
+    return daybegin+12*3600; 
 }

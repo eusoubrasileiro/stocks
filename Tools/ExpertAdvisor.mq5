@@ -68,7 +68,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
         if(magic==EXPERT_MAGIC) //--- if the MagicNumber matches
         {
             // time to close
-            if(opentime+expiretime > timenow || timenow > endday)
+            if(timenow > opentime+expiretime || timenow > endday)
             {
                 //--- zeroing the request and result values
                 ZeroMemory(request);
@@ -137,6 +137,9 @@ void OnTimer(){
         //Sleep(10); //sleep few 10 ms
         if(!TestGetPrediction(pnow, timenow)) // not time to place an order
             return;
+        // same prediction or there was no prediction
+        if(pnow.direction == plast.direction && pnow.time == plast.time)
+            return;   
     }
 
     // place

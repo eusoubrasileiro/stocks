@@ -1,5 +1,5 @@
 #define EXPERT_MAGIC 777707777  // MagicNumber of the expert
-#define TESTING true
+#define TESTING false
 
 // symbols neeeded for training and prediction on PETR4
 string symbols[9] = {"BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WIN@"};
@@ -14,6 +14,7 @@ struct prediction {
 prediction predictions[];
 // index in array of predictions
 int ipred = 0;
+int npred = 0; // number of predictions
 // last prediction
 prediction plast={0};
 //expected variation of price 3:1 for sl, tp

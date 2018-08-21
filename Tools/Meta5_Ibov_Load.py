@@ -130,19 +130,22 @@ def Load_Meta5_Binary(filename):
     df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
     return df.set_index('time') # set index as datetime
 
-def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True):
+def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True):
         """
         Load All *.bin files in the current path_bin_data folder
-        Print all symbols loaded.
-        cleandays remove days with less than x-hours of trading
+        Use defined suffix. Print all symbols loaded.
+
+        cleandays : remove days with less than x-hours of trading
+        preload : reuse previous lodaded data
         """
 
         global SYMBOLS
         global masterdf
 
-        if (not(masterdf is None)) and (not(SYMBOLS is None)):
-            print('Data already loaded')
-            return masterdf
+        if preload: # use preloaded data
+            if (not(masterdf is None)) and (not(SYMBOLS is None)):
+                print('Data already loaded')
+                return masterdf
 
         # move to path_bin_data
         os.chdir(path_bin_data)

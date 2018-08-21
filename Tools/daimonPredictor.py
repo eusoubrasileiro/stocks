@@ -80,8 +80,6 @@ def createCrossedFeatures(df, span=60):
         df['macd_double'+quote] = ta.MACD(df[quote].values, span, span*3)[0]
         df['rsi_2'+quote] = ta.RSI(df[quote].values, span*2)
         df['rsi_3'+quote] = ta.RSI(df[quote].values, span*3)
-    for i in range(len(quotes)-1):
-        df[quotes[i]+'_'+quotes[i+1]] = df[quotes[i]]+df[quotes[i+1]]
     return df
 
 def TorchModelPredict(model, X):
@@ -277,9 +275,10 @@ while(True):
     # select only columns with more than 95% uncorrelated
     # use file with name of collumns previouly backtested
     with open('collumns_selected.txt', 'r') as f:
-        collumns = f.read()
-    select_collumns = collumns.split(' ')[:-1]
-    X = X[select_collumns]
+        columns = f.read()
+    select_columns = columns.split(' ')[:-1]
+
+    X = X[select_columns]
 
     scaler = StandardScaler()
     scaler.fit(X)

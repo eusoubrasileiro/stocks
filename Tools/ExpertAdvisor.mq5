@@ -17,7 +17,7 @@ int OnInit()
         // when testing doesn't need to save data
         // read all predictions at once
         TestReadPredictions();
-    }
+    }   
 
     Print("Begining now: ", timenow);
 

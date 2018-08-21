@@ -8,11 +8,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 import talib as ta
-from util import progressbar
-import Meta5_Ibov_Load as meta5load
-import torch as th
-import torch.nn.functional as F
-import copy
 
 def createTargetVector(X, targetsymbol, view=True):
     """
@@ -36,10 +31,11 @@ def createTargetVector(X, targetsymbol, view=True):
         plt.figure(figsize=(10,3))
         axr[1].plot(X.y.values[-1200:], label='-120 minutes target class up/down : 1/0')
         axr[1].legend(loc='center')
-
-    indexp = X[X.y.isna()].index # those are the minutes that will be used for prediction
     y = X.y
     X.drop(['y','ema'], axis=1, inplace=True)
+    # those are the minutes that will be used for prediction
+    indexp = y[y.isnull()].index
+    #y = y[~y.isnull()] # remove last 120 minutes
     return X, y, indexp
 
 def clip_outliers(X, percentil=0.1):
@@ -59,6 +55,16 @@ def bucketize_volume(V, nclass=10):
     # clip outliers
     logvols = clip_outliers(logvols)
     return bucketize(logvols)
+
+def BucketizeAndClip(X):
+    # bucketize some features and clip outliers of all the data
+    for col in X:
+        # bucketize volumes and tick volume but before make log of them
+        if col.endswith('R') or col.endswith('T'):
+            X[col] = bucketize_volume(X[col].values)
+        # remove outliers of the rest of the data
+        else:
+            X[col] = clip_outliers(X[col])
 
 def createCrossedFeatures(df, span=60):
     """
@@ -87,16 +93,6 @@ def createCrossedFeatures(df, span=60):
         df['rsi_2'+quote] = ta.RSI(df[quote].values, span*2)
         df['rsi_3'+quote] = ta.RSI(df[quote].values, span*3)
     return df
-
-def BucketizeAndClip(X):
-    # bucketize some features and clip outliers of all the data
-    for col in X:
-        # bucketize volumes and tick volume but before make log of them
-        if col.endswith('R') or col.endswith('T'):
-            X[col] = bucketize_volume(X[col].values)
-        # remove outliers of the rest of the data
-        else:
-            X[col] = clip_outliers(X[col])
 
 def RemoveSimilarFeatures(X, correlation=95.):
     """
@@ -140,17 +136,16 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C',
     else: # calculate correlations and remove by cut-off
         X = RemoveSimilarFeatures(X, correlation=correlated)
 
+    X = X.dropna() ## drop nans at the begging of the data
+
     scaler = StandardScaler()
     scaler.fit(X)
     X[:] = scaler.transform(X)
     # last 120 minutes (can be used only for prediction on real time)
-    Xp = X[indexp]
-    # remove nans due emas, macd etc
-    X.dropna(inplace=True)
-    y = y[X.index] # update training vector
-    # and due shift on time
-    y = y.dropna(inplace=True)
-    X = X[y.index] # update training vector
+    Xp = X.loc[indexp] ## for prediction get the last
+    ## for training remove last 120 minutes for prediction
+    X.drop(Xp.index, inplace=True)
+    y = y[X.index] ## update training vector, this already removes the last 120 nan values
     return X, y, Xp
 
 def GetTrainingVectors(X, targetsymbol='PETR4_C', verbose=True):

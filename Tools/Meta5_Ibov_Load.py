@@ -84,17 +84,16 @@ def Set_Data_Path(_path_data_bundle, _path_bin_data):
     file = Path(masterdf_filepath)
     if file.is_file():
         masterdf = pd.read_pickle(masterdf_filepath)
-        print('master data loaded size (minutes)', len(masterdf))
-
+        print('master data loaded size (minutes): ', len(masterdf))
     else:
-        print('must load metatrader 5 *.mt5bin files')
+        print('Must load metatrader 5 *.mt5bin files!')
         return
 
     file = Path(symbols_filepath)
     if file.is_file():
         SYMBOLS = pd.read_pickle(symbols_filepath)
-        print('Symbols lodaded:')
-        print(SYMBOLS)
+        print('Symbols loaded:')
+        print(SYMBOLS.values[:])
     else:
         print('couldnt find symbols file')
 
@@ -144,7 +143,7 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=T
 
         if preload: # use preloaded data
             if (not(masterdf is None)) and (not(SYMBOLS is None)):
-                print('Data already loaded')
+                print('Data already loaded!')
                 return masterdf
 
         # move to path_bin_data
@@ -192,8 +191,8 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=T
             RemoveDays() # remove useless days for training less than xx minutes
 
         if verbose:
-                print('Symbols lodaded:')
-                print(SYMBOLS)
+                print('Symbols loaded:')
+                print(SYMBOLS.values[:])
                 Report_Missing(masterdf)
 
         # move to data_bundle_path and save data

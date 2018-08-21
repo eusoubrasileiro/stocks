@@ -44,7 +44,7 @@ void SaveDataNow(datetime timenow){
             Print("Failed to get history data for the symbol ", symbols[i]);
             continue;
         }
-        Print("minutes downloaded: ", string(copied));
+        Print("minutes downloaded  ",  symbols[i],  " size: ",  string(copied));
         WriteSymbol(symbols[i], mqlrates);
     }
 }

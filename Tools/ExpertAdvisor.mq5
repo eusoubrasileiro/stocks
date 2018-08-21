@@ -8,7 +8,7 @@ int OnInit()
 {
     datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
     //--- create timer
-    if(!TESTING){ // real operation
+    if(!TESTINGW_FILE){ // real operation
         EventSetTimer(60);
         SaveDataNow(timenow);
     }
@@ -116,7 +116,7 @@ void OnTimer(){
     ClosePositionsbyTime(timenow, dayend, 3600*2); // 2 hours expire time
 
     // we can work
-    if(!TESTING){ // not testing
+    if(!TESTINGW_FILE){ // not testing
         SaveDataNow(timenow);
         Sleep(5000); // sleep enough time for the python worker make
         //a new prediction file

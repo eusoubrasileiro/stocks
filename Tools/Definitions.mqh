@@ -1,5 +1,5 @@
 #define EXPERT_MAGIC 777707777  // MagicNumber of the expert
-#define TESTING false
+#define TESTINGW_FILE false // testin with predictions files
 
 // symbols neeeded for training and prediction on PETR4
 string symbols[9] = {"BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WIN@"};

@@ -279,7 +279,7 @@ cdef nextGuess(int[:, ::1] guess_time, int iguess, int time):
 @cython.wraparound(False)
 @cython.nonecheck(False)
 cdef actualMoney(int io, double[:,::1] open_book, double money,
-                  double H, double L, double cost_order=12):
+                  double H, double L):
     """"calculate actual money on open orders + pouch / pocket"""
     cdef int i
 #     cdef double money = money
@@ -293,12 +293,30 @@ cdef actualMoney(int io, double[:,::1] open_book, double money,
     return money
 
 
+# orders open on the last hour
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+cdef norderslastHour(int time, int io, double[:,::1] obook,
+        int ic,  double[:,::1] cbook, int perdt):
+    """ number of orders openned on the last perdt time delta-hour-minute """
+    cdef int i
+    cdef int norders=0
+    for i in range(io): # for all open orders sum those open on the nminutes last hour
+        if obook[i, OT] > time - perdt: # open on the last nminutes hour
+            norders += 1
+    for i in range(ic): # for all closed orders sum those open on the nminutes last hour
+        if cbook[i, OT] > time - perdt: # open on the last nminutes hour
+            norders += 1
+    return norders
+
+
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
 cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
                double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
-               double money=60000, int restrict=1,
+               double money=60000, int norderperdt=3, int perdt=15, double minprofit=150,
                double expected_var=0.008, int exp_time=2*60):
     """
     guess_book contains : {time index, direction, index endday, index startday}
@@ -384,13 +402,19 @@ cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
             #if iro > 0 and i-int(book_orders_open[iro-1, OT]) < 30 and restrict > 0:
             #    continue
 
+            # no more than n orders open per hour perdt
+            if norderslastHour(i, iro, book_orders_open,
+                irc, book_orders_closed, perdt) > norderperdt:
+                moneyprogress[i] = actualMoney(iro, book_orders_open, money, H, L)
+                continue;
+
             # get the direction (buy or sell)
             buy = guess_book[iguess, 0]
             # enter price or H or L (allways worst case scenario)
             enter_price = H if buy==1 else L
             # Calculate number of stocks based on minimual profit expected etc.
             # enter price, expected gain variance
-            quantity = Nstocks(enter_price, exgain=expected_var*3, minp=150)
+            quantity = Nstocks(enter_price, exgain=expected_var*3, minp=minprofit)
             #print('time: ', i, quantity*enter_price, money)
             # is there money to buy?
             if quantity*enter_price < money:

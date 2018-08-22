@@ -167,6 +167,8 @@ def TrainPredict(X, y, Xp, verbose=True):
     input_size = X.shape[1]
 
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
+    if verbose:
+        print("used device: ", device)
 
     X = th.tensor(X)
     X = X.to(device)

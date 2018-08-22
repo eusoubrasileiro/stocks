@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 import numpy as np
 import struct
@@ -21,6 +22,7 @@ def save_prediction(time, direction):
 
 # working path of Expert Advisor Metatrader 5
 # save on the metatrader 5 files path that can be read by the expert advisor
+#meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 os.chdir(meta5filepath)
 # clear terminal to start
@@ -43,7 +45,7 @@ while(True): # daemon allways running
         print('Just Read Minute Data File Len: ', len(X))
         print("Last minute: ", X.index.values[-1])
     except Exception as e:
-        print('Error reading input file: ', e)
+        print('Error reading input file: ', str(e))
         endmsg()
         continue
 

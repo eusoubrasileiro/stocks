@@ -147,6 +147,9 @@ def TorchNNTrainPredictDecide(X, y, X_p, input_size, verbose=False, device='cuda
             buy = 1
         else: # sell
             buy = -1
+    else:
+        del clfmodel # cleanup memory gac can get it back
+        return None
 
     del clfmodel # cleanup memory gac can get it back
     return buy, errorv

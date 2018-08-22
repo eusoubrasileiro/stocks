@@ -9,7 +9,7 @@
 
 //--- global variables   
 int    count=0;  
-string symbols[9] = {"BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WIN@"};
+string symbols[9] = {"WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4"};
 const int minutes=2147483647; //maximum value 2<<31 - 1
 
 void OnStart(){ 

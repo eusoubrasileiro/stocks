@@ -123,19 +123,16 @@ void OnTimer(){
         // read prediction file... with date and time
         if(!GetPrediction(pnow)) // something wrong there was no prediction
             return;
-        // same prediction or there was no prediction
-        if(pnow.direction == plast.direction && pnow.time == plast.time)
-            return;
     }
     else{ // when testing
         // when testing doesn't need to save data
         //Sleep(10); //sleep few 10 ms
         if(!TestGetPrediction(pnow, timenow)) // not time to place an order
             return;
-        // same prediction or there was no prediction
-        if(pnow.direction == plast.direction && pnow.time == plast.time)
-            return;   
     }
+    // same prediction or there was no prediction
+    if(pnow.direction == plast.direction && pnow.time == plast.time)
+        return;   
     // moved to here so we can check if something is wrong
     // do not place orders 1:30 before the end of the day
     if(timenow > dayend - (90*60))
@@ -143,7 +140,13 @@ void OnTimer(){
     // do not place orders in the begin of the day
     if(timenow < daybegin)
         return;
-
+    // no orders older than 2 minutes, the second condition almost never used
+    if(pnow.time > timenow + 3*60 || pnow.time < timenow - 3*60 )
+        return;
+    // number of open positions dont open more than
+    if(PositionsTotal() > 14) // dont open more than 14 positions
+        return;
+        
     // place
     PlaceOrderNow(pnow.direction);
 

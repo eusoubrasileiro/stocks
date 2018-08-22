@@ -19,3 +19,5 @@ int npred = 0; // number of predictions
 prediction plast={0};
 //expected variation of price 3:1 for sl, tp
 const double expect_var=0.01;
+// number of open positions
+int openpositions;

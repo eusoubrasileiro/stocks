@@ -21,11 +21,12 @@ void SaveDataNow(datetime timenow){
     // additionally it is needed +3*60 = 180 samples due EMA of crossed features
     // rounding up 3200 to consider minutes lost
     // asks much more than needed something to be researched!!
-    int nwindow=6400; // minimal needed data for training validating and predicting now
+    //int nwindow=6400; // minimal needed data for training validating and predicting now
+    int nwindow=7*60*5*4;// one month seams some entries are lost due bad buckets?
     MqlRates mqlrates[];
-    ArraySetAsSeries(mqlrates, true);
     int nsymbols = ArraySize(symbols);
     int copied, error;
+    int totalcopied=0;
 
     for(int i=0; i<nsymbols; i++)
     {
@@ -39,14 +40,15 @@ void SaveDataNow(datetime timenow){
                 error =  GetLastError();
             }
         }
-        if(copied == -1 && copied < nwindow-7) // do not write file if is missing 7 minutes to the window
+        if(copied == -1) 
         {
             Print("Failed to get history data for the symbol ", symbols[i]);
             continue;
         }
-        Print("minutes downloaded  ",  symbols[i],  " size: ",  string(copied));
         WriteSymbol(symbols[i], mqlrates);
-    }
+        totalcopied += copied;
+    }    
+    Print("percent data downloaded: ",  string((float) totalcopied/(nwindow*nsymbols)));
 }
 
 

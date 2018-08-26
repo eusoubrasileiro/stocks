@@ -9,6 +9,12 @@ from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 import talib as ta
 
+
+# run the firs time the module is Load/run
+meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+os.chdir(meta5filepath)
+stocks_stats = pd.read_csv('stocks_stats_2018.csv', index_col=0)
+
 def createTargetVector(X, targetsymbol, view=True):
     """
     Create y target vector (column) shift back in time 120 minutes.
@@ -38,33 +44,46 @@ def createTargetVector(X, targetsymbol, view=True):
     #y = y[~y.isnull()] # remove last 120 minutes
     return X, y, indexp
 
-def clip_outliers(X, percentil=0.1):
-    pmin, pmax = np.percentile(X, [percentil, 100-percentil])
-    return np.clip(X, pmin, pmax)
+# def clip_outliers(X, percentil=0.1):
+#     pmin, pmax = np.percentile(X, [percentil, 100-percentil])
+#     return np.clip(X, pmin, pmax)
+#
+# def bucketize(X, nclass=10):
+#     ### bucketize or discretize serie
+#     discrete = pd.cut(X, nclass)
+#     return discrete.codes
+#
+# def bucketize_volume(V, nclass=10):
+#     """ Tick volume and money volume have huge values
+#     that are better represented by a log scale
+#     than in discrete classes"""
+#     logvols =  np.log(V)
+#     # clip outliers
+#     logvols = clip_outliers(logvols)
+#     return bucketize(logvols)
+#
+# def BucketizeAndClip(X):
+#     # bucketize some features and clip outliers of all the data
+#     for col in X:
+#         # bucketize volumes and tick volume but before make log of them
+#         if col.endswith('R') or col.endswith('T'):
+#             X[col] = bucketize_volume(X[col].values)
+#         # remove outliers of the rest of the data
+#         else:
+#             X[col] = clip_outliers(X[col])
 
-def bucketize(X, nclass=10):
-    ### bucketize or discretize serie
-    discrete = pd.cut(X, nclass)
-    return discrete.codes
-
-def bucketize_volume(V, nclass=10):
-    """ Tick volume and money volume have huge values
-    that are better represented by a log scale
-    than in discrete classes"""
-    logvols =  np.log(V)
-    # clip outliers
-    logvols = clip_outliers(logvols)
-    return bucketize(logvols)
-
-def BucketizeAndClip(X):
-    # bucketize some features and clip outliers of all the data
+def LogVols(X):
     for col in X:
-        # bucketize volumes and tick volume but before make log of them
+        #  make log of them
         if col.endswith('R') or col.endswith('T'):
-            X[col] = bucketize_volume(X[col].values)
-        # remove outliers of the rest of the data
-        else:
-            X[col] = clip_outliers(X[col])
+            X[col] = np.log(X[col].values+1.) # to avoid log(0)
+
+def ScaleNormalize(X, stats):
+    """given mean and variance (stats dataframe)
+    for each collum `convert` to variance 1 and mean 0
+    subtract mean and divide by variance"""
+    for col in X: # make variance 1 and mean 0
+        X[col] = (X[col]-stats.loc[col, 'mean'])/stats.loc[col, 'std']
 
 def createCrossedFeatures(df, span=60):
     """
@@ -123,7 +142,7 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C',
         float : correlation cutoff for removing similar feature
     """
     X, y, indexp = createTargetVector(X, targetsymbol='PETR4_C', view=verbose)
-    BucketizeAndClip(X)
+    LogVols(X)
     X = createCrossedFeatures(X)
 
     if isinstance(correlated, str): # file path
@@ -138,9 +157,9 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C',
 
     X = X.dropna() ## drop nans at the begging of the data
 
-    scaler = StandardScaler()
-    scaler.fit(X)
-    X[:] = scaler.transform(X)
+    # scaler using known stats of stocsk 2018
+    ScaleNormalize(X, stocks_stats)
+
     # last 120 minutes (can be used only for prediction on real time)
     Xp = X.loc[indexp] ## for prediction get the last
     ## for training remove last 120 minutes for prediction

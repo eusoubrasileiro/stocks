@@ -186,6 +186,7 @@ def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=T
 
         masterdf = pd.concat(dfsymbols, axis=1)
         masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+        masterdf.dropna(inplace=True)
 
         if cleandays:
             RemoveDays() # remove useless days for training less than xx minutes

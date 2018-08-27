@@ -125,7 +125,7 @@ int nlastOrders(){
     // on the last 15 minutes count the openned orders
     HistorySelect(now-15*60,now);
     ulong ticket;
-    int entry;
+    long entry;
     uint  total=HistoryDealsTotal(); // total deals on the last n minutes
     //--- for all deals
    for(uint i=0;i<total;i++){

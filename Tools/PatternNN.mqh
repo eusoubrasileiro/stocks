@@ -40,14 +40,14 @@ void SaveDataNow(datetime timenow){
                 error =  GetLastError();
             }
         }
-        if(copied == -1) 
+        if(copied == -1)
         {
             Print("Failed to get history data for the symbol ", symbols[i]);
             continue;
         }
         WriteSymbol(symbols[i], mqlrates);
         totalcopied += copied;
-    }    
+    }
     Print("percent data downloaded: ",  string((float) totalcopied/(nwindow*nsymbols)));
 }
 
@@ -86,7 +86,7 @@ unsigned int nstocks(double enterprice){
     // This guarantees a `MinP` per order"""
     // # round stocks to 100's
     double exgain=0.01;
-    double minp=150;
+    double minp=300;
     double costorder=15;
     double ir=0.2;
     int ceil;
@@ -115,4 +115,27 @@ datetime dayBegin(datetime timenow){
     // calculate begin of the day
     daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
     return daybegin+12*3600;
+}
+
+//  number of orders oppend on the last n minutes
+int nlastOrders(){
+    int lastnopen=0; // number of orders openned on the last n minutes
+    //--- request trade history
+    datetime now = TimeCurrent();
+    // on the last 15 minutes count the openned orders
+    HistorySelect(now-15*60,now);
+    ulong ticket;
+    int entry;
+    uint  total=HistoryDealsTotal(); // total deals on the last n minutes
+    //--- for all deals
+   for(uint i=0;i<total;i++){
+      //--- try to get deals ticket
+      ticket=HistoryDealGetTicket(i);
+      if(ticket>0){ // get the deal entry property
+         entry =HistoryDealGetInteger(ticket,DEAL_ENTRY);
+         if(entry==DEAL_ENTRY_IN) // a buy or a sell (entry not closing/exiting)
+            lastnopen++;
+      }
+    }
+    return lastnopen;
 }

@@ -49,7 +49,7 @@ while(True): # daemon allways running
         endmsg()
         continue
 
-    # dont make a prediction twice
+    # dont make a prediction twice, testing was done this way
     if X.index.values[-1] > last_time:
         last_time = X.index.values[-1]
     else: # dont make a prediction twice

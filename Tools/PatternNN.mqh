@@ -22,7 +22,7 @@ void SaveDataNow(datetime timenow){
     // rounding up 3200 to consider minutes lost
     // asks much more than needed something to be researched!!
     //int nwindow=6400; // minimal needed data for training validating and predicting now
-    int nwindow=7*60*5*4;// one month seams some entries are lost due bad buckets?
+    int nwindow=6400;
     MqlRates mqlrates[];
     int nsymbols = ArraySize(symbols);
     int copied, error;
@@ -86,11 +86,11 @@ unsigned int nstocks(double enterprice){
     // This guarantees a `MinP` per order"""
     // # round stocks to 100's
     double exgain=0.01;
-    double minp=300;
+    // double minp=; minprofit
     double costorder=15;
     double ir=0.2;
     int ceil;
-    ceil = int(int((minp+costorder*2)/((1-ir)*enterprice*exgain))/100);
+    ceil = int(int((minprofit+costorder*2)/((1-ir)*enterprice*exgain))/100);
     return ceil*100;
 }
 
@@ -117,13 +117,13 @@ datetime dayBegin(datetime timenow){
     return daybegin+12*3600;
 }
 
-//  number of orders oppend on the last n minutes
+//  number of orders oppend on the last n minutes defined on Definitons.mqh
 int nlastOrders(){
     int lastnopen=0; // number of orders openned on the last n minutes
     //--- request trade history
     datetime now = TimeCurrent();
     // on the last 15 minutes count the openned orders
-    HistorySelect(now-15*60,now);
+    HistorySelect(now-60*perdt,now);
     ulong ticket;
     long entry;
     uint  total=HistoryDealsTotal(); // total deals on the last n minutes

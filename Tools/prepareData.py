@@ -141,7 +141,7 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C',
         str : file path with ascii file with selected feature columns
         float : correlation cutoff for removing similar feature
     """
-    X, y, indexp = createTargetVector(X, targetsymbol='PETR4_C', view=verbose)
+    X, y, indexp = createTargetVector(X, targetsymbol=targetsymbol, view=verbose)
     LogVols(X)
     X = createCrossedFeatures(X)
 

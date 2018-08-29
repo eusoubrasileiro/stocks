@@ -35,7 +35,7 @@ void SaveDataNow(datetime timenow){
             // -1 if it has not complet it yet
             copied = CopyRates(symbols[i], PERIOD_M1, 0,  nwindow, mqlrates);
             if(copied < nwindow){ //  sleep time(1 seconds) for downloading the data
-                Sleep(1000);
+                Sleep(7000);
                 // 4401 Request history not found, no data yet
                 error =  GetLastError();
             }

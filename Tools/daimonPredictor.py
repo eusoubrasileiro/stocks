@@ -68,15 +68,12 @@ while(True): # daemon allways running
         targetsymbol='PETR4_C', verbose=False, correlated=collumns_file)
 
     # classifier training and use
-    result = torchNNTrainPredict.TrainPredict(X, y, Xp, verbose=True)
+    buy = torchNNTrainPredict.TrainPredict(X, y, Xp, verbose=True)
 
-    buy = 0
-    if result is None:
+    if buy==0:
         print('No accuracy entry point to make orders.')
         endmsg()
         continue
-    else:
-        buy, score = result
 
     #### SAVE PREDICTION BINARY FILE
     prediction_time = Xp.index.values[-1]

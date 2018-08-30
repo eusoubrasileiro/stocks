@@ -118,7 +118,7 @@ void OnTimer(){
     // we can work
     if(!TESTINGW_FILE){ // not testing
         SaveDataNow(timenow);
-        Sleep(5000); // sleep enough time for the python worker make
+        Sleep(12000); // sleep enough time for the python worker make
         //a new prediction file
         // read prediction file... with date and time
         if(!GetPrediction(pnow)) // something wrong there was no prediction

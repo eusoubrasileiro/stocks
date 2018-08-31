@@ -139,3 +139,25 @@ int nlastOrders(){
     }
     return lastnopen;
 }
+
+int nordersDay(){
+    int open=0; // number of orders openned 
+    //--- request trade history
+    datetime now = TimeCurrent();
+    // on the last 15 minutes count the openned orders
+    HistorySelect(dayBegin(now), now);
+    ulong ticket;
+    long entry;
+    uint  total=HistoryDealsTotal(); // total deals
+    //--- for all deals
+   for(uint i=0;i<total;i++){
+      //--- try to get deals ticket
+      ticket=HistoryDealGetTicket(i);
+      if(ticket>0){ // get the deal entry property
+         entry =HistoryDealGetInteger(ticket,DEAL_ENTRY);
+         if(entry==DEAL_ENTRY_IN) // a buy or a sell (entry not closing/exiting)
+            open++;
+      }
+    }
+    return open;
+}

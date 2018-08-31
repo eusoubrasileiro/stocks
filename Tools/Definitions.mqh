@@ -28,3 +28,5 @@ const double minprofit=300;
 const int norders=3;
 // per dt in minutes
 const int perdt=15;
+// maximum orders per day
+const int maxorders=12;

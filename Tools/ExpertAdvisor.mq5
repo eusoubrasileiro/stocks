@@ -144,11 +144,11 @@ void OnTimer(){
     if(pnow.time > timenow + 3*60 || pnow.time < timenow - 3*60 )
         return;
 
-    if(nlastOrders() > norders) // cannot place more than 4 orders per
+    if(nlastOrders() >= norders) // cannot place more than 2 orders per
         return;
 
-    // number of open positions dont open more than
-    if(PositionsTotal() > 14) // dont open more than 14 positions
+    // number of open positions dont open more than that per day
+    if(nordersDay() >= maxorders) // dont open more than 8 positions
         return;
 
     // place

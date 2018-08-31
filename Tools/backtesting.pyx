@@ -316,8 +316,8 @@ cdef norderslastHour(int time, int io, double[:,::1] obook,
 @cython.wraparound(False)
 cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
                double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
-               double money=60000, int norderperdt=3, int perdt=15, double minprofit=150,
-               double expected_var=0.008, int exp_time=2*60):
+               double money=60000, int maxorders=12, int norderperdt=3, int perdt=15,
+               double minprofit=300, double expected_var=0.008, int exp_time=2*60):
     """
     guess_book contains : {time index, direction, index endday, index startday}
     array of orders to be placed at {time index},
@@ -394,7 +394,7 @@ cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
             iguess = nextGuess(guess_book, iguess, iday_end+1)
             norder_day = 0
         # is there any order to be done at this time_index
-        elif i == guess_book[iguess, 1] and norder_day < 15:
+        elif i == guess_book[iguess, 1] and norder_day <= maxorders:
             # # order spree? no more than one order open at once
             # if iro > 2 and restrict > 0:
             #     continue
@@ -404,7 +404,7 @@ cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
 
             # no more than n orders open per hour perdt
             if norderslastHour(i, iro, book_orders_open,
-                irc, book_orders_closed, perdt) > norderperdt:
+                irc, book_orders_closed, perdt) >= norderperdt:
                 moneyprogress[i] = actualMoney(iro, book_orders_open, money, H, L)
                 continue;
 

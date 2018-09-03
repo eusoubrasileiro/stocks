@@ -22,7 +22,7 @@ const double expect_var=0.01;
 // number of open positions
 //int openpositions;
 // desired minprofit
-const double minprofit=300;
+const double minprofit=160;
 // control of number of orders per ndt (minutes)
 // 3 orders maximum allowed on the last 15 minutes
 const int norders=3;

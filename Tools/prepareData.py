@@ -9,12 +9,6 @@ from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 import talib as ta
 
-
-# run the firs time the module is Load/run
-meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
-os.chdir(meta5filepath)
-stocks_stats = pd.read_csv('stocks_stats_2018.csv', index_col=0)
-
 def createTargetVector(X, targetsymbol, view=True):
     """
     Create y target vector (column) shift back in time 120 minutes.
@@ -82,8 +76,13 @@ def ScaleNormalize(X, stats):
     """given mean and variance (stats dataframe)
     for each collum `convert` to variance 1 and mean 0
     subtract mean and divide by variance"""
-    for col in X: # make variance 1 and mean 0
-        X[col] = (X[col]-stats.loc[col, 'mean'])/stats.loc[col, 'std']
+    if stats is None: # calculate mean and variance for each colum
+    # and normalize than for mean 0 and variance 1
+        for col in X: # make variance 1 and mean 0
+            X[col] = (X[col]-np.mean(X[col]))/np.sdt(X[col])
+    else: # mean and variance were specied
+        for col in X: # make variance 1 and mean 0
+            X[col] = (X[col]-stats.loc[col, 'mean'])/stats.loc[col, 'std']
 
 def createCrossedFeatures(df, span=60):
     """
@@ -113,52 +112,48 @@ def createCrossedFeatures(df, span=60):
         df['rsi_3'+quote] = ta.RSI(df[quote].values, span*3)
     return df
 
-def RemoveSimilarFeatures(X, correlation=95.):
+def getSimilarFeatures(X, correlation=95.):
     """
-    remove features with more than 95% absolute correlation
+    calculate features with more than 95% absolute correlation
     note : very slow for calculate on big data frames
+    return: column names
+    might be used to remove (drop) highly correlated columns
     """
     correlation = X.corr()
     corr_matrix = correlation.abs()
     # Select upper triangle of correlation matrix
     upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
     # Find index of feature columns with correlation greater than 0.95
-    to_drop = [column for column in upper.columns if any(upper[column] > 0.95)]
-    # Drop features
-    X.drop(to_drop, axis=1, inplace=True)
-    return X
+    similar_columns = [column for column in upper.columns if any(upper[column] > 0.95)]
+    return similar_columns
 
-def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C',
-        verbose=True, correlated=95.):
+def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PETR4_C',
+        verbose=True):
     """
     Calculate features for NN training and target binary class.
     Returns X, y, Xp (--future prediction--)
 
     inputs
-    X : dataframe fully populated with symbols from Meta5_Ibov_Load
-    targetsymbol : chosen symbol from ibovespa dataframe
-    correlated : str (file path) or float
-        str : file path with ascii file with selected feature columns
-        float : correlation cutoff for removing similar feature
+    X : dataframe fully selectedcollumns, populated with symbols from Meta5_Ibov_Load
+    targetsymbol : chosen symbol from ovespa dataframe
+    selected : list
+        list : list of collumns to keep others will be removed
+    stats :
+        statistical mean and variance for each collumn in X DataFrame
+        for normalization
     """
     X, y, indexp = createTargetVector(X, targetsymbol=targetsymbol, view=verbose)
     LogVols(X)
     X = createCrossedFeatures(X)
 
-    if isinstance(correlated, str): # file path
-        # select only columns use file with name of collumns previouly backtested
-        # ascii file each column diveded by spaces
-        with open(correlated, 'r') as f:
-            columns = f.read()
-        select_columns = columns.split(' ')[:-1]
-        X = X[select_columns]
-    else: # calculate correlations and remove by cut-off
+    if selected is None:  # calculate correlations and remove by cut-off
         X = RemoveSimilarFeatures(X, correlation=correlated)
+    else: # select only desired columns previouly backtested
+        X = X[selected]
 
     X = X.dropna() ## drop nans at the begging of the data
 
-    # scaler using known stats of stocsk 2018
-    ScaleNormalize(X, stocks_stats)
+    ScaleNormalize(X, stats)
 
     # last 120 minutes (can be used only for prediction on real time)
     Xp = X.loc[indexp] ## for prediction get the last

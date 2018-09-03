@@ -17,15 +17,15 @@ import glob
 import datetime
 import numpy as np
 import os
+import sys
 from pathlib import Path
 
-def Report_Missing(df):
-    """print the number of missing minutes in the df data set"""
+def calculateMissing(df):
+    """calculate the percentage of missing minutes in the df data set"""
     # Calculate last minute of operation for each day in `df`
     datetimes = pd.DataFrame(df.index.values, columns=['datetime'])
     datetimes['date'] = datetimes.datetime.apply(lambda x: x.date())
     datetimes['time'] = datetimes.datetime.apply(lambda x: x.time())
-    #datetimes.head(1)
     date_last_trade_time = datetimes.groupby('date').max().apply(
     (lambda x: datetime.datetime.combine(x[0], x[1])),
     axis=1)
@@ -42,10 +42,10 @@ def Report_Missing(df):
             #raise Exception('Missing data at ', first_trade_time.date(), ' missing ',
             #                expectedminutes-currentminutes, ' minutes')
             missing_count += expectedminutes-currentminutes
-    print('percentage of missing minute data {: .2%}'.format(missing_count/len(df)))
+    return missing_count/len(df)
 
 
-def RemoveDays(minutes=4*60):
+def removeDays(minutes=4*60):
     """remove days with less than minutes data"""
     global masterdf
     masterdf['data'] = masterdf.index.date
@@ -67,39 +67,35 @@ SYMBOLS = None
 """ pandas dataframe all symbols loaded stored here """
 masterdf = None
 
-
-def Set_Data_Path(_path_data_bundle, _path_bin_data):
-    """ set data and binary data path before loading or if already loaded """
-    global path_bin_data
-    global path_data_bundle
-    global masterdf
-    global SYMBOLS
-    path_data_bundle = _path_data_bundle
-    path_bin_data = _path_bin_data
-
+def loadExistent():
     ### Try to load already created data from data bundle folder
     masterdf_filepath = os.path.join(path_data_bundle,'masterdf.pickle')
     symbols_filepath  = os.path.join(path_data_bundle,'SYMBOLS.pickle')
-
-    file = Path(masterdf_filepath)
-    if file.is_file():
+    filem = Path(masterdf_filepath)
+    files = Path(symbols_filepath)
+    if filem.is_file():
         masterdf = pd.read_pickle(masterdf_filepath)
-        print('master data loaded size (minutes): ', len(masterdf))
+        print('master data loaded size (minutes): ', len(masterdf), file=sys.stderr)
     else:
-        print('Must load metatrader 5 *.mt5bin files!')
+        print('Must load metatrader 5 *.mt5bin files!', file=sys.stderr)
         return
-
-    file = Path(symbols_filepath)
-    if file.is_file():
+    if files.is_file():
         SYMBOLS = pd.read_pickle(symbols_filepath)
-        print('Symbols loaded:')
-        print(SYMBOLS.values[:])
+        print('Symbols loaded:', file=sys.stderr)
+        print(SYMBOLS.values[:], file=sys.stderr)
     else:
-        print('couldnt find symbols file')
+        print('Couldnt find symbols file', file=sys.stderr)
 
+def setDataPath(_path_data_bundle, _path_bin_data, preload=True):
+    """ set data and binary data path before loading or if already loaded """
+    global path_bin_data
+    global path_data_bundle
+    path_data_bundle = _path_data_bundle
+    path_bin_data = _path_bin_data
+    if preload:
+        loadExistent()
 
 ## MQL5 MqlRates struct all data comes as a an array of that
-
 #struct MqlRates
 #  {
 #   datetime time;         // Hora inicial do período 8 bytes
@@ -112,7 +108,7 @@ def Set_Data_Path(_path_data_bundle, _path_bin_data):
 #   long     real_volume;  // Volume de negociação
 #  };
 
-def Load_Meta5_Binary(filename):
+def loadMeta5Binary(filename):
     dtype = np.dtype([
         ("time", np.int64),
         ("O", np.float64),
@@ -129,83 +125,84 @@ def Load_Meta5_Binary(filename):
     df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
     return df.set_index('time') # set index as datetime
 
-def  Load_Meta5_Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True):
-        """
-        Load All *.bin files in the current path_bin_data folder
-        Use defined suffix. Print all symbols loaded.
+def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True):
+    """
+    Load All *.bin files in the current path_bin_data folder
+    Use defined suffix. Print all symbols loaded.
 
-        cleandays : remove days with less than x-hours of trading
-        preload : reuse previous lodaded data
-        """
+    cleandays : remove days with less than x-hours of trading
+    preload : reuse previous lodaded data
+    """
 
-        global SYMBOLS
-        global masterdf
+    global SYMBOLS
+    global masterdf
 
-        if preload: # use preloaded data
-            if (not(masterdf is None)) and (not(SYMBOLS is None)):
-                print('Data already loaded!')
-                return masterdf
+    if preload: # use preloaded data
+        loadExistent()
+        if (not(masterdf is None)) and (not(SYMBOLS is None)):
+            print('Using previous loaded data!', file=sys.stderr)
+            return masterdf
 
-        # move to path_bin_data
-        os.chdir(path_bin_data)
+    # move to path_bin_data
+    os.chdir(path_bin_data)
 
-        # read all suffixed files in this folder
-        symbols = []
-        dfsymbols = []
-        for filename in glob.glob('*'+suffix):
-            dfsymbols.append(Load_Meta5_Binary(filename))
-            symbol = filename.split(suffix)[0]
-            symbols.append(symbol)
+    # read all suffixed files in this folder
+    symbols = []
+    dfsymbols = []
+    for filename in glob.glob('*'+suffix):
+        dfsymbols.append(loadMeta5Binary(filename))
+        symbol = filename.split(suffix)[0]
+        symbols.append(symbol)
 
-        if len(symbols) < 9: # 9 symbols
-            print("Couldn't load data: missing *{:} files!".format(suffix))
-            return
+    if len(symbols) < 9: # 9 symbols
+        print("Couldn't load data: missing *{:} files!".format(suffix))
+        return
 
-        SYMBOLS = pd.Series(symbols)
-        indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
-        # get the intersecting indexes
-        # remove if exist (some case there are) duplicated indexes
-        inner_index = indexes[0]
-        for index in indexes[1:]:
-            inner_index = inner_index.join(index, how='inner')
-        inner_index = inner_index.index.drop_duplicates()
-        # apply inner_index on all data -- all indexes not in the inner list of indexes are dropped
-        for i in range(len(symbols)):
-            dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
-            dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
+    SYMBOLS = pd.Series(symbols)
+    indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
+    # get the intersecting indexes
+    # remove if exist (some case there are) duplicated indexes
+    inner_index = indexes[0]
+    for index in indexes[1:]:
+        inner_index = inner_index.join(index, how='inner')
+    inner_index = inner_index.index.drop_duplicates()
+    # apply inner_index on all data -- all indexes not in the inner list of indexes are dropped
+    for i in range(len(symbols)):
+        dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
+        dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
 
-        ### The Master DataFrame with
-        #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
-        #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
-        #index = pd.MultiIndex.from_product(iterables, names=['SYMBOL', 'ATRIB',])
-        #index
-        #masterdf.columns = index
-        #masterdf.head(1)
-        #masterdf.drop([0, 1], axis=0, level=0)
-        #masterdf.drop('SPREAD', axis=1, level=1).head(1)
+    ### The Master DataFrame with
+    #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
+    #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
+    #index = pd.MultiIndex.from_product(iterables, names=['SYMBOL', 'ATRIB',])
+    #index
+    #masterdf.columns = index
+    #masterdf.head(1)
+    #masterdf.drop([0, 1], axis=0, level=0)
+    #masterdf.drop('SPREAD', axis=1, level=1).head(1)
 
-        masterdf = pd.concat(dfsymbols, axis=1)
-        masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
-        masterdf.dropna(inplace=True)
+    masterdf = pd.concat(dfsymbols, axis=1)
+    masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+    masterdf.dropna(inplace=True)
 
-        if cleandays:
-            RemoveDays() # remove useless days for training less than xx minutes
+    if cleandays:
+        RemoveDays() # remove useless days for training less than xx minutes
 
-        if verbose:
-                print('Symbols loaded:')
-                print(SYMBOLS.values[:])
-                Report_Missing(masterdf)
+    if verbose:
+        print('Symbols loaded:', file=sys.stderr)
+        print(SYMBOLS.values[:], file=sys.stderr)
+        print("percent missing: ", calculateMissing(masterdf), file=sys.stderr)
 
-        # move to data_bundle_path and save data
-        os.chdir(path_data_bundle)
-        SYMBOLS.to_pickle('SYMBOLS.pickle')
-        masterdf.to_pickle('masterdf.pickle')
+    # move to data_bundle_path and save data
+    os.chdir(path_data_bundle)
+    SYMBOLS.to_pickle('SYMBOLS.pickle')
+    masterdf.to_pickle('masterdf.pickle')
 
-        return masterdf
+    return masterdf
 
 
 # collum mapping which collums are from which symbol
-def get_symbol(symbol):
+def getSymbol(symbol):
     """
     get the corresponding collumns for that symbol
     consider the following collumns for each symbol
@@ -216,7 +213,7 @@ def get_symbol(symbol):
     return masterdf.iloc[:, ifirst_collumn:ifirst_collumn+6]
 
 
-def FixedColumnNames():
+def simpleColumnNames():
     """
     Create Data Frame for random forest up down prediction
     targetquote is the target symbol
@@ -233,8 +230,5 @@ def FixedColumnNames():
     newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0]
             for i in range(len(SYMBOLS)) for j in range(6) ]
     df.columns = newnames
-    # we will work with close price just because we want.. no reason whatsoever
-    # just add one collum with the target variable
-    #df['target'] = get_symbol(targetquote)[prediction_on]
 
     return df

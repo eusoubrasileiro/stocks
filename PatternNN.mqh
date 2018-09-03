@@ -141,7 +141,7 @@ int nlastOrders(){
 }
 
 int nordersDay(){
-    int open=0; // number of orders openned 
+    int open=0; // number of orders openned
     //--- request trade history
     datetime now = TimeCurrent();
     // on the last 15 minutes count the openned orders

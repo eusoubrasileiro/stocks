@@ -21,6 +21,7 @@ def endmsg():
 # working path of Expert Advisor Metatrader 5
 # save on the metatrader 5 files path that can be read by the expert advisor
 #meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+#meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 os.chdir(meta5filepath)
 # statistical mean and variance from 2013+2018 used to make data
@@ -47,7 +48,7 @@ while(True): # daemon allways running
         print('Just Read Minute Data File Len: ', len(X))
         print("Last minute: ", X.index.values[-1])
     except Exception as e:
-        print('Error reading input file: ', str(e))
+        print('Error reading input file: ', str(e), file=sys.stderr)
         endmsg()
         continue
 
@@ -58,8 +59,9 @@ while(True): # daemon allways running
         continue
 
     missing = meta5Ibov.calculateMissing(meta5Ibov.masterdf)
+    print('Missing Data: ', missing, file=sys.stderr)
     # change this to evaluate the percentage of missing data
-    if len(X) < (3200): # cannot make indicators or predictions with
+    if len(X) < (3200): #or missing > 0.015: # cannot make indicators or predictions with
         print('Too few data, cannot model neither predict!', file=sys.stderr)
         endmsg()
         continue # so few data

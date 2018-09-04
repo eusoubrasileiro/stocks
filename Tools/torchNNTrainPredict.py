@@ -226,6 +226,7 @@ def TrainPredict(X, y, Xp, verbose=True):
     """
     X, y training/validation vectors for binary classification class y
     Xp vector for prediction
+    Use only the latest nwindow number of samples!
     """
 
     times = Xp.index # same times, last time will saved for prediction
@@ -235,6 +236,11 @@ def TrainPredict(X, y, Xp, verbose=True):
     input_size = X.shape[1]
 
     device = getDevice()
+
+    # get the latest ntraining size samples (FUNDAMENTAL)
+    # otherwise prediction is wrong!
+    X = X[-nwindow:]
+    y = y[-nwindow:]
 
     X = th.tensor(X)
     X = X.to(device)
@@ -250,7 +256,7 @@ def TrainPredict(X, y, Xp, verbose=True):
     X_s = X[ntraining:ntraining+nvalidation]
     y_s = y[ntraining:ntraining+nvalidation]
     # predict on the last nforecast samples
-    X_p = X[ntraining+nvalidation:ntraining+nvalidation+nforecast]
+    X_p = X[-nforecast:]
 
     # return mode, accuracy
     clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,

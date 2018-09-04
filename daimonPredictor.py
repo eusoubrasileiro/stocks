@@ -58,7 +58,6 @@ except:
     pass
 # first previous time
 previoustime = zeroTime()
-previoustime = np.datetime64(previoustime)
 
 while(True): # daemon allways running
     try:

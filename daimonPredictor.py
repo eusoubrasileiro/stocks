@@ -8,7 +8,7 @@ import calendar
 import time
 import argparse
 from Tools.util import progressbar
-from Tools import prepareData, torchNNTrainPredict
+from Tools import prepareData, torchNN
 from Tools import meta5Ibov
 
 parser = argparse.ArgumentParser()
@@ -95,8 +95,8 @@ while(True): # daemon allways running
         X, targetsymbol='PETR4_C', verbose=False,
         selected=selected_columns, stats=stocks_stats)
     # classifier training and use
-    buy = torchNNTrainPredict.TrainPredict(X, y, Xp, verbose=True)
-    device = torchNNTrainPredict.getDevice() # get cpu or cuda
+    buy = torchNN.TrainPredictDecide(X, y, Xp, verbose=True)
+    device = torchNN.getDevice() # get cpu or cuda
     if buy==0: # no entry point
         daimontime = datetime.datetime.now()
         recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)

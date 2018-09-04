@@ -7,13 +7,22 @@ import torch as th
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
+nforecast=120 # 2 hours shift
+nvalidation=nforecast # same size to validate the model prior prediction
+ntraining = 5*8*60 # 8 hours before for training
+nwindow = nvalidation+nforecast+ntraining
+# Pytorch
+modelinit = None
+criterion = th.nn.CrossEntropyLoss()
+# optimizer = None
+# scheduler = None
 
 def TorchModelPredict(model, X):
     y_prob = model(X)
     y_pred = th.argmax(y_prob, 1) # binary class clip convertion
     return y_prob, y_pred
 
-def tensor_shuffle(X, y, size):
+def tensorShuffle(X, y, size):
     """better use the dataset api in the future"""
     i = np.random.randint(X.shape[0]-size)
     return X[i:i+size], y[i:i+size]
@@ -21,10 +30,6 @@ def tensor_shuffle(X, y, size):
 def getDevice():
     return th.device("cuda" if th.cuda.is_available() else "cpu")
 
-modelinit = None
-criterion = th.nn.CrossEntropyLoss()
-# optimizer = None
-# scheduler = None
 def initModel(input_size, model=None, device="cuda"):
     """create a sequential NN or just copy the weights
     initiate optimizer and scheduler"""
@@ -63,7 +68,7 @@ def trainTorchNet(X, y, X_s, y_s, input_size, model=None, nepochs=30, device="cu
 
     for t in range(nepochs):
 
-        X_t, y_t = tensor_shuffle(X, y, batch_size)
+        X_t, y_t = tensorShuffle(X, y, batch_size)
 
         y_pred = model(X_t)
         # Compute and print loss
@@ -121,29 +126,17 @@ def trainTorchNet(X, y, X_s, y_s, input_size, model=None, nepochs=30, device="cu
     # return the model and accuracy of training and validation
     return model, best_errort, best_errorv
 
-""""Executor of prediction"""
-
-
-# change here if you wish OPTIONS
-# shift=60
-nforecast=120
-nvalidation=nforecast # to validate the model prior prediction
-ntraining = 5*8*60 # 8 hours before for training
-nwindow = nvalidation+nforecast+ntraining
-
 def predictDecideBuySell(errort, errorv, model, X_p):
     """1 for going up -1 for going down"""
     # we cannot predict unless the model is 90%+ accurate
     # accurate on validation. on training we accept 70%+
     if errorv > 0.1 or errort > 0.3:
         return 0
-    buy=0
-
+    buy=0 # do nothing
     probability, prediction = TorchModelPredict(model, X_p)
     # calculate percent of direction on the prediction minutes
     down = th.abs((th.sum(prediction)-120))/120
     up = th.abs(1-down)
-
     down = down.item()
     up = up.item()
     # only if next minutes will be 90% time going up or down
@@ -157,7 +150,7 @@ def predictDecideBuySell(errort, errorv, model, X_p):
             buy = -1
     return buy
 
-def Slide_Predictions(X, y, input_size, verbose=False, device='cuda'):
+def SlidingPredictions(X, y, input_size, verbose=False, device='cuda'):
     """
     Backtesting:
     Make predictions with a sliding window.
@@ -222,7 +215,7 @@ def Slide_Predictions(X, y, input_size, verbose=False, device='cuda'):
     return predictions
 
 
-def TrainPredict(X, y, Xp, verbose=True):
+def TrainPredictDecide(X, y, Xp, verbose=True):
     """
     X, y training/validation vectors for binary classification class y
     Xp vector for prediction
@@ -236,8 +229,7 @@ def TrainPredict(X, y, Xp, verbose=True):
     input_size = X.shape[1]
 
     device = getDevice()
-
-    # get the latest ntraining size samples (FUNDAMENTAL)
+    # get the latest nwindow size samples (FUNDAMENTAL)
     # otherwise prediction is wrong!
     X = X[-nwindow:]
     y = y[-nwindow:]
@@ -260,7 +252,7 @@ def TrainPredict(X, y, Xp, verbose=True):
 
     # return mode, accuracy
     clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
-                                             None, device=device, verbose=False)
+                                             None, device=device, verbose=verbose)
     buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
 
     return buy

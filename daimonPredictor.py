@@ -32,10 +32,10 @@ def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
     meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")
     daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")
     with open('processedminutes.txt', 'a') as f:
-        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d} {:>8}\n".format(
+        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d} {:>8}".format(
         entrytime, daimontime, meta5time, sizeread, 100*percmiss,
         direction, str(device))
-        f.write(msg)
+        f.write(msg+'\n')
         print(msg, file=sys.stderr)
 
 # Working Path for Expert Advisor Metatrader 5

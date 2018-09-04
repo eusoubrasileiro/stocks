@@ -140,12 +140,12 @@ void OnTimer(){
     // do not place orders in the begin of the day
     if(timenow < daybegin)
         return;
-    // no orders older than 2 minutes, the second condition almost never used
-    if(pnow.time > timenow + 3*60 || pnow.time < timenow - 3*60 )
+    // no orders older than 4 minutes, the second condition almost never used
+    if(pnow.time > timenow + 5*60 || pnow.time < timenow - 5*60 )
         return;
-    if(nlastOrders() >= norders) // cannot place more than 2 orders per
+    if(nlastOrders() >= norders) // cannot place more than xxx orders per
         return;    // number of open positions dont open more than that per day
-    if(nordersDay() >= maxorders) // dont open more than 8 positions
+    if(nordersDay() >= maxorders) // dont open more than yyy positions
         return;
 
     // place

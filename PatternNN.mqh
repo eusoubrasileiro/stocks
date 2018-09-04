@@ -19,10 +19,9 @@ void SaveDataNow(datetime timenow){
     // ntraining = 5*8*60 # 5*8 hours before for training - 1 week or 8 hours
     // nwindow = nvalidation+nforecast+ntraining = 5*8*60 (2400) + 120 + 120 = 2640
     // additionally it is needed +3*60 = 180 samples due EMA of crossed features
-    // rounding up 3200 to consider minutes lost
-    // asks much more than needed something to be researched!!
-    //int nwindow=6400; // minimal needed data for training validating and predicting now
-    int nwindow=6400;
+    // rounding up 3200
+    // asks much more than needed to workaround unsolvable minute data lost
+    int nwindow=5000; // minimal needed data for training validating and predicting now
     MqlRates mqlrates[];
     int nsymbols = ArraySize(symbols);
     int copied, error;
@@ -69,6 +68,8 @@ bool GetPrediction(prediction &pred){
             Print("prediction datetime: ", pred.time, " direction: ", pred.direction);
             return true;
         }
+        else
+            Sleep(2000); // cannot read so wait a bit
     }
     Print("Something is Wrong couldnt read Prediction file");
     return false;

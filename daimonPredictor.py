@@ -6,98 +6,115 @@ import struct
 import datetime
 import calendar
 import time
+import argparse
 from Tools.util import progressbar
 from Tools import prepareData, torchNNTrainPredict
 from Tools import meta5Ibov
 
-def save_prediction(time, direction):
-    """ create a file with the list of all predictions executed"""
-    with open('executed_predictions.txt', 'a') as f:
-        f.write("{:>5} {:5d} \n".format(str(time), direction))
+parser = argparse.ArgumentParser()
+parser.add_argument("--delay", type=int, default=10, nargs='?',
+            help="delay time between reading data file in seconds (default 10s)")
+args = parser.parse_args()
 
-def endmsg():
-    print('='*70)
+def zeroTime():
+    return datetime.datetime(year=1970, month=1, day=1)
 
-# working path of Expert Advisor Metatrader 5
-# save on the metatrader 5 files path that can be read by the expert advisor
-#meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
-#meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
+        percmiss=-1, daimontime=0, direction=-9, device='unknown'):
+    """ record on file/print on stderr minute processed"""
+    if entrytime==0:
+        entrytime = zeroTime()
+    if meta5time==0:
+        meta5time = zeroTime()
+    if daimontime==0:
+        daimontime = zeroTime()
+    entrytime = entrytime.strftime("%d/%m/%y %H:%M:%S")
+    meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")
+    daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")
+    with open('processedminutes.txt', 'a') as f:
+        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d} {:>8}\n".format(
+        entrytime, daimontime, meta5time, sizeread, 100*percmiss,
+        direction, str(device))
+        f.write(msg)
+        print(msg, file=sys.stderr)
+
+# Working Path for Expert Advisor Metatrader 5
+# Use same path that can be read by the expert advisor
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 os.chdir(meta5filepath)
 # statistical mean and variance from 2013+2018 used to make data
 # with variance < 1 and mean close to 0, that is how it works!
 stocks_stats = pd.read_csv('stocks_stats_2018.csv', index_col=0)
-# select columns by backtesting best performance accuracy
-# ascii file each column divided by spaces,
-with open('collumns_selected.txt', 'r') as f:
+# selected columns by backtesting best performance accuracy
+with open('collumns_selected.txt', 'r') as f: # txt column names divided by spaces
     columns = f.read()
 selected_columns = columns.split(' ')[:-1]
 # clear terminal to start
 os.system('cls' if os.name == 'nt' else 'clear')
-# first last time
-last_time = datetime.datetime(year=1970, month=1, day=1)
-last_time = np.datetime64(last_time)
+# clear folder
+try:
+    os.system('rm *.mt5bin masterdf.pickle SYMBOLS.pickle processedminutes.txt')
+except:
+    pass
+# first previous time
+previoustime = zeroTime()
+previoustime = np.datetime64(previoustime)
 
 while(True): # daemon allways running
     try:
-        meta5Ibov.setDataPath(meta5filepath, meta5filepath)
+        entrytime = datetime.datetime.now()
+        meta5Ibov.setDataPath(meta5filepath, meta5filepath, verbose=False)
         # don't want masterdf to be reused
         masterdf = meta5Ibov.loadMeta5Data(suffix='RTM1.mt5bin',
                     cleandays=False, preload=False, verbose=False)
         X = meta5Ibov.simpleColumnNames()
-        print('Just Read Minute Data File Len: ', len(X))
-        print("Last minute: ", X.index.values[-1])
+        meta5time = pd.Timestamp(X.index.values[-1])
     except Exception as e:
-        print('Error reading input file: ', str(e), file=sys.stderr)
-        endmsg()
+        print('Exception while reading *RTM1.mt5bin files: ',
+                str(e), file=sys.stderr)
+        recordMinute(entrytime)
+        time.sleep(args.delay) # wait a bit before next read
         continue
 
-    # dont make a prediction twice, testing was done this way
-    if X.index.values[-1] > last_time:
-        last_time = X.index.values[-1]
+    # dont make a prediction twice, backtesting was done this way
+    if meta5time > previoustime:
+        previoustime = meta5time
     else: # dont make a prediction twice
+        time.sleep(args.delay) # wait a bit before next read
         continue
-
-    missing = meta5Ibov.calculateMissing(meta5Ibov.masterdf)
-    print('Missing Data: ', missing, file=sys.stderr)
-    # change this to evaluate the percentage of missing data
-    if len(X) < (3200): #or missing > 0.015: # cannot make indicators or predictions with
-        print('Too few data, cannot model neither predict!', file=sys.stderr)
-        endmsg()
-        continue # so few data
-
-    # Prepare Data for training classification : creating features etc.
+    sizeread = len(X) # samples read
+    # effective missing data
+    percmiss = meta5Ibov.calculateMissing(meta5Ibov.masterdf[-3200:])
+    # change this to evaluate the percentage of missing data? future!
+    if sizeread < 3200: # cannot make indicators or predictions with
+        print('Too few data, cannot work!', file=sys.stderr)
+        recordMinute(entrytime, meta5time, sizeread, percmiss)
+        continue # too few data
+    # Prepare data for training classification : creating features etc.
     # stats and selected columns from backtesting
     X, y, Xp = prepareData.GetTrainingPredictionVectors(
         X, targetsymbol='PETR4_C', verbose=False,
         selected=selected_columns, stats=stocks_stats)
-
     # classifier training and use
     buy = torchNNTrainPredict.TrainPredict(X, y, Xp, verbose=True)
-
-    if buy==0:
-        #print('No accuracy entry point to make orders.')
-        endmsg()
+    device = torchNNTrainPredict.getDevice() # get cpu or cuda
+    if buy==0: # no entry point
+        daimontime = datetime.datetime.now()
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
         continue
-
-    #### SAVE PREDICTION BINARY FILE
-    prediction_time = Xp.index.values[-1]
-    prediction_time = pd.Timestamp(prediction_time) # to save on txt file
-    # save on file
-    save_prediction(prediction_time, buy)
-    # prediction_time to long
-    prediction_time = np.int64(calendar.timegm(prediction_time.timetuple()))
+    # Create Prediction Binary File 12 bytes
+    predtime = pd.Timestamp(meta5time) # to save on txt file
+    # prediction time to long
+    predtime = np.int64(calendar.timegm(predtime.timetuple()))
     while(True): # try until is able to write prediction file
-        try:
-            # Writing a prediction for mql5 read
+        try: # write prediction for meta5 read
             with open('prediction.bin','wb') as f:
                 # struct of ulong and int 8+4 = 12 bytes
-                dbytes = struct.pack('<Qi', prediction_time, np.int32(buy))
+                dbytes = struct.pack('<Qi', predtime, np.int32(buy))
                 if f.write(dbytes) == 12:
-                    print('Just wrote prediction file! time: ', prediction_time, file=sys.stderr)
-                    print('prediction direction: ', buy, file=sys.stderr)
                     break
-        except:
+        except: # keep trying read
             continue
-
-    endmsg()
+    # end
+    daimontime = datetime.datetime.now()
+    recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)

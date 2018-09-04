@@ -25,7 +25,7 @@ const double expect_var=0.01;
 const double minprofit=160;
 // control of number of orders per ndt (minutes)
 // 3 orders maximum allowed on the last 15 minutes
-const int norders=3;
+const int norders=2;
 // per dt in minutes
 const int perdt=15;
 // maximum orders per day

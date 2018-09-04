@@ -67,7 +67,7 @@ SYMBOLS = None
 """ pandas dataframe all symbols loaded stored here """
 masterdf = None
 
-def loadExistent():
+def loadExistent(verbose=True):
     ### Try to load already created data from data bundle folder
     masterdf_filepath = os.path.join(path_data_bundle,'masterdf.pickle')
     symbols_filepath  = os.path.join(path_data_bundle,'SYMBOLS.pickle')
@@ -75,25 +75,29 @@ def loadExistent():
     files = Path(symbols_filepath)
     if filem.is_file():
         masterdf = pd.read_pickle(masterdf_filepath)
-        print('master data loaded size (minutes): ', len(masterdf), file=sys.stderr)
+        if verbose:
+            print('Master data loaded size (minutes): ', len(masterdf), file=sys.stderr)
     else:
-        print('Must load metatrader 5 *.mt5bin files!', file=sys.stderr)
+        if verbose:
+            print('Must load metatrader 5 *.mt5bin files!', file=sys.stderr)
         return
     if files.is_file():
         SYMBOLS = pd.read_pickle(symbols_filepath)
-        print('Symbols loaded:', file=sys.stderr)
-        print(SYMBOLS.values[:], file=sys.stderr)
+        if verbose:
+            print('Symbols loaded:', file=sys.stderr)
+            print(SYMBOLS.values[:], file=sys.stderr)
     else:
-        print('Couldnt find symbols file', file=sys.stderr)
+        if verbose:
+            print('Couldnt find symbols file', file=sys.stderr)
 
-def setDataPath(_path_data_bundle, _path_bin_data, preload=True):
+def setDataPath(_path_data_bundle, _path_bin_data, preload=True, verbose=True):
     """ set data and binary data path before loading or if already loaded """
     global path_bin_data
     global path_data_bundle
     path_data_bundle = _path_data_bundle
     path_bin_data = _path_bin_data
     if preload:
-        loadExistent()
+        loadExistent(verbose)
 
 ## MQL5 MqlRates struct all data comes as a an array of that
 #struct MqlRates
@@ -138,7 +142,7 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
     global masterdf
 
     if preload: # use preloaded data
-        loadExistent()
+        loadExistent(verbose)
         if (not(masterdf is None)) and (not(SYMBOLS is None)):
             print('Using previous loaded data!', file=sys.stderr)
             return masterdf
@@ -155,7 +159,7 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
         symbols.append(symbol)
 
     if len(symbols) < 9: # 9 symbols
-        print("Couldn't load data: missing *{:} files!".format(suffix))
+        print("Couldn't load data! Missing *{:} files!".format(suffix), file=sys.stderr)
         return
 
     SYMBOLS = pd.Series(symbols)

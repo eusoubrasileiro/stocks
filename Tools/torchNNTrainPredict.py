@@ -18,6 +18,9 @@ def tensor_shuffle(X, y, size):
     i = np.random.randint(X.shape[0]-size)
     return X[i:i+size], y[i:i+size]
 
+def getDevice():
+    return th.device("cuda" if th.cuda.is_available() else "cpu")
+
 modelinit = None
 criterion = th.nn.CrossEntropyLoss()
 # optimizer = None
@@ -231,9 +234,7 @@ def TrainPredict(X, y, Xp, verbose=True):
     y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
     input_size = X.shape[1]
 
-    device = th.device("cuda" if th.cuda.is_available() else "cpu")
-    if verbose:
-        print("used device: ", device)
+    device = getDevice()
 
     X = th.tensor(X)
     X = X.to(device)

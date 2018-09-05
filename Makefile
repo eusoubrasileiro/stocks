@@ -5,12 +5,14 @@ MT5CMPATH := /home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/T
 data:
 	ln -s /home/andre/PycharmProjects/stocks/data/collumns_selected.txt $(MT5CMPATH)
 	ln -s /home/andre/PycharmProjects/stocks/data/stocks_stats_2018.csv $(MT5CMPATH)
-mt5:
+mt5: 
+	# make symlinks from stocks folder to Metatrader folder
 	ln -s /home/andre/PycharmProjects/stocks/*.mq* $(MT5EXPATH)
 	ln -s /home/andre/PycharmProjects/stocks/Tools/*.mq* $(MT5EXPATH)
 cython:
 	$(PY) setup.py build_ext --inplace
-	#python setup.py build_ext --inplace --cython
-	# make symlinks from stocks folder to Metatrader folder
+
 clean:
 	rm $(MT5EXPATH)/*.mq*
+
+all:  clean data mt5 cython

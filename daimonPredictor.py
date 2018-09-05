@@ -95,7 +95,7 @@ while(True): # daemon allways running
         X, targetsymbol='PETR4_C', verbose=False,
         selected=selected_columns, stats=stocks_stats)
     # classifier training and use
-    buy = torchNN.TrainPredictDecide(X, y, Xp, verbose=True)
+    buy = torchNN.TrainPredictDecide(X, y, Xp, verbose=False)
     device = torchNN.getDevice() # get cpu or cuda
     if buy==0: # no entry point
         daimontime = datetime.datetime.now()

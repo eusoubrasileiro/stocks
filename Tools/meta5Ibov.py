@@ -190,7 +190,7 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
     masterdf.dropna(inplace=True)
 
     if cleandays:
-        RemoveDays() # remove useless days for training less than xx minutes
+        removeDays() # remove useless days for training less than xx minutes
 
     if verbose:
         print('Symbols loaded:', file=sys.stderr)

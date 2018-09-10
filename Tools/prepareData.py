@@ -78,7 +78,9 @@ def createCrossedFeatures(df, span=60):
         df['dema_2'+quote] = df[quote] - df['ema_2'+quote]
         df['dema_3'+quote] = df[quote] - df['ema_3'+quote]
         df['macd'+quote] = ta.MACD(df[quote].values)[0]
+        # [0] ignore MACD signal Line
         df['macd_mean'+quote] = ta.MACD(df[quote].values, span, span*2)[0]
+        # [0] ignore MACD signal Line
         df['macd_double'+quote] = ta.MACD(df[quote].values, span, span*3)[0]
         df['rsi_2'+quote] = ta.RSI(df[quote].values, span*2)
         df['rsi_3'+quote] = ta.RSI(df[quote].values, span*3)
@@ -104,6 +106,9 @@ def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PET
     """
     Calculate features for NN training and target binary class.
     Returns X, y, Xp (--future prediction--)
+
+    number of lost samples due (shift + EMA's + unknown):
+    nwasted = 120+120+7
 
     inputs
     X : dataframe fully selectedcollumns, populated with symbols from Meta5_Ibov_Load

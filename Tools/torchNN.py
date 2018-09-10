@@ -1,19 +1,21 @@
 import os
 import numpy as np
 import pandas as pd
-import random # for testing only
 import copy
+import random # for reproducible results
 from Tools.util import progressbar
 import torch as th
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
-nforecast=120 # 2 hours shift
-nvalidation=nforecast # same size to validate the model prior prediction
-ntraining = 5*8*60 # 8 hours before for training
-nwindow = nvalidation+nforecast+ntraining
+nwasted = 120 + 120 + 7  # number of lost samples due (shift + EMA's + unknown)
+ntraining = 5*8*60 # previous 1 week of 8 hours for training
+nscore = 120 # validation samples
+nforecast = 120 # forecasting/prediction samples
+nneed = ntraining + nscore + nforecast + nwasted # needed number of samples
+npredict = nscore + nforecast + ntraining # samples for predicting ONE direction
 # Pytorch
-modelinit = None
+modelinit = None # reuse of model did not increase performance meaningfully
 criterion = th.nn.CrossEntropyLoss()
 # optimizer = None
 # scheduler = None
@@ -153,77 +155,11 @@ def predictDecideBuySell(errort, errorv, model, X_p):
             buy = -1
     return buy
 
-# for Backtesting
-def SlidingPredictions(X, y, input_size, device="cuda",
-            verbose=True, model=None):
-    """
-    Make predictions with a sliding window.
-    returns prediction book
-    """
-    size = len(X)
-    # number of possible predictions with data size : size
-    # because forecast are allways array of forecasts
-    # defined by the shift made
-    nshifts = size-(ntraining+nvalidation+nforecast)
-
-    if nshifts <= 0:
-        print('somethings is wrong, array of data too small')
-        print('minimum size is training+validation+forecast for 1 prediction')
-        return
-
-    if verbose:
-        print('maximum number of predictions is: ', nshifts)
-
-    # sliding window with step of one sample shift
-    prediction_book = th.zeros([nshifts, 4], dtype=th.float32)
-    #pd.DataFrame(index=np.arange(nshifts), columns=['tindex', 'buy', 'score'])
-    X_ = X
-    X = X.values.astype(np.float32) # due Float tensors
-    y = Y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
-
-    # all to cuda memory
-    X = th.tensor(X).to(device)
-    y = th.tensor(y).to(device)
-    clfmodel = None # no model yet
-
-    j=0
-    for i in progressbar(range(nshifts)):
-        # training samples are the first ones
-        X_t = X[i:i+ntraining]
-        y_t = y[i:i+ntraining]
-        # control samples for scoring (validation of the model)
-        # SCORE using the nforecast samples just after the window
-        X_s = X[i+ntraining:i+ntraining+nvalidation]
-        y_s = y[i+ntraining:i+ntraining+nvalidation]
-        # predict on the last nforecast samples
-        X_p = X[i+ntraining+nvalidation:i+ntraining+nvalidation+nforecast]
-        # return mode, accuracy
-        clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
-                                                 device, False)
-        buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
-
-        if buy != 0:
-            prediction_book[j, 0] = i+nwindow-nforecast+5
-            prediction_book[j, 1] = errort
-            prediction_book[j, 2] = errorv
-            prediction_book[j, 3] = buy
-            j = j + 1
-        # accurary of the model if higher than 90% we can predict
-        if verbose:
-            print(i, " errort : ", errort, " errorv: ", errorv, " buy ", buy)
-
-    predictions = prediction_book.numpy()
-    predictions = pd.DataFrame(predictions[:j], columns=['time', 'terror', 'verror', 'direction'])
-    predictions['time'] = X_.index[predictions['time'].values.astype(int)]
-
-    return predictions
-
-
 def TrainPredictDecide(X, y, Xp, verbose=True):
     """
     X, y training/validation vectors for binary classification class y
     Xp vector for prediction
-    Use only the latest nwindow number of samples!
+    Use only the latest npredict number of samples!
     """
 
     times = Xp.index # same times, last time will saved for prediction
@@ -233,10 +169,10 @@ def TrainPredictDecide(X, y, Xp, verbose=True):
     input_size = X.shape[1]
 
     device = getDevice()
-    # get the latest nwindow size samples (FUNDAMENTAL)
+    # get the latest npredict size samples (FUNDAMENTAL)
     # otherwise prediction is wrong!
-    X = X[-nwindow:]
-    y = y[-nwindow:]
+    X = X[-npredict:]
+    y = y[-npredict:]
 
     X = th.tensor(X)
     X = X.to(device)
@@ -245,17 +181,113 @@ def TrainPredictDecide(X, y, Xp, verbose=True):
     Xp = th.tensor(Xp)
     Xp = X.to(device)
 
-    X_t = X[:ntraining]
+    X_t = X[:ntraining] # training
     y_t = y[:ntraining]
     # control samples for scoring (validation of the model)
     # SCORE using the nforecast samples just after the window
-    X_s = X[ntraining:ntraining+nvalidation]
-    y_s = y[ntraining:ntraining+nvalidation]
-    # predict on the last nforecast samples
-    X_p = X[-nforecast:]
+    X_s = X[ntraining:ntraining+nscore] # validation
+    y_s = y[ntraining:ntraining+nscore]
+    # Xp predict on the last nforecast samples was provided
 
     clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
                                              device, verbose)
-    buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
+    buy = predictDecideBuySell(errort, errorv, clfmodel, Xp)
+
+    if verbose:
+        print(" errort : ", errort, " errorv: ", errorv, " buy ", buy)
 
     return buy
+
+####### Backtesting only
+def backtestPredictions(X, y, inputsize, device="cuda",
+            verbose=True):
+    """
+    Make predictions with a sliding window over X, y feature and target classes
+    vectors.
+
+    X : historical data X vector
+        with all cross feature collumns and standardized
+    y : target binary class
+        pair of X vector above
+
+    inputsize : number of features in X vector
+
+    returns prediction book dataframe with attributes:
+    {prediction time, training error, validation error, predicted direction}
+
+    prediction time is allways in the minute of npredict window
+    no delay assumed due computing time
+    """
+    size = len(X)
+    # number of possible predictions with data size : size
+    # because forecast are allways array of forecasts
+    # defined by the shift made
+    nshifts = size-(ntraining+nscore+nforecast)
+
+    if nshifts < 0:
+        print('somethings is wrong, array of data too small')
+        print('minimum size is ntraining+nscore+nforecast for 1 prediction')
+        return
+
+    if verbose:
+        print('maximum number of predictions is: ', nshifts)
+
+    # sliding window with step of one sample shift
+    prediction_book = th.zeros([nshifts, 4], dtype=th.float32)
+
+    time = X.index # time indexes used in the end
+    X = X.values.astype(np.float32) # due Float tensors
+    y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
+
+    # all to cuda memory
+    X = th.tensor(X).to(device)
+    y = th.tensor(y).to(device)
+    clfmodel = None # no model yet
+
+    j = 0
+    for i in progressbar(range(nshifts)):
+        # training samples are the first ones
+        X_t = X[i:i+ntraining]
+        y_t = y[i:i+ntraining]
+        # control samples for scoring (validation of the model)
+        # SCORE using the nforecast samples just after the window
+        X_s = X[i+ntraining:i+ntraining+nscore]
+        y_s = y[i+ntraining:i+ntraining+nscore]
+        # predict on the last nforecast samples
+        X_p = X[i+ntraining+nscore:i+ntraining+nscore+nforecast]
+        # return mode, accuracy
+        clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, inputsize,
+                                                 device, verbose)
+        buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
+
+        if buy != 0:
+            prediction_book[j, 0] = i+npredict
+            prediction_book[j, 1] = errort
+            prediction_book[j, 2] = errorv
+            prediction_book[j, 3] = buy
+            j = j+1
+        # accurary of the model if higher than 90% we can predict
+        if verbose:
+            print(i, " errort : ", errort, " errorv: ", errorv, " buy ", buy)
+
+    predictions = prediction_book.numpy() # tensor to numpy array
+    predictions = pd.DataFrame(predictions[:j],
+        columns=['time', 'terror', 'verror', 'direction'])
+    predictions['time'] = time[predictions['time'].values.astype(int)]
+
+    return predictions
+
+# Remember LOSS includes probability of classification (cross-class)
+# is not as simple as eclidian error (ms_loss).
+#
+# So even if MSLOSS might be smaller what matters
+# more as metric is the true cross entropy loss.
+# Specially because MSLOSS is calculated over the clipped array of classs probibilities.
+
+# TODO: in future
+# import numpy as np
+# from scipy.stats import entropy
+#
+# def entropy1(labels, base=None):
+#     value,counts = np.unique(labels, return_counts=True)
+#     return entropy(counts, base=base)

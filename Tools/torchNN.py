@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import random # for testing only
 import copy
 from Tools.util import progressbar
 import torch as th
@@ -23,7 +24,8 @@ def TorchModelPredict(model, X):
     return y_prob, y_pred
 
 def tensorShuffle(X, y, size):
-    """better use the dataset api in the future"""
+    """ get a random slice of size from X and y
+    note:.better use the dataset api in the future"""
     i = np.random.randint(X.shape[0]-size)
     return X[i:i+size], y[i:i+size]
 
@@ -50,8 +52,8 @@ def initModel(input_size, model=None, device="cuda"):
     return model, optimizer, scheduler
 
 
-def trainTorchNet(X, y, X_s, y_s, input_size, model=None, nepochs=30, device="cuda",
-                  batch_size=256, verbose=True):
+def trainTorchNet(X, y, X_s, y_s, input_size, device="cuda", verbose=True,
+        model=None, batch_size=256, nepochs=30):
     """
     X, y         : vectors for training
     X_s, y_s     : vector for validation (scoring the model)
@@ -134,8 +136,9 @@ def predictDecideBuySell(errort, errorv, model, X_p):
         return 0
     buy=0 # do nothing
     probability, prediction = TorchModelPredict(model, X_p)
+
     # calculate percent of direction on the prediction minutes
-    down = th.abs((th.sum(prediction)-120))/120
+    down = th.abs((th.sum(prediction)-nforecast))/nforecast
     up = th.abs(1-down)
     down = down.item()
     up = up.item()
@@ -150,9 +153,10 @@ def predictDecideBuySell(errort, errorv, model, X_p):
             buy = -1
     return buy
 
-def SlidingPredictions(X, y, input_size, verbose=False, device='cuda'):
+# for Backtesting
+def SlidingPredictions(X, y, input_size, device="cuda",
+            verbose=True, model=None):
     """
-    Backtesting:
     Make predictions with a sliding window.
     returns prediction book
     """
@@ -195,7 +199,7 @@ def SlidingPredictions(X, y, input_size, verbose=False, device='cuda'):
         X_p = X[i+ntraining+nvalidation:i+ntraining+nvalidation+nforecast]
         # return mode, accuracy
         clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
-                                                 None, device=device, verbose=False)
+                                                 device, False)
         buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
 
         if buy != 0:
@@ -250,9 +254,8 @@ def TrainPredictDecide(X, y, Xp, verbose=True):
     # predict on the last nforecast samples
     X_p = X[-nforecast:]
 
-    # return mode, accuracy
     clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
-                                             None, device=device, verbose=verbose)
+                                             device, verbose)
     buy = predictDecideBuySell(errort, errorv, clfmodel, X_p)
 
     return buy

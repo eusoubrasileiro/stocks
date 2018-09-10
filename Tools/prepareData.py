@@ -38,34 +38,6 @@ def createTargetVector(X, targetsymbol, view=True):
     #y = y[~y.isnull()] # remove last 120 minutes
     return X, y, indexp
 
-# def clip_outliers(X, percentil=0.1):
-#     pmin, pmax = np.percentile(X, [percentil, 100-percentil])
-#     return np.clip(X, pmin, pmax)
-#
-# def bucketize(X, nclass=10):
-#     ### bucketize or discretize serie
-#     discrete = pd.cut(X, nclass)
-#     return discrete.codes
-#
-# def bucketize_volume(V, nclass=10):
-#     """ Tick volume and money volume have huge values
-#     that are better represented by a log scale
-#     than in discrete classes"""
-#     logvols =  np.log(V)
-#     # clip outliers
-#     logvols = clip_outliers(logvols)
-#     return bucketize(logvols)
-#
-# def BucketizeAndClip(X):
-#     # bucketize some features and clip outliers of all the data
-#     for col in X:
-#         # bucketize volumes and tick volume but before make log of them
-#         if col.endswith('R') or col.endswith('T'):
-#             X[col] = bucketize_volume(X[col].values)
-#         # remove outliers of the rest of the data
-#         else:
-#             X[col] = clip_outliers(X[col])
-
 def LogVols(X):
     for col in X:
         #  make log of them

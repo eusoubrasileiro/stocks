@@ -25,12 +25,6 @@ def TorchModelPredict(model, X):
     y_pred = th.argmax(y_prob, 1) # binary class clip convertion
     return y_prob, y_pred
 
-def tensorShuffle(X, y, size):
-    """ get a random slice of size from X and y
-    note:.better use the dataset api in the future"""
-    i = np.random.randint(X.shape[0]-size)
-    return X[i:i+size], y[i:i+size]
-
 def getDevice():
     return th.device("cuda" if th.cuda.is_available() else "cpu")
 
@@ -70,9 +64,19 @@ def trainTorchNet(X, y, X_s, y_s, input_size, device="cuda", verbose=True,
     best_lossv = 1000.
     best_error = 100.
 
+    # def tensorShuffle(X, y, size):
+    #     """ get a random slice of size from X and y
+    #     note:.better use the dataset api in the future"""
+    #     i = np.random.randint(X.shape[0]-size)
+    #     return X[i:i+size], y[i:i+size]
+
+    # shuflled slices
+    start = th.randint(X.shape[0]-batch_size, (nepochs,), dtype=th.int64).to(device)
+    end = start + batch_size
+
     for t in range(nepochs):
 
-        X_t, y_t = tensorShuffle(X, y, batch_size)
+        X_t, y_t = X[start[t]:end[t]], y[start[t]:end[t]]
 
         y_pred = model(X_t)
         # Compute and print loss
@@ -230,7 +234,7 @@ def backtestPredictions(X, y, inputsize, device="cuda",
         return
 
     if verbose:
-        print('maximum number of predictions is: ', nshifts)
+        print('maximum number of predictions is: ', nshifts+1)
 
     # sliding window with step of one sample shift
     prediction_book = th.zeros([nshifts, 4], dtype=th.float32)

@@ -20,5 +20,5 @@ September 2018. Starting again.
 - Write good unit tests, specially testing time of prediction. Use Python 3 API.  
 - Don't spend much time with prototype notebooks. That means you are losing focus and objective. Instead write python modules from notebooks using the knowledge learned.  
 
-1. Wrote code to fit global NN on 5 years data using 2 hours shift. Removed samples overlapping days, 2 hours in the morning and 2 hours before session end - avoiding contamination between days assumption for day trade.  
+1. Wrote code to fit global NN on 5 years data using 2 hours shift. Removed samples overlapping days, 2 hours in the morning and 2 hours before session end - avoiding contamination between days assumption for day trade. After training 80/20 (accuracy of 55% on validation) used the model to predict on the 5 years. Results after backtesting were 33% accuracy.
  

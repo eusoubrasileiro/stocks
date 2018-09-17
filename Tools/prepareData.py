@@ -9,7 +9,7 @@ from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 import talib as ta
 
-def createTargetVector(X, targetsymbol, view=True):
+def createTargetVector(X, targetsymbol, span=120, view=True):
     """
     Create y target vector (column) shift back in time 120 minutes.
 
@@ -17,19 +17,18 @@ def createTargetVector(X, targetsymbol, view=True):
         when training we can drop the last samples that are nans
         default behavior
     """
-    span=120 # best long trend guide until now
     X['ema'] = ta.EMA(X[targetsymbol].values, span)
     X.loc[ X[targetsymbol] > X.ema, 'y'] = 1
     X.loc[ X[targetsymbol] < X.ema, 'y'] = 0
-    X.y = X.y.shift(-span) # has to be 120!!!
+    X.y = X.y.shift(-span) # lag time assumption
     if view:
         f, axr = plt.subplots(2, sharex=True, figsize=(15,4))
         f.subplots_adjust(hspace=0)
-        axr[0].plot(X.ema.values[-1200:], label='ema120')
+        axr[0].plot(X.ema.values[-1200:], label='emaLag')
         axr[0].plot(X[targetsymbol].values[-1200:], label=targetsymbol)
         axr[0].legend()
         plt.figure(figsize=(10,3))
-        axr[1].plot(X.y.values[-1200:], label='-120 minutes target class up/down : 1/0')
+        axr[1].plot(X.y.values[-1200:], label='-Lag minutes target class up/down : 1/0')
         axr[1].legend(loc='center')
     y = X.y
     X.drop(['y','ema'], axis=1, inplace=True)
@@ -51,7 +50,7 @@ def ScaleNormalize(X, stats):
     if stats is None: # calculate mean and variance for each colum
     # and normalize than for mean 0 and variance 1
         for col in X: # make variance 1 and mean 0
-            X[col] = (X[col]-np.mean(X[col]))/np.sdt(X[col])
+            X[col] = (X[col]-np.mean(X[col]))/np.std(X[col])
     else: # mean and variance were specied
         for col in X: # make variance 1 and mean 0
             X[col] = (X[col]-stats.loc[col, 'mean'])/stats.loc[col, 'std']
@@ -101,8 +100,8 @@ def getSimilarFeatures(X, correlation=95.):
     similar_columns = [column for column in upper.columns if any(upper[column] > 0.95)]
     return similar_columns
 
-def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PETR4_C',
-        verbose=True):
+def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
+        selected=None, stats=None, correlation=0.98, verbose=True):
     """
     Calculate features for NN training and target binary class.
     Returns X, y, Xp (--future prediction--)
@@ -112,25 +111,23 @@ def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PET
 
     inputs
     X : dataframe fully selectedcollumns, populated with symbols from Meta5_Ibov_Load
-    targetsymbol : chosen symbol from ovespa dataframe
+    targetsymbol : chosen symbol from bovespa dataframe
     selected : list
         list : list of collumns to keep others will be removed
     stats :
         statistical mean and variance for each collumn in X DataFrame
         for normalization
     """
-    X, y, indexp = createTargetVector(X, targetsymbol=targetsymbol, view=verbose)
+    X, y, indexp = createTargetVector(X, targetsymbol, span, verbose)
     LogVols(X)
-    X = createCrossedFeatures(X)
+    X = createCrossedFeatures(X, span)
 
     if selected is None:  # calculate correlations and remove by cut-off
-        X = RemoveSimilarFeatures(X, correlation=correlated)
-    else: # select only desired columns previouly backtested
-        X = X[selected]
-
+        selected = getSimilarFeatures(X, correlation)
+    # select only desired columns
+    X = X[selected]
     X = X.dropna() ## drop nans at the begging of the data
-
-    ScaleNormalize(X, stats)
+    ScaleNormalize(X, stats) # normalize by stats
 
     # last 120 minutes (can be used only for prediction on real time)
     Xp = X.loc[indexp] ## for prediction get the last
@@ -138,10 +135,3 @@ def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PET
     X.drop(Xp.index, inplace=True)
     y = y[X.index] ## update training vector, this already removes the last 120 nan values
     return X, y, Xp
-
-def GetTrainingVectors(X, targetsymbol='PETR4_C', verbose=True):
-    """
-    calls GetTrainingPredictionVectors
-    """
-    X, y, Xp = GetTrainingPredictionVectors(X, targetsymbol, verbose=verbose)
-    return X, y

@@ -24,5 +24,7 @@ September 2018. Starting again.
 
 **Tasks now**:
 
-- [ ]  Write code to train and cross-validate model (3 k-fold). NN class?
+- [x]  Write class to train model
+- [ ] Decent Early Stopping
+- [ ] Cross-validate model (K-fold). Use `sklearn` K-fold.
  

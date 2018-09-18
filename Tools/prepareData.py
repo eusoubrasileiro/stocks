@@ -20,11 +20,7 @@ def createTargetVector(X, targetsymbol, span=120, view=True):
     X['ema'] = ta.EMA(X[targetsymbol].values, span)
     X.loc[ X[targetsymbol] > X.ema, 'y'] = 1
     X.loc[ X[targetsymbol] < X.ema, 'y'] = 0
-<<<<<<< HEAD
-    X.y = X.y.shift(-span)
-=======
     X.y = X.y.shift(-span) # lag time assumption
->>>>>>> d521edd5205b09186cf75542f180d3606729aa01
     if view:
         f, axr = plt.subplots(2, sharex=True, figsize=(15,4))
         f.subplots_adjust(hspace=0)
@@ -104,13 +100,8 @@ def getSimilarFeatures(X, correlation=0.95):
     similar_columns = [column for column in upper.columns if any(upper[column] > correlation)]
     return similar_columns
 
-<<<<<<< HEAD
-def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PETR4_C',
-        verbose=True, correlation=0.98, span=120):
-=======
 def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
         selected=None, stats=None, correlation=0.98, verbose=True):
->>>>>>> d521edd5205b09186cf75542f180d3606729aa01
     """
     Calculate features for NN training and target binary class.
     Returns X, y, Xp (--future prediction--)
@@ -127,17 +118,6 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
         statistical mean and variance for each collumn in X DataFrame
         for normalization
     """
-<<<<<<< HEAD
-    X, y, indexp = createTargetVector(X, targetsymbol=targetsymbol, view=verbose, span=span)
-    LogVols(X)
-    X = createCrossedFeatures(X, span=span)
-
-    if selected is None:  # calculate correlations and remove by cut-off
-        X = X[getSimilarFeatures(X, correlation)]
-    else: # select only desired columns previouly backtested
-        X = X[selected]
-
-=======
     X, y, indexp = createTargetVector(X, targetsymbol, span, verbose)
     LogVols(X)
     X = createCrossedFeatures(X, span)
@@ -146,7 +126,6 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
         selected = getSimilarFeatures(X, correlation)
     # select only desired columns
     X = X[selected]
->>>>>>> d521edd5205b09186cf75542f180d3606729aa01
     X = X.dropna() ## drop nans at the begging of the data
     ScaleNormalize(X, stats) # normalize by stats
 

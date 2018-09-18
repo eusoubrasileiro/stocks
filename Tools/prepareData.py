@@ -20,15 +20,19 @@ def createTargetVector(X, targetsymbol, span=120, view=True):
     X['ema'] = ta.EMA(X[targetsymbol].values, span)
     X.loc[ X[targetsymbol] > X.ema, 'y'] = 1
     X.loc[ X[targetsymbol] < X.ema, 'y'] = 0
+<<<<<<< HEAD
     X.y = X.y.shift(-span)
+=======
+    X.y = X.y.shift(-span) # lag time assumption
+>>>>>>> d521edd5205b09186cf75542f180d3606729aa01
     if view:
         f, axr = plt.subplots(2, sharex=True, figsize=(15,4))
         f.subplots_adjust(hspace=0)
-        axr[0].plot(X.ema.values[-1200:], label='ema120')
+        axr[0].plot(X.ema.values[-1200:], label='emaLag')
         axr[0].plot(X[targetsymbol].values[-1200:], label=targetsymbol)
         axr[0].legend()
         plt.figure(figsize=(10,3))
-        axr[1].plot(X.y.values[-1200:], label='-120 minutes target class up/down : 1/0')
+        axr[1].plot(X.y.values[-1200:], label='-Lag minutes target class up/down : 1/0')
         axr[1].legend(loc='center')
     y = X.y
     X.drop(['y','ema'], axis=1, inplace=True)
@@ -100,8 +104,13 @@ def getSimilarFeatures(X, correlation=0.95):
     similar_columns = [column for column in upper.columns if any(upper[column] > correlation)]
     return similar_columns
 
+<<<<<<< HEAD
 def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PETR4_C',
         verbose=True, correlation=0.98, span=120):
+=======
+def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
+        selected=None, stats=None, correlation=0.98, verbose=True):
+>>>>>>> d521edd5205b09186cf75542f180d3606729aa01
     """
     Calculate features for NN training and target binary class.
     Returns X, y, Xp (--future prediction--)
@@ -111,13 +120,14 @@ def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PET
 
     inputs
     X : dataframe fully selectedcollumns, populated with symbols from Meta5_Ibov_Load
-    targetsymbol : chosen symbol from ovespa dataframe
+    targetsymbol : chosen symbol from bovespa dataframe
     selected : list
         list : list of collumns to keep others will be removed
     stats :
         statistical mean and variance for each collumn in X DataFrame
         for normalization
     """
+<<<<<<< HEAD
     X, y, indexp = createTargetVector(X, targetsymbol=targetsymbol, view=verbose, span=span)
     LogVols(X)
     X = createCrossedFeatures(X, span=span)
@@ -127,9 +137,18 @@ def GetTrainingPredictionVectors(X, selected=None, stats=None, targetsymbol='PET
     else: # select only desired columns previouly backtested
         X = X[selected]
 
-    X = X.dropna() ## drop nans at the begging of the data
+=======
+    X, y, indexp = createTargetVector(X, targetsymbol, span, verbose)
+    LogVols(X)
+    X = createCrossedFeatures(X, span)
 
-    ScaleNormalize(X, stats)
+    if selected is None:  # calculate correlations and remove by cut-off
+        selected = getSimilarFeatures(X, correlation)
+    # select only desired columns
+    X = X[selected]
+>>>>>>> d521edd5205b09186cf75542f180d3606729aa01
+    X = X.dropna() ## drop nans at the begging of the data
+    ScaleNormalize(X, stats) # normalize by stats
 
     # last 120 minutes (can be used only for prediction on real time)
     Xp = X.loc[indexp] ## for prediction get the last

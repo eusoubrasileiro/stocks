@@ -27,7 +27,8 @@ September 2018. Starting again.
 - [x] Cross-validate model (K-fold). Test `sklearn` K-fold. Cannot use K-fold because cannot use future to train model. 
 - [x] Also tested `train_test_split` from `sklearn` but it cannot be used for the same reason, mixing future with past when training the model. 
 - [x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, no future-past mixing.
-
+- [ ] Backtest 6 months predictions of global model.
+- [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size` for start.
 
 
  

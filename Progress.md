@@ -20,11 +20,14 @@ September 2018. Starting again.
 - Write good unit tests, specially testing time of prediction. Use Python 3 API.  
 - Don't spend much time with prototype notebooks. That means you are losing focus and objective. Instead write python modules from notebooks using the knowledge learned.  
 
-1. Wrote code to fit global NN on 5 years data using 2 hours shift. Removed samples overlapping days, 2 hours in the morning and 2 hours before session end - avoiding contamination between days assumption for day trade. After training 80/20 (accuracy of 55% on validation) used the model to predict on the 5 years. Results after backtesting were 33% accuracy.
+1. Wrote code to fit global NN on 5 years data using 1:30 hours shift. Removed samples overlapping days, 90 minutes in the morning and 90 minutes before session end - avoiding contamination between days assumption for day trade. Trained with 1 year and tested on the next 6 months. After training 66/33 with cross-validation 30 samples P50 accuracy  is 56%. 
 
-**Tasks now**:
+- [x] Write class to train model `BinaryNN`
+- [x] Decent Early Stopping (with patiance default 5 epochs ignoring variances in loss less than 0.05%)
+- [x] Cross-validate model (K-fold). Test `sklearn` K-fold. Cannot use K-fold because cannot use future to train model. 
+- [x] Also tested `train_test_split` from `sklearn` but it cannot be used for the same reason, mixing future with past when training the model. 
+- [x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, no future-past mixing.
 
-- [x]  Write class to train model
-- [ ] Decent Early Stopping
-- [ ] Cross-validate model (K-fold). Use `sklearn` K-fold.
+
+
  

@@ -48,14 +48,14 @@ class BinaryNN(th.nn.Module):
         if self.j > 0:
             if self.prog[self.j, 1]*(1+5e-4) < self.bestv: # now loss for validation is smaller
                 self.bestv = self.prog[self.j, 1].item()
+                self.bestacc = self.prog[self.j, 2].item() 
                 self._saveState() # save the actual weights
                 self.pcount = 0 # re-start patience counter
             # Early Stop: after N successive increasing validation losses -> stop
-        elif self.prog[self.j, 1]*(1+5e-4) > self.bestv:
-                print('patiance: ',  self.pcount)
-                self.pcount += 1 # increment patience counter
-                if self.pcount > self.patience:
-                    return True
+            elif self.prog[self.j, 1]*(1+5e-4) > self.bestv:
+                    self.pcount += 1 # increment patience counter
+                    if self.pcount > self.patience:
+                        return True
         return False # no stop
 
     def _validate(self, X, y, Xs, ys):
@@ -105,6 +105,7 @@ class BinaryNN(th.nn.Module):
         self.prog.to(device)
         self.j=0
         self.bestv=10. # best validation loss
+        self.bestacc=0. # accuracy 
         for i in progressbar(range(iterations)): # range(iterations):
             Xt, yt = X[start[i]:end[i]], y[start[i]:end[i]]
             yp = self.layers(Xt)
@@ -123,20 +124,24 @@ class BinaryNN(th.nn.Module):
                     print("iteration : {:<6d} train loss: {:<7.7f} valid acc: {:<7.7f}"
                           " valid loss :{:<7.7f}".format(i, loss, acc, lossv))
                 if self._earlyStop(): # check for early stop
+                    print("early stopped: no progress on validation")
                     break
                 self.j += 1
+        return self.bestacc # best validation accuracy
 
-def tensorTrainTestSplit(Xn, Yn, device, test_size=.20, verbose=True): #random split
-    """generate random split of training and validation vectors"""
-    Xt, Xs, yt, ys = train_test_split(Xn, Yn, test_size=test_size) #random split
-    if verbose:
-        print('training set size ', len(Xt), ' validation set size ', len(Xs))
-    Xt = th.tensor(Xt.astype(np.float32)).to(device)
-    Xs = th.tensor(Xs.astype(np.float32)).to(device)
-    yt = th.tensor(yt.astype(np.int64)).to(device)
-    ys = th.tensor(ys.astype(np.int64)).to(device)
-    return Xt, Xs, yt, ys # tensors
-
+def dfvectorstoTensor(X, y, device):
+    """
+    create tensors at device from:
+    X (features vector float)
+    y (target class int) 
+    both pandas dataframes
+    """
+    Xn = X.values
+    yn = y.values
+    Xn = th.tensor(Xn.astype(np.float32)).to(device)
+    yn = th.tensor(yn.astype(np.int64)).to(device)
+    return Xn, yn
+                
 def modelPredict(model, X):
     y_prob = model(X)
     y_pred = th.argmax(y_prob, 1) # binary class clip convertion

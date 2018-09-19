@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import copy
 import random # for reproducible results
+from sklearn.model_selection import train_test_split
 from Tools.util import progressbar
 import torch as th
 import torch.nn.functional as F
@@ -20,13 +21,155 @@ criterion = th.nn.CrossEntropyLoss()
 # optimizer = None
 # scheduler = None
 
-def TorchModelPredict(model, X):
+class BinaryNN(th.nn.Module):
+    """binary classifier"""
+    def __init__(self, input_size=148, learn=5e-5, dropout=0.4, patience=5, nonlin=th.nn.ReLU()):
+        super(BinaryNN, self).__init__()
+        self.layers =  th.nn.Sequential(th.nn.Linear(input_size, 1024), th.nn.Dropout(dropout), nonlin,
+                th.nn.Linear(1024,2048), th.nn.Dropout(dropout), nonlin,
+                th.nn.Linear(2048,1024), th.nn.Dropout(dropout), nonlin,
+                th.nn.Linear(1024,280), th.nn.Dropout(dropout), nonlin,
+                th.nn.Linear(280, 70), th.nn.Dropout(dropout), nonlin,
+                th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        self.optimizer = th.optim.Adam(self.layers.parameters(), lr=learn)
+        self.criterion = th.nn.CrossEntropyLoss()
+        self.prog = None # saves training loss, validation and accuracy
+        self.patience = patience # number of successive increases in validation loss that demands stop of training
+
+    def _saveState(self):
+        """save a copy of actual weights"""
+        self.saved = copy.deepcopy(self.layers.state_dict())
+
+    def _earlyStop(self):
+        """evaluate validation for early stop"""
+        ### is there a better tecniques of (early stopping)?
+        ### using not just validation loss but a combination of things?
+        ### stop when variations are less than 0.05%
+        if self.j > 0:
+            if self.prog[self.j, 1]*(1+5e-4) < self.bestv: # now loss for validation is smaller
+                self.bestv = self.prog[self.j, 1].item()
+                self._saveState() # save the actual weights
+                self.pcount = 0 # re-start patience counter
+            # Early Stop: after N successive increasing validation losses -> stop
+        elif self.prog[self.j, 1]*(1+5e-4) > self.bestv:
+                print('patiance: ',  self.pcount)
+                self.pcount += 1 # increment patience counter
+                if self.pcount > self.patience:
+                    return True
+        return False # no stop
+
+    def _validate(self, X, y, Xs, ys):
+        self.layers.eval()
+        with th.no_grad(): # reduce unnecessary memory/process usage
+            yp = self.layers(X)
+            loss = self.criterion(yp, y) # train loss
+            yps = self.layers(Xs)
+            lossv = self.criterion(yps, ys) # validation loss
+            yps = th.argmax(yps, 1)
+            errorv = th.nn.functional.mse_loss(
+            yps.float(), ys.float())  # MSE accuracy on validation set
+        self.layers.train()
+        return (1.-errorv.item()), lossv.item(), loss.item()
+
+    def results(self):
+        epochs = np.arange(1, self.j+1)*self.score
+        results = pd.DataFrame(self.prog.data.numpy()[:self.j, :],
+                               index=epochs, columns=['t_loss', 'v_loss', 'accuracy'])
+        results.index.name = 'epochs'
+        return results
+
+    def forward(self, X):
+        return self.layers(X)
+
+    def fit(self, X, y, Xs, ys, device, epochs=5, batch=32, score=1, gma=0.9, verbose=True):
+        """
+        X, y         : vectors for training
+        X_s, y_s     : vector for validation (scoring the model)
+        epochs       : how many epochs to train the model
+        score        : interval of epochs to validate model (default 1 epoch) can be float
+        note:. X, y, Xs, ys should be on device
+        """
+        self.score = score # used by results
+        self.layers.to(device)
+        nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
+        iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
+        score = int(np.ceil(score*nepoch))
+        # Decay LR by a factor of 0.9 every score*epochs
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=score, gamma=gma)
+        # random training slices indexes
+        start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(device)
+        end = start + batch
+        # record training progress values
+        # training loss [0], validation loss [1] and accuracy [2]
+        self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
+        self.prog.to(device)
+        self.j=0
+        self.bestv=10. # best validation loss
+        for i in progressbar(range(iterations)): # range(iterations):
+            Xt, yt = X[start[i]:end[i]], y[start[i]:end[i]]
+            yp = self.layers(Xt)
+            loss = self.criterion(yp, yt)
+            # Zero gradients, perform a backward pass, and update the weights.
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            self.scheduler.step()
+            if (i+1)%score == 0: # record training loss, validation (+1, avoid i=0 conditon validation)
+                acc, lossv, loss = self._validate(X, y, Xs, ys)
+                self.prog[self.j, 0] = loss
+                self.prog[self.j, 1] = lossv
+                self.prog[self.j, 2] = acc
+                if verbose:
+                    print("iteration : {:<6d} train loss: {:<7.7f} valid acc: {:<7.7f}"
+                          " valid loss :{:<7.7f}".format(i, loss, acc, lossv))
+                if self._earlyStop(): # check for early stop
+                    break
+                self.j += 1
+
+def tensorTrainTestSplit(Xn, Yn, device, test_size=.20, verbose=True): #random split
+    """generate random split of training and validation vectors"""
+    Xt, Xs, yt, ys = train_test_split(Xn, Yn, test_size=test_size) #random split
+    if verbose:
+        print('training set size ', len(Xt), ' validation set size ', len(Xs))
+    Xt = th.tensor(Xt.astype(np.float32)).to(device)
+    Xs = th.tensor(Xs.astype(np.float32)).to(device)
+    yt = th.tensor(yt.astype(np.int64)).to(device)
+    ys = th.tensor(ys.astype(np.int64)).to(device)
+    return Xt, Xs, yt, ys # tensors
+
+def modelPredict(model, X):
     y_prob = model(X)
     y_pred = th.argmax(y_prob, 1) # binary class clip convertion
     return y_prob, y_pred
 
+def modelAccuracy(model, X, y):
+    """use mse loss to calculate score error"""
+    model.eval()
+    with th.no_grad(): # reduce unnecessary memory/process usage
+        yp = model(X)
+        yp = th.argmax(yp, 1)
+        error = th.nn.functional.mse_loss(
+        yp.float(), y.float())  # MSE accuracy
+    model.train()
+    return 1-error.item()
+
 def getDevice():
+    """get CUDA GPU device if available"""
     return th.device("cuda" if th.cuda.is_available() else "cpu")
+
+def setSeed(device, seed=10):
+    """make results reproducible"""
+    np.random.seed(seed)
+    if str(device) == 'cuda':
+        th.backends.cudnn.deterministic = True
+    random.seed(seed) # pytorch rely on random for weights
+    th.manual_seed(seed)
+
+def tensorNormalize(X):
+    """mean zero and variance one in each collumn"""
+    with th.no_grad():
+         X = (X-X.mean(0))/X.std(0)
+    return X
 
 def initModel(input_size, model=None, device="cuda"):
     """create a sequential NN or just copy the weights
@@ -63,12 +206,6 @@ def trainTorchNet(X, y, X_s, y_s, input_size, device="cuda", verbose=True,
     best_model = None
     best_lossv = 1000.
     best_error = 100.
-
-    # def tensorShuffle(X, y, size):
-    #     """ get a random slice of size from X and y
-    #     note:.better use the dataset api in the future"""
-    #     i = np.random.randint(X.shape[0]-size)
-    #     return X[i:i+size], y[i:i+size]
 
     # shuflled slices
     start = th.randint(X.shape[0]-batch_size, (nepochs,), dtype=th.int64).to(device)

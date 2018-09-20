@@ -23,7 +23,7 @@ criterion = th.nn.CrossEntropyLoss()
 
 class BinaryNN(th.nn.Module):
     """binary classifier"""
-    def __init__(self, input_size=148, learn=5e-5, dropout=0.4, patience=5, nonlin=th.nn.ReLU()):
+    def __init__(self, device, input_size=148, learn=5e-5, dropout=0.4, patience=5, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
         self.layers =  th.nn.Sequential(th.nn.Linear(input_size, 1024), th.nn.Dropout(dropout), nonlin,
                 th.nn.Linear(1024,2048), th.nn.Dropout(dropout), nonlin,
@@ -31,6 +31,8 @@ class BinaryNN(th.nn.Module):
                 th.nn.Linear(1024,280), th.nn.Dropout(dropout), nonlin,
                 th.nn.Linear(280, 70), th.nn.Dropout(dropout), nonlin,
                 th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        self.device = device
+        self.layers.to(self.device)
         self.optimizer = th.optim.Adam(self.layers.parameters(), lr=learn)
         self.criterion = th.nn.CrossEntropyLoss()
         self.prog = None # saves training loss, validation and accuracy
@@ -48,7 +50,7 @@ class BinaryNN(th.nn.Module):
         if self.j > 0:
             if self.prog[self.j, 1]*(1+5e-4) < self.bestv: # now loss for validation is smaller
                 self.bestv = self.prog[self.j, 1].item()
-                self.bestacc = self.prog[self.j, 2].item() 
+                self.bestacc = self.prog[self.j, 2].item()
                 self._saveState() # save the actual weights
                 self.pcount = 0 # re-start patience counter
             # Early Stop: after N successive increasing validation losses -> stop
@@ -80,32 +82,52 @@ class BinaryNN(th.nn.Module):
 
     def forward(self, X):
         return self.layers(X)
+        
+    def fineTune(self, X, y, epochs=1, batch=32):
+        """
+        Training without cross-validation, for "fine-tunning"
+        note:. can only run after a `fit` has been called before
+        """
+        nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
+        iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
+        # random training slices indexes
+        start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(self.device)
+        end = start + batch
+        self.layers.train()
+        for i in progressbar(range(iterations)): # range(iterations):
+            Xt, yt = X[start[i]:end[i]], y[start[i]:end[i]]
+            yp = self.layers(Xt)
+            loss = self.criterion(yp, yt)
+            # Zero gradients, perform a backward pass, and update the weights.
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            self.scheduler.step()
 
-    def fit(self, X, y, Xs, ys, device, epochs=5, batch=32, score=1, gma=0.9, verbose=True):
+    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, verbose=True):
         """
         X, y         : vectors for training
         X_s, y_s     : vector for validation (scoring the model)
         epochs       : how many epochs to train the model
         score        : interval of epochs to validate model (default 1 epoch) can be float
-        note:. X, y, Xs, ys should be on device
+        note:. X, y, Xs, ys should be on device the same device
         """
         self.score = score # used by results
-        self.layers.to(device)
         nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
         score = int(np.ceil(score*nepoch))
         # Decay LR by a factor of 0.9 every score*epochs
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=score, gamma=gma)
         # random training slices indexes
-        start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(device)
+        start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(self.device)
         end = start + batch
         # record training progress values
         # training loss [0], validation loss [1] and accuracy [2]
         self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
-        self.prog.to(device)
+        self.prog.to(self.device)
         self.j=0
         self.bestv=10. # best validation loss
-        self.bestacc=0. # accuracy 
+        self.bestacc=0. # accuracy
         for i in progressbar(range(iterations)): # range(iterations):
             Xt, yt = X[start[i]:end[i]], y[start[i]:end[i]]
             yp = self.layers(Xt)
@@ -133,7 +155,7 @@ def dfvectorstoTensor(X, y, device):
     """
     create tensors at device from:
     X (features vector float)
-    y (target class int) 
+    y (target class int)
     both pandas dataframes
     """
     Xn = X.values
@@ -141,7 +163,7 @@ def dfvectorstoTensor(X, y, device):
     Xn = th.tensor(Xn.astype(np.float32)).to(device)
     yn = th.tensor(yn.astype(np.int64)).to(device)
     return Xn, yn
-                
+
 def modelPredict(model, X):
     y_prob = model(X)
     y_pred = th.argmax(y_prob, 1) # binary class clip convertion

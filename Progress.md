@@ -38,10 +38,15 @@ September 2018. Starting again.
 - [ ] Try to tune backtesting parameters like stop time etc.
 - [ ] Is 56% accuracy enough for proffiting?
 
-2. `Pytorch NN Local Model`  Assuming 56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local model fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check real accuracy of model. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Preliminar results suggests that validation accuracy alone cannot be used to divide good from bad predictions. Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use a 3 split on each fold (train, test, accuracy).
+2. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Two models were trainned, the second using half the data for training/validation it gave a P50:72%  accuracy. That suggests that validation accuracy alone can be used to divide good from bad predictions (1000 simulations), used cut-off of 95% on the first validation score. Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours]. 
+
+Thoughts:
+Generalization of the general parameters for the **Model** can be done by cross-validation on sequential folds.
+Efficience of Application/Use of the **Model** on local is another subject/matter/problem. 
+Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use this 3 split on each fold (train, test, accuracy). But the 3rd piece of the fold cannot (accuracy) be used to control/early-stop the training. 
 
 - [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size` for start.
-
+- [x] Create method `fineTune` to train the model without validation samples. 
 
 
  

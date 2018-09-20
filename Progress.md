@@ -20,15 +20,28 @@ September 2018. Starting again.
 - Write good unit tests, specially testing time of prediction. Use Python 3 API.  
 - Don't spend much time with prototype notebooks. That means you are losing focus and objective. Instead write python modules from notebooks using the knowledge learned.  
 
-1. Wrote code to fit global NN on 5 years data using 1:30 hours shift. Removed samples overlapping days, 90 minutes in the morning and 90 minutes before session end - avoiding contamination between days assumption for day trade. Trained with 1 year and tested on the next 6 months. After training 66/33 with cross-validation 30 samples P50 accuracy  is 56%. 
+1.`Pytorch NN Global Model` - Wrote code to fit global NN on 5 years data using 1:30 hours shift. Removed samples overlapping days, 90 minutes in the morning and 90 minutes before session end - avoiding contamination between days assumption for day trade. Trained with 1 year and tested on the next 6 months. After training 66/33 with cross-validation 30 samples P50 accuracy  is 56%. 
 
 - [x] Write class to train model `BinaryNN`
 - [x] Decent Early Stopping (with patiance default 5 epochs ignoring variances in loss less than 0.05%)
 - [x] Cross-validate model (K-fold). Test `sklearn` K-fold. Cannot use K-fold because cannot use future to train model. 
 - [x] Also tested `train_test_split` from `sklearn` but it cannot be used for the same reason, mixing future with past when training the model. 
-- [x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, no future-past mixing.
+ > Quotting article *Random-testtrain-split-is-not-always-enough*
+ > A trading strategy is always tested only on data that is entirely from the future of any data used in training. Nobody ever 
+ > builds a trading strategy using a random subset of the days from 2014 and then claims it is a good strategy if it makes
+ > money on a random set of test days from 2014. Finance would happily use random test-train split — it is much easier to 
+ > implement and less sensitive to seasonal effects — if it worked for them. But it does not work, due to unignorable 
+ > details of their application domain, so they have to use domain knowledge ***to build more representative splits***.
+- [x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, following the name no future-past mixing.
+- [X] Wrote draft of cross-validation function using sequential-folds.
 - [ ] Backtest 6 months predictions of global model.
+- [ ] Try to tune backtesting parameters like stop time etc.
+- [ ] Is 56% accuracy enough for proffiting?
+
+2. `Pytorch NN Local Model`  Assuming 56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local model fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check real accuracy of model. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Preliminar results suggests that validation accuracy alone cannot be used to divide good from bad predictions. Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use a 3 split on each fold (train, test, accuracy).
+
 - [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size` for start.
+
 
 
  

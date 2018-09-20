@@ -354,7 +354,7 @@ cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
         # get the current price (allways worst case scenario), and the end of the day
         H, L, iday_end, iday_start = rates[i, 0], rates[i, 1], int(rates[i, 2]), int(rates[i, 3])
 
-        if i < iday_start+2*60: # no orders in the first 2 hours minutes
+        if i < iday_start+exp_time: # no orders in the first 2 hours minutes
             # track money evolution
             moneyprogress[i] = actualMoney(iro, book_orders_open, money, H, L)
             continue
@@ -389,7 +389,7 @@ cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
             # tryAdjustStop(iro, book_orders_open, H, L)
 
         # it is not time to place orders anymore (end of session is near)
-        if i == (iday_end-90):
+        if i == (iday_end-exp_time):
             # go to the next guess after this day
             iguess = nextGuess(guess_book, iguess, iday_end+1)
             norder_day = 0

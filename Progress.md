@@ -36,9 +36,15 @@ September 2018. Starting again.
 - [X] Wrote draft of cross-validation function using sequential-folds.
 - [ ] Backtest 6 months predictions of global model.
 - [ ] Try to tune backtesting parameters like stop time etc.
-- [ ] Is 56% accuracy enough for proffiting?
+- [ ] Is P50:56% accuracy enough for profiting?
+- [ ] What accuracy pdf should my model produce so I can profit?
 
-2. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Two models were trainned, the second using half the data for training/validation it gave a P50:72%  accuracy. That suggests that validation accuracy alone can be used to divide good from bad predictions (1000 simulations), used cut-off of 95% on the first validation score. Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours]. 
+2. Too many degrees of freedom, too many variables to explore. Random-search (gut instinct is random?) has proved to be a good tool for parameter optimization. Furthermore I have no other way to decide which path is better. Vai na raça!
+
+- [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best?
+- [ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the model.
+
+3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Two models were trainned, the second using half the data for training/validation it gave a P50:72%  accuracy. That suggests that validation accuracy alone can be used to divide good from bad predictions (1000 simulations), used cut-off of 95% on the first validation score. Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours]. 
 
 Thoughts:
 Generalization of the general parameters for the **Model** can be done by cross-validation on sequential folds.

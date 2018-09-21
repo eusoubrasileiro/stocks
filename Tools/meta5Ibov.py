@@ -68,6 +68,8 @@ SYMBOLS = None
 masterdf = None
 
 def loadExistent(verbose=True):
+    global masterdf
+    global SYMBOLS
     ### Try to load already created data from data bundle folder
     masterdf_filepath = os.path.join(path_data_bundle,'masterdf.pickle')
     symbols_filepath  = os.path.join(path_data_bundle,'SYMBOLS.pickle')

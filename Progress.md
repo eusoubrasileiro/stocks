@@ -50,6 +50,7 @@ Thoughts:
 Generalization of the general parameters for the **Model** can be done by cross-validation on sequential folds.
 Efficience of Application/Use of the **Model** on local is another subject/matter/problem. 
 Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use this 3 split on each fold (train, test, accuracy). But the 3rd piece of the fold cannot (accuracy) be used to control/early-stop the training. 
+Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy in evaluation it is possible to have low accuracy on training due early stopping. 
 
 - [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size` for start.
 - [x] Create method `fineTune` to train the model without validation samples. 

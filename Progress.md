@@ -51,5 +51,5 @@ September 2018. Starting again.
 
 - Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy on validation-set it is possible to have low accuracy on training due early stopping or randomness. 
 
-- [ ] Hyperperameter random? `GridSearchCV`  for `number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs` for start fix 90 minutes for accuracy.
+- [ ] Hyperperameter random? `GridSearchCV`  for `number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs` for start fix 90 minutes for accuracy. That will guide less overfiting and too many parameters on model and others. Fundamental!
 - [x] Create method `fineTune` to train the model without validation-set and early-stop control. 

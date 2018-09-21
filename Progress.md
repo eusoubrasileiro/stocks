@@ -44,7 +44,7 @@ September 2018. Starting again.
 - [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best?
 - [ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the model.
 
-3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using months or weeks to predict days or minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Two models were trainned, the second using half the data for training/validation it gave a P50:72%  accuracy. That suggests that validation accuracy alone can be used to divide good from bad predictions (1000 simulations), used cut-off of 95% on the first validation score. Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours]. 
+3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using a week to predict 90 minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Models were trainned, and a fine tunning using all the samples available was done without supersivion. Preliminar results suggests that's a good methodology and the best idea found to divide good from bad predictions was using an 'average' of trainging and validation accuracies `avg = np.sqrt(score0*score1)` (~800+800 simulations). Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours, finetunning 3 epochs]. Cutting by training accuracy alone  did not work well.  Final results were ~ : 0.70 0.70 0.76 0.90 0.95. for avg > 0.93/94 with 1.5% showing frequency. 
 
 Thoughts:
 Generalization of the general parameters for the **Model** can be done by cross-validation on sequential folds.
@@ -52,7 +52,7 @@ Efficience of Application/Use of the **Model** on local is another subject/matte
 Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use this 3 split on each fold (train, test, accuracy). But the 3rd piece of the fold cannot (accuracy) be used to control/early-stop the training. 
 Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy in evaluation it is possible to have low accuracy on training due early stopping. 
 
-- [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size` for start.
+- [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size, ...` for start.
 - [x] Create method `fineTune` to train the model without validation samples. 
 
 

@@ -44,16 +44,12 @@ September 2018. Starting again.
 - [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best?
 - [ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the model.
 
-3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models fitting. Using a week to predict 90 minutes. Besides that made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model when on real-world use. Those samples were used to measure accuracy on data just after the validation data, simulating "future" data. Models were trainned, and a fine tunning using all the samples available was done without supersivion. Preliminar results suggests that's a good methodology and the best idea found to divide good from bad predictions was using an 'average' of trainging and validation accuracies `avg = np.sqrt(score0*score1)` (~800+800 simulations). Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours, finetunning 3 epochs]. Cutting by training accuracy alone  did not work well.  Final results were ~ : 0.70 0.70 0.76 0.90 0.95. for avg > 0.93/94 with 1.5% showing frequency. 
+3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models. Using a week to predict 90 minutes. Made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model just after the validation-set, simulating "future" data when on real-world use. Models were trainned, and a fine-tune on the model was done. Models were trained using all the samples available without a validation-set to supervise but for very few epochs. Idea is to displace the weights just a little bit using the most recent data available. Preliminar results suggests that's a promising methodology. To divide good from bad models (entry points) the best result found was using an 'average' of trainging and validation accuracies `avg = np.sqrt(score0*score1)` Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours, finetunning 3 epochs]. Final results were ~ : p0:0.70 p1:0.70 p10:0.76 p50:0.90 p90:0.95. for avg > 0.93/94 with 1.5% showing frequency on ~1600 simulations ~3.5 per day. 
 
-Thoughts:
-Generalization of the general parameters for the **Model** can be done by cross-validation on sequential folds.
-Efficience of Application/Use of the **Model** on local is another subject/matter/problem. 
-Following that logic, it seems that, a better way to evalute (cross-validate) the effective *local* generalization of the model is to use this 3 split on each fold (train, test, accuracy). But the 3rd piece of the fold cannot (accuracy) be used to control/early-stop the training. 
-Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy in evaluation it is possible to have low accuracy on training due early stopping. 
+**More Thoughts**
+- Generalization of the general parameters for the *Model* can be done by cross-validation on sequential folds.
 
-- [ ] Hyperperameter `GridSearchCV` for `number layers, train-score ratio, train+score size, ...` for start.
-- [x] Create method `fineTune` to train the model without validation samples. 
+- Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy on validation-set it is possible to have low accuracy on training due early stopping or randomness. 
 
-
- 
+- [ ] Hyperperameter random? `GridSearchCV`  for `number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs` for start fix 90 minutes for accuracy.
+- [x] Create method `fineTune` to train the model without validation-set and early-stop control. 

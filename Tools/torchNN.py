@@ -41,6 +41,10 @@ class BinaryNN(th.nn.Module):
     def _saveState(self):
         """save a copy of actual weights"""
         self.saved = copy.deepcopy(self.layers.state_dict())
+    
+    def _loadState(self):
+        """load previously best weights from training"""
+        self.layers.load_state_dict(self.saved)
 
     def _earlyStop(self):
         """evaluate validation for early stop"""
@@ -148,8 +152,10 @@ class BinaryNN(th.nn.Module):
                 if self._earlyStop(): # check for early stop
                     print("early stopped: no progress on validation")
                     break
-                self.j += 1
-        return self.bestacc # best validation accuracy
+                self.j += 1                
+        self._loadState() # load the best weights
+        self.trainacc = modelAccuracy(self, X, y) # calculate final accuracy training-set
+        return self.bestacc, self.trainacc # accuracy validation-set, training-set
 
 def dfvectorstoTensor(X, y, device):
     """

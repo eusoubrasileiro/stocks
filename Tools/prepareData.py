@@ -37,6 +37,54 @@ def createTargetVector(X, targetsymbol, span=120, view=True):
     #y = y[~y.isnull()] # remove last 120 minutes
     return X, y, indexp
 
+def createTargetVectorDiff(X, targetsymbol, span=120, view=True):
+    """
+    Create y target vector (column) shift back in time 120 minutes.
+
+    training : True
+        when training we can drop the last samples that are nans
+        default behavior
+    """
+    X['dif'] =  X[targetsymbol].shift(-span) - X[targetsymbol]
+    X.loc[ X.dif > 0, 'y'] = 1
+    X.loc[ X.dif <= 0, 'y'] = 0
+    # X.y = X.y.shift(-span) # lag time assumption
+    if view:
+        f, axr = plt.subplots(3, sharex=True, figsize=(15,4))
+        f.subplots_adjust(hspace=0)
+        axr[0].plot(X[targetsymbol].values[-1200:], label=targetsymbol)
+        axr[0].legend()
+        plt.figure(figsize=(10,3))
+        axr[1].plot(X.dif.values[-1200:], label='difLag')
+        plt.figure(figsize=(10,3))
+        axr[2].plot(X.y.values[-1200:], label='-Lag minutes target class up/down : 1/0')
+        axr[2].legend(loc='center')
+    y = X.y
+    X.drop(['y','dif'], axis=1, inplace=True)
+    # those are the minutes that will be used for prediction
+    indexp = y[y.isnull()].index
+    #y = y[~y.isnull()] # remove last 120 minutes
+    return X, y, indexp
+
+def removedayBorders(X, minutes):
+    """
+    X is dataframe must have a datetime index
+    remove n minutes from beginning and end of day
+    stock-market day starts at 10:00 am and ends at 5:00 pm
+    """
+    dt = datetime.timedelta(minutes=minutes)
+    end = (datetime.datetime(1970, 1, 1, 17, 0)-dt).time()
+    start = (datetime.datetime(1970, 1, 1, 10, 0)+dt).time()
+    X['day'] = X.index.map(lambda x: x.date())
+    for day, group in X.groupby('day'):
+        if len(group) < minutes*3: # less than 3xminutes better not use it for tranning
+            X.drop(group.index, inplace=True)
+    X['start'] = X.day.map(lambda x: datetime.datetime(x.year, x.month, x.day, start.hour, start.minute, 0))
+    X['end'] = X.day.map(lambda x: datetime.datetime(x.year, x.month, x.day, end.hour, end.minute, 0))
+    Xn = X.query('index > start and index < end').copy()
+    Xn.drop(columns=['day', 'start', 'end'], inplace=True)
+    return Xn
+
 def LogVols(X):
     for col in X:
         #  make log of them
@@ -119,6 +167,42 @@ def GetTrainingPredictionVectors(X, targetsymbol='PETR4_C', span=120,
         for normalization
     """
     X, y, indexp = createTargetVector(X, targetsymbol, span, verbose)
+    LogVols(X)
+    X = createCrossedFeatures(X, span)
+
+    if selected is None:  # calculate correlations and remove by cut-off
+        selected = getSimilarFeatures(X, correlation)
+    # select only desired columns
+    X = X[selected]
+    X = X.dropna() ## drop nans at the begging of the data
+    ScaleNormalize(X, stats) # normalize by stats
+
+    # last 120 minutes (can be used only for prediction on real time)
+    Xp = X.loc[indexp] ## for prediction get the last
+    ## for training remove last 120 minutes for prediction
+    X.drop(Xp.index, inplace=True)
+    y = y[X.index] ## update training vector, this already removes the last 120 nan values
+    return X, y, Xp
+
+def GetTrainingPredictionVectorsDiff(X, targetsymbol='PETR4_C', span=120,
+        selected=None, stats=None, correlation=0.98, verbose=True):
+    """
+    Calculate features for NN training and target binary class.
+    Returns X, y, Xp (--future prediction--)
+
+    number of lost samples due (shift + EMA's + unknown):
+    nwasted = 120+120+7
+
+    inputs
+    X : dataframe fully selectedcollumns, populated with symbols from Meta5_Ibov_Load
+    targetsymbol : chosen symbol from bovespa dataframe
+    selected : list
+        list : list of collumns to keep others will be removed
+    stats :
+        statistical mean and variance for each collumn in X DataFrame
+        for normalization
+    """
+    X, y, indexp = createTargetVectorDiff(X, targetsymbol, span, verbose)
     LogVols(X)
     X = createCrossedFeatures(X, span)
 

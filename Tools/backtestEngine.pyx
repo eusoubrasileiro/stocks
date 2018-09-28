@@ -1,4 +1,4 @@
-#from libc.math cimport exp, sqrt
+    #from libc.math cimport exp, sqrt
 # Import Cython definitions for numpy
 import numpy
 cimport numpy
@@ -314,7 +314,7 @@ cdef norderslastHour(int time, int io, double[:,::1] obook,
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)
-cpdef Simulate(double[:,::1] rates, int[:,::1] guess_book,
+cpdef Simulator(double[:,::1] rates, int[:,::1] guess_book,
                double[:,::1] book_orders_open, double[:,::1] book_orders_closed,
                double money=60000, int maxorders=12, int norderperdt=3, int perdt=15,
                double minprofit=300, double expected_var=0.008, int exp_time=2*60):

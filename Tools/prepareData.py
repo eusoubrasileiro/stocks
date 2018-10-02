@@ -37,7 +37,7 @@ def createTargetVector(X, targetsymbol, span=120, view=True):
     #y = y[~y.isnull()] # remove last 120 minutes
     return X, y, indexp
 
-def createTargetVectorDiff(X, targetsymbol, span=120, view=True):
+def createTargetVectorDiff(X, targetsymbol, span=120, cut=0.04, view=True):
     """
     Create y target vector (column) shift back in time 120 minutes.
 

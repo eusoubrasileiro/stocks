@@ -11,6 +11,7 @@ from Tools import meta5Ibov
 import seaborn as sns
 import talib as ta
 from Tools.backtestEngine import Simulator
+from Tools.backtestEnginen import Simulator as Simulatorn
 
 class strategyTester(object):
     """
@@ -95,6 +96,19 @@ class strategyTester(object):
     def Simulate(self, money=50000, maxorders=10, norderperdt=1, perdt=60,
                 minprofit=100, expected_var=0.01, exp_time=90):
         money, nc, no = Simulator(np.ascontiguousarray(self.arrayprices),
+                                np.ascontiguousarray(self.arraypredictions),
+                            self.orders_open,self.orders_closed, money, maxorders,
+                     norderperdt, perdt, minprofit, expected_var, exp_time)
+        ordersbook = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
+                      "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9}
+        dfclosedbook = pd.DataFrame(self.orders_closed[:nc,:],
+                                columns=ordersbook.keys())
+        dfclosedbook.dropna(inplace=True)
+        return money, dfclosedbook
+
+    def Simulaten(self, money=50000, maxorders=10, norderperdt=1, perdt=60,
+                minprofit=100, expected_var=0.01, exp_time=90):
+        money, nc, no = Simulatorn(np.ascontiguousarray(self.arrayprices),
                                 np.ascontiguousarray(self.arraypredictions),
                             self.orders_open,self.orders_closed, money, maxorders,
                      norderperdt, perdt, minprofit, expected_var, exp_time)

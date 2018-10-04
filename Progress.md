@@ -22,27 +22,31 @@ September 2018. Starting again.
 
 1.`Pytorch NN Global Model` - Wrote code to fit global NN on 5 years data using 1:30 hours shift. Removed samples overlapping days, 90 minutes in the morning and 90 minutes before session end - avoiding contamination between days assumption for day trade. Trained with 1 year and tested on the next 6 months. After training 66/33 with cross-validation 30 samples P50 accuracy  is 56%. 
 
-- [x] Write class to train model `BinaryNN`
-- [x] Decent Early Stopping (with patiance default 5 epochs ignoring variances in loss less than 0.05%)
-- [x] Cross-validate model (K-fold). Test `sklearn` K-fold. Cannot use K-fold because cannot use future to train model. 
-- [x] Also tested `train_test_split` from `sklearn` but it cannot be used for the same reason, mixing future with past when training the model. 
+[x] Write class to train model `BinaryNN`
+[x] Decent Early Stopping (with patiance default 5 epochs ignoring variances in loss less than 0.05%)
+[x] Cross-validate model (K-fold). Test `sklearn` K-fold. Cannot use K-fold because cannot use future to train model. 
+[x] Also tested `train_test_split` from `sklearn` but it cannot be used for the same reason, mixing future with past when training the model. 
  > Quotting article *Random-testtrain-split-is-not-always-enough*
  > A trading strategy is always tested only on data that is entirely from the future of any data used in training. Nobody ever 
  > builds a trading strategy using a random subset of the days from 2014 and then claims it is a good strategy if it makes
  > money on a random set of test days from 2014. Finance would happily use random test-train split — it is much easier to 
  > implement and less sensitive to seasonal effects — if it worked for them. But it does not work, due to unignorable 
  > details of their application domain, so they have to use domain knowledge ***to build more representative splits***.
-- [x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, following the name no future-past mixing.
-- [X] Wrote draft of cross-validation function using sequential-folds.
-- [ ] Backtest 6 months predictions of global model.
-- [ ] Try to tune backtesting parameters like stop time etc.
-- [ ] Is P50:56% accuracy enough for profiting?
-- [ ] What accuracy pdf should my model produce so I can profit?
+[x] Wrote `indexSequentialFolds` to create folds for cross-validate the model, following the name no future-past mixing.
+[x] Wrote draft of cross-validation function using sequential-folds.
+[ ] Backtest 6 months predictions of global model.
+[ ] Try to tune backtesting parameters like stop time etc.
+[ ] Is P50:56% accuracy enough for profiting?
+[ ] What accuracy pdf should my model produce so I can profit?
 
 2. Too many degrees of freedom, too many variables to explore. Random-search (gut instinct is random?) has proved to be a good tool for parameter optimization. Furthermore I have no other way to decide which path is better. Vai na raça!
 
-- [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best?
-- [ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the model.
+[ ] Sensibility Analyses. What direction take based on moving average trend. What performs best?  
+   [x] Ported `backtestEngine` to numba.   
+   [x] Created `EstrategyTester` class.  
+   [x] Random Grid Search with parameters `time lag`, `clip percentage (decision)`, `min. profit`, `expected. variation`. 
+
+[ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the NN Model.
 
 3. `Pytorch NN Local Models`  Assuming P50:56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models. Using a week to predict 90 minutes. Made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model just after the validation-set, simulating "future" data when on real-world use. Models were trainned, and a fine-tune on the model was done. Models were trained using all the samples available without a validation-set to supervise but for very few epochs. Idea is to displace the weights just a little bit using the most recent data available. Preliminar results suggests that's a promising methodology. To divide good from bad models (entry points) the best result found was using an 'average' of trainging and validation accuracies `avg = np.sqrt(score0*score1)` Parameters : [ntrain= 4*60*5 week, ntest = 90 1:30 hours, nacc = 90 1:30 hours, finetunning 3 epochs]. Final results were ~ : p0:0.70 p1:0.70 p10:0.76 p50:0.90 p90:0.95. for avg > 0.93/94 with 1.5% showing frequency on ~1600 simulations ~3.5 per day. 
 
@@ -51,5 +55,5 @@ September 2018. Starting again.
 
 - Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy on validation-set it is possible to have low accuracy on training due early stopping or randomness. 
 
-- [ ] Hyperperameter random? `GridSearchCV`  for `number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs` for start fix 90 minutes for accuracy. That will guide less overfiting and too many parameters on model and others. Fundamental!
-- [x] Create method `fineTune` to train the model without validation-set and early-stop control. 
+[ ] Hyperperameter random? `GridSearchCV`  for `number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs` for start fix 90 minutes for accuracy. That will guide less overfiting and too many parameters on model and others. Fundamental!
+[x] Create method `fineTune` to train the model without validation-set and early-stop control. 

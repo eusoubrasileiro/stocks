@@ -1,4 +1,5 @@
-    #from libc.math cimport exp, sqrt
+# deprecated in favor of numba
+#from libc.math cimport exp, sqrt
 # Import Cython definitions for numpy
 import numpy
 cimport numpy

@@ -26,7 +26,7 @@ ordersbookdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
 
 @njit(nogil=True, parallel=True)
 def Nstocks(enterprice, exgain,
-            minp=300, costorder=15., ir=0.2):
+            minp=300., costorder=15., ir=0.2):
     """Needed number of stocks based on:
 
     * Minimal acceptable profit $MinP$ (in R$)
@@ -38,7 +38,7 @@ def Nstocks(enterprice, exgain,
     Be reminded that Number of Stocks MUST BE in 100s.
     This guarantees a `MinP` per order"""
     # round stocks to 100's
-    ceil = int(int((minp+costorder*2)/((1-ir)*enterprice*exgain))/100)
+    ceil = int(int((minp+costorder*2)/((1.-ir)*enterprice*exgain))/100)
     # numpy ceil avoid using it for perfomance
     return ceil*100
 
@@ -258,8 +258,8 @@ def norderslastHour(time, io, obook,
 
 @njit(nogil=True, parallel=True)
 def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
-               money=60000, maxorders=12, norderperdt=3, perdt=15,
-               minprofit=300, expected_var=0.008, exp_time=2*60):
+               money=60000., maxorders=12, norderperdt=3, perdt=15,
+               minprofit=300., expected_var=0.008, exp_time=2*60):
     """
     guess_book contains : {time index, direction, index endday, index startday}
     array of orders to be placed at {time index},

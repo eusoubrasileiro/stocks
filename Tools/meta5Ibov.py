@@ -21,29 +21,16 @@ import sys
 from pathlib import Path
 
 def calculateMissing(df):
-    """calculate the percentage of missing minutes in the df data set"""
+    """
+    Calculate the percentage of missing minutes in the df data set
+    Consider first and last minute as boundaries
+    """
     # Calculate last minute of operation for each day in `df`
-    datetimes = pd.DataFrame(df.index.values, columns=['datetime'])
-    datetimes['date'] = datetimes.datetime.apply(lambda x: x.date())
-    datetimes['time'] = datetimes.datetime.apply(lambda x: x.time())
-    date_last_trade_time = datetimes.groupby('date').max().apply(
-    (lambda x: datetime.datetime.combine(x[0], x[1])),
-    axis=1)
-    date_first_trade_time = datetimes.groupby('date').min().apply(
-    (lambda x: datetime.datetime.combine(x[0], x[1])),
-    axis=1)
-    missing_count = 0
-    for first_trade_time, last_trade_time in zip(date_first_trade_time, date_last_trade_time):
-        dt = (last_trade_time-first_trade_time)
-        timerange = first_trade_time+np.arange(0, 1+dt.seconds/60, 1)*datetime.timedelta(minutes=1)
-        currentminutes = len(df[df.index.isin(timerange)])
-        expectedminutes = len(timerange)
-        if currentminutes < expectedminutes:
-            #raise Exception('Missing data at ', first_trade_time.date(), ' missing ',
-            #                expectedminutes-currentminutes, ' minutes')
-            missing_count += expectedminutes-currentminutes
-    return missing_count/len(df)
-
+    df['time'] = df.index.astype(np.int64)//10**9 # (to unix timestamp) from nano seconds 10*9 to seconds
+    days = df.groupby(df.index.date)['time'].agg(['min', 'max', 'count']) # aggreagate on groupby
+    missingmins = days['count']-((days['max']-days['min'])//60)-1 # -1 due count is +1
+    df.drop(columns='time', inplace=True)
+    return abs(missingmins.sum()/len(df))
 
 def removeDays(minutes=4*60):
     """remove days with less than minutes data"""
@@ -128,7 +115,8 @@ def loadMeta5Binary(filename):
     data = np.fromfile(filename, dtype=dtype)
     df = pd.DataFrame(data)
     ## convert from unix time (meta5) 8 bytes to datetime utc
-    df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
+    #df.time = df.time.apply(lambda x: datetime.datetime.utcfromtimestamp(x))
+    df.time = pd.to_datetime(df.time.values, unit='s')
     return df.set_index('time') # set index as datetime
 
 def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True):

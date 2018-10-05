@@ -36,20 +36,23 @@ class strategyTester(object):
         self.dfprices = dfprices[["H","L"]].copy() # worst case simulation M1
         self.dfpredictions = dfpredictions.copy()
         self.obookdict = engine.ordersbookdict
+        self.start = start
+        self.end = end
+        # simulation results
+        self.orders_open = None # very few orders stay here so can be very small
+        self.orders_closed = None # all or\ders end-up here so must be bigs
+        self.orders = None # DataFrame with result of each order after simulation
         assert(self.dfpredictions.dir.unique() == [1, -1],
                "acceptable directions are -1/1")
         self.dfprices, self.dfpredictions = self._alignTime(self.dfprices,
             self.dfpredictions, start, end)
-        self.orders_open = None # very few orders stay here so can be very small
-        self.orders_closed = None # all or\ders end-up here so must be bigs
         self._createArrays()
-
 
     def _alignTime(self, prices, predictions, startdelta=datetime.timedelta(days=1),
                         enddelta=datetime.timedelta(hours=2)):
         """
-        Allign time indexes of prices and predictions dataframes
-        From that create integer needed by backtestEnginei
+        Align time indexes of prices and predictions dataframes
+        From that create integer needed by backtestEngine
         Also create integer index of start of day and end of day needed by backtestEngine.
         """
         # "convert" minutes to relative minutes integers
@@ -57,13 +60,14 @@ class strategyTester(object):
         # to store begin and end "i" of days indexes
         prices['idayend'] = 0
         prices['idaystart'] = 0
-        prices['date'] = prices.index.date.astype(np.datetime64)
+        prices['date'] = prices.index.date
         for date, group in prices.groupby(prices.date):
             prices.loc[group.index, 'idayend'] = group.i.max()
             prices.loc[group.index, 'idaystart'] = group.i.min()
-        #predictions.set_index('time', inplace=True)
+        #dates = prices.groupby(prices.date).agregate(['min', 'max'])
+        #prices.loc['date' == dates]
         ## add one day at the beggining and two hours in the end
-        prices = prices[predictions.index[0]-startdelta:predictions.index[-1]+enddelta]
+        prices = prices.loc[predictions.index[0]-startdelta:predictions.index[-1]+enddelta]
         # get reference time indexes "i" from prices/prices
         predictions['i'] = prices.loc[predictions.index].i
         # set to zero at the begging of prices array
@@ -85,21 +89,82 @@ class strategyTester(object):
         setup/create book of open orders and closed orders
         those arrays are base for backtestEngine
         """
-        self.arrayprices = self.dfprices.values.astype(np.float64)
-        self.arraypredictions = self.dfpredictions.values.astype(np.int32) # get array data only
+        self.prices = self.dfprices.values.astype(np.float64)
+        self.predictions = self.dfpredictions.values.astype(np.int32) # get array data only
         self.orders_open = np.zeros((self.dfpredictions.shape[0], 10), order='C')*np.nan
         self.orders_closed = np.zeros((self.dfpredictions.shape[0], 10), order='C')*np.nan
         # *nan to make it easy to read after
         #return arrayprices, arraypredictions
 
-    def Simulate(self, money=50000, maxorders=10, norderperdt=1, perdt=60,
-                minprofit=100., expected_var=0.01, exp_time=90):
-        money, nc, no = engine.Simulator(np.ascontiguousarray(self.arrayprices),
-                                np.ascontiguousarray(self.arraypredictions),
-                            self.orders_open,self.orders_closed, money, maxorders,
-                     norderperdt, perdt, minprofit, expected_var, exp_time)
-
-        dfclosedbook = pd.DataFrame(self.orders_closed[:nc,:],
+    def _executedOrders(self):
+        self.orders = pd.DataFrame(self.orders_closed[:self.nc,:],
                                 columns=self.obookdict.keys())
-        dfclosedbook.dropna(inplace=True)
-        return money, dfclosedbook
+        self.orders.dropna(inplace=True)
+
+    def setupScenarios(self, size, verbose=True):
+        """
+        Calculate maximum number of scenario simulations based on current data
+        and scenario `size` in minutes.
+        """
+        glast = self.predictions[-1, 1] - size + 1 # last possible int time to have the last scenario
+        # its index would be a search for a value less or equal it (in the array reversed)
+        # the last inde is the size minus that index
+        ilast = len(self.predictions)-engine.argnextLE(self.predictions[::-1, 1], 0, glast) + 1
+        # so ilast is the number of possible simulations with size nwindow (in time)
+        self.nscenarios = ilast
+        if verbose:
+            print('number of possible scenarios', self.nscenarios)
+        return self.nscenarios
+
+    # def runScenarios(self):
+    #     for i in np.random.randint(0, ilast, size=nsize))
+
+    def Scenario(self, begi, simperiodm, capital=50000, maxorders=10, norderperdt=1, perdt=60,
+                minprofit=100., expected_var=0.01, exp_time=90, verbose=True):
+        """
+        begi : time integer index defining the 'begin' of this scenario (max: len(self.dfpredictions))
+        simperiodm : simulation size in minutes for this scenario (max: < len(self.dfpredictions))
+        """
+        endi=int(self.end.total_seconds()/60) # how many minutes after to close all orders
+        predictions = self.predictions
+        input_predictions = predictions[predictions[:,1] < predictions[begi,1]+simperiodm-1, :][begi:].copy()
+        input_prices = self.prices[predictions[begi, 1]:predictions[begi, 1]+simperiodm+1+endi].copy()
+        # allignt start day and end day to zero
+        input_prices[:, 2:] = np.clip(input_prices[:,2:]-predictions[begi,1], 0, np.inf)
+        input_predictions[:, 1] -= predictions[begi, 1]
+
+        money, nc, no = engine.Simulator(input_prices, input_predictions,
+                     self.orders_open, self.orders_closed, capital, maxorders,
+              norderperdt, perdt, minprofit, expected_var, exp_time)
+        self.money = money
+        self.nc = nc
+        self.no = no
+        self._executedOrders()
+
+    def Simulate(self, capital=50000, maxorders=10, norderperdt=1, perdt=60,
+                minprofit=100., expected_var=0.01, exp_time=90, verbose=True):
+        money, nc, no = engine.Simulator(self.prices, self.predictions,
+                            self.orders_open,self.orders_closed, capital, maxorders,
+                     norderperdt, perdt, minprofit, expected_var, exp_time)
+        self.money = money
+        self.nc = nc
+        self.no = no
+        self._executedOrders()
+
+    def avgAccuracy(self):
+        """
+        last simulation average accuracy of executed orders (decimal percentage)
+        TODO: do better than just > 0 SS code?
+        """
+        return len(self.orders[self.orders.SS > 0])/len(self.orders)
+
+    def drawDown(self):
+        """
+        max negative variation of money during simulation (decimal percentage)
+        equivalent to np.percentile(..., 0)...
+        """
+        return np.min(self.money)/self.money[0]-1.
+
+    def basePercentis(self):
+        """P0, P10, 50 of money variation during simulation (decimal percentage)"""
+        return np.percentile(self.money/self.money[0], [0, 10, 50])-1.

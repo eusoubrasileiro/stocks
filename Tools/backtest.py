@@ -156,6 +156,9 @@ class strategyTester(object):
         last simulation average accuracy of executed orders (decimal percentage)
         TODO: do better than just > 0 SS code?
         """
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.nan
         return len(self.orders[self.orders.SS > 0])/len(self.orders)
 
     def drawDown(self):
@@ -163,8 +166,50 @@ class strategyTester(object):
         max negative variation of money during simulation (decimal percentage)
         equivalent to np.percentile(..., 0)...
         """
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.nan
         return np.min(self.money)/self.money[0]-1.
 
     def basePercentis(self):
         """P0, P10, 50 of money variation during simulation (decimal percentage)"""
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.zeros(3)*np.nan
         return np.percentile(self.money/self.money[0], [0, 10, 50])-1.
+
+    def sharp(self, return_free=0.01):
+        """
+        sharp ratio: (return- return-free)/stdev
+        return : return in percentage
+        return-free : risk free investment return (treasure bonds etc.)
+            depend on the simulation period (default: 0.01)
+        stdev : standard deviation money variation
+        sharp == 1 means same return than risk-free investment
+        sharp > 1 better than risk-free investment
+        sharp < 1 worse likewise
+        """
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.nan
+        sim_return = (self.money[-1]/self.money[0])
+        return (sim_return-return_free)/np.std(self.money, ddof=1)
+
+    def volatility(self):
+        """simple money sample stdev"""
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.nan
+        return np.std(self.money, ddof=1)
+
+    def sortino(self):
+        """
+        same as sharp but the denominator is only the downside
+        volatility. Negative side variance, will not punish for positive
+        swings, only for negative ones.
+        ... TOdo implement.
+        """
+        pass
+
+    def avgOrdersDay(self):
+        """average number of orders executed per day"""

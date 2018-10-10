@@ -8,7 +8,7 @@ May 2018. Started using code from Forex experiments focusing on Ibovespa stocks 
 4. Time for backtesting was too slow (altough I was using multithreading) so I decided to test Tensorflow aiming GPU boost.
 5. Wrote script ( DownloadRates.mq5 ) for downloading ibovespa stocks data using Metatrader 5 (1 minute time frame) and converting it to pandas dataframe ( meta5Ibov.py ).
 6. Tensorflow was fast but Pytorch was easier and cleaner so I moved ( torchNN.py ).
-7. Created a efficient fast backtesting engine backtesting.pyx (1 minute time-frame) in Cython (should be ported to numba?!) - checked against Metatrader 5 backtesting tool.
+7. Created a efficient fast backtesting engine backtesting.pyx (1 minute time-frame) in Cython - checked against Metatrader 5 backtesting tool.
 8. Results were promissing with 120 minutes time shift and local models using past 1 week data.
 9. Wrote ExpertAdvisor.mq5 . Backtesting inside Metatrader 5 results were increadible using predictions file. Also wrote daimonPredictor.py to create predictions to advisor in real time.
 10. When backtesting on Rico Hedge Demo Account found the biggest errors of all, predictions created by pytorch code were shift in time to the past 120 minutes. So results were wrong! Need to study a mathematical model that works (P1, P10, P50, acceptable) for prediction.
@@ -40,9 +40,13 @@ Lessons learned:
 - [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best? Prototype:  `What direction - Ema trend up-down.ipynb`.
   - [x] Ported backtestEngine to numba.  
   - [x] Created EstrategyTester class.  
-  - [x] Random Grid Search with parameters  `lag time`, `clip percentage (decision)` , `min. profit` , `expected. variation`.  
-  - [ ] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy of the NN Model.  
-
+  - [x] Random Grid Search with parameters  `lag time`, `clip percentage (decision)` , `min. profit` , `expected. variation`.   - [x] Uniform distributions for variables: lag=[60, 180], clip=[0.66, 0.96], var=[0.005, 0.025], minprofit=[70, 600]
+  - [x] Run ~2000 realizations with scenarios of 1 month, capital of 50k, 10 orders per day max., 2 orders per hours max.  
+  - [x] First evaluation variable to sort results : `eval=3*acc+2*p0+p10+p50+(1.-minprofit/max(minprofit))`  
+  - [x] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy for a NN Model.  Assuming adding 30% random directions, for example, corresponds to a model with a p50 of 70% of accuracy. Don't know how to approach it better.  
+  - [x] Had results for parameters but missed to save profit and average number of orders per day. Final parameters were producing too few predictions?
+  - [ ] Save variables: money[p0, p1, p50], accuracy, average orders per day, final profit, sortino?, sharp?
+  
 1.  Pytorch NN Local Models Assuming P50 56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models. Using a week to predict 90 minutes. Made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model just after the validation-set, simulating "future" data when on real-world use. Models were trainned, and a fine-tune on the model was done. Models were trained using all the samples available without a validation-set to supervise but for very few epochs. Idea is to displace the weights just a little bit using the most recent data available. Preliminar results suggests that's a promising methodology. To divide good from bad models (entry points) the best result found was using an 'average' of trainging and validation accuracies avg = np.sqrt(score0*score1) Parameters : [ntrain= 4 60 5 week, ntest = 90 1 30 hours, nacc = 90 1 30 hours, finetunning 3 epochs]. Final results were ~ : p0 0.70 p1 0.70 p10 0.76 p50 0.90 p90 0.95. for avg > 0.93/94 with 1.5% showing frequency on ~1600 simulations ~3.5 per day.  
 
 ### More Thoughts  

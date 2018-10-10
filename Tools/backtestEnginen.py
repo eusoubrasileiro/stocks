@@ -20,9 +20,11 @@ CP=6 # close price
 SS=7 # sucess status
 CT=8 # close time
 MB=9 # money back
+DY=10 # day identifier
+
 
 ordersbookdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
-                      "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9}
+                      "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9, "DY": 10}
 
 @njit(nogil=True, parallel=True)
 def Nstocks(enterprice, exgain,
@@ -65,7 +67,7 @@ def MoneyBack(enter_price, close_price,
 
 @njit(nogil=True, parallel=True)
 def ExecuteOrder(k, book, price, quantity, direction,
-            dgain, dstop, time, cost_order=12):
+            dgain, dstop, time, day, cost_order=12):
     """
     place order on book:book at position k
     return money spent
@@ -79,6 +81,7 @@ def ExecuteOrder(k, book, price, quantity, direction,
     # time order was placed, (should be datetime?)
     # no it can be just the index of the price on the rates array the "i"
     book[k, OT] = time
+    book[k, DY] = day # day identifier
 
     return quantity*price + cost_order
 
@@ -100,7 +103,7 @@ def CloseOrder(io, obook, irow, cbook,
     # money back (will be incremented)
     moneyback = MoneyBack(cbook[EP], cbook[CP],
                                 cbook[QT], cbook[DR])
-    cbook[MB] =  moneyback
+    cbook[MB] = moneyback
     # more money in the end than in the start
     # Status codes -2 stop, -1 stop time, 1 gain time, 2 gain
     if moneyback > cbook[EP]*cbook[QT]:
@@ -359,7 +362,7 @@ def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
             if quantity*enter_price < money:
                 moneyspent = ExecuteOrder(iro, book_orders_open,
                             enter_price, quantity, buy,
-                            expected_var*3, expected_var, i)
+                            expected_var*3, expected_var, i, iday_start)
                 iro +=1 # new entry on book
                 money -= moneyspent
                 norder_day += 1

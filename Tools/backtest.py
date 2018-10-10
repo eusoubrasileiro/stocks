@@ -36,6 +36,7 @@ class strategyTester(object):
         self.dfprices = dfprices[["H","L"]].copy() # worst case simulation M1
         self.dfpredictions = dfpredictions.copy()
         self.obookdict = engine.ordersbookdict
+        self.dictsize = len(engine.ordersbookdict)
         self.start = start
         self.end = end
         # simulation results
@@ -91,8 +92,8 @@ class strategyTester(object):
         """
         self.prices = self.dfprices.values.astype(np.float64)
         self.predictions = self.dfpredictions.values.astype(np.int32) # get array data only
-        self.orders_open = np.zeros((self.dfpredictions.shape[0], 10), order='C')*np.nan
-        self.orders_closed = np.zeros((self.dfpredictions.shape[0], 10), order='C')*np.nan
+        self.orders_open = np.zeros((self.dfpredictions.shape[0], self.dictsize), order='C')*np.nan
+        self.orders_closed = np.zeros((self.dfpredictions.shape[0], self.dictsize), order='C')*np.nan
         # *nan to make it easy to read after
         #return arrayprices, arraypredictions
 
@@ -132,7 +133,8 @@ class strategyTester(object):
         # allignt start day and end day to zero
         input_prices[:, 2:] = np.clip(input_prices[:,2:]-predictions[begi,1], 0, np.inf)
         input_predictions[:, 1] -= predictions[begi, 1]
-
+        self.exprices = input_prices # latest used/run
+        self.expredictions = input_predictions
         money, nc, no = engine.Simulator(input_prices, input_predictions,
                      self.orders_open, self.orders_closed, capital, maxorders,
               norderperdt, perdt, minprofit, expected_var, exp_time)
@@ -143,6 +145,8 @@ class strategyTester(object):
 
     def Simulate(self, capital=50000, maxorders=10, norderperdt=1, perdt=60,
                 minprofit=100., expected_var=0.01, exp_time=90, verbose=True):
+        self.exprices = self.prices # latest used/run
+        self.expredictions = self.predictions
         money, nc, no = engine.Simulator(self.prices, self.predictions,
                             self.orders_open,self.orders_closed, capital, maxorders,
                      norderperdt, perdt, minprofit, expected_var, exp_time)
@@ -178,29 +182,34 @@ class strategyTester(object):
             return np.zeros(3)*np.nan
         return np.percentile(self.money/self.money[0], [0, 10, 50])-1.
 
-    def sharp(self, return_free=0.01):
+    def sharp(self, risk_free=None):
         """
         sharp ratio: (return- return-free)/stdev
         return : return in percentage
-        return-free : risk free investment return (treasure bonds etc.)
-            depend on the simulation period (default: 0.01)
+        risk_free : risk free investment return (treasure bonds etc.)
+            depend on the simulation period (default: 1% month)
         stdev : standard deviation money variation
-        sharp == 1 means same return than risk-free investment
         sharp > 1 better than risk-free investment
         sharp < 1 worse likewise
         """
         if len(self.orders) == 0:
             print('there are no executed orders')
             return np.nan
+        # based on daily interest rate 0.75 month SELIC
+        # corrected to business days 22 per month
+        if risk_free is None:
+            days = self.days()
+            risk_free = 1.00034**days
         sim_return = (self.money[-1]/self.money[0])
-        return (sim_return-return_free)/np.std(self.money, ddof=1)
+        return (sim_return-risk_free)/self.volatility()
 
     def volatility(self):
-        """simple money sample stdev"""
+        """simple money volatility stdev"""
         if len(self.orders) == 0:
             print('there are no executed orders')
             return np.nan
-        return np.std(self.money, ddof=1)
+        var = strategytester.money[1:]/strategytester.money[:-1]
+        return np.std(var, ddof=1)
 
     def sortino(self):
         """
@@ -211,5 +220,15 @@ class strategyTester(object):
         """
         pass
 
+    def days(self):
+        """number of days on last simulation"""
+        ndays = len(np.unique(self.exprices[:,3])) # based on istart
+        return ndays
+
     def avgOrdersDay(self):
-        """average number of orders executed per day"""
+        """average number of orders executed per day on last simulation run"""
+        if hasattr(self, 'exprices'):
+            return len(self.orders)/self.days()
+        else:
+            print('Did not run any simulation yet')
+            return 0.

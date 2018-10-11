@@ -33,10 +33,10 @@ Lessons learned:
 - [x] Wrote draft of cross-validation function using sequential-folds.  
 - [ ] Backtest 6 months predictions of global model.  
 - [ ] Try to tune backtesting parameters like stop time etc.   
-- [ ] Is P50:56% accuracy enough for profiting?  
+- [x] Is P50:56% accuracy enough for profiting? Not with the actual set-up of trade.
 - [ ] What accuracy pdf should my model produce so I can profit?  
 
-1. Too many degrees of freedom, too many variables to explore. Random-search (gut instinct is random?) has proved to be a good tool for parameter optimization. Furthermore I have no other way to decide which path is better. Vai na raça!  
+3. Too many degrees of freedom, too many variables to explore. Random-search (gut instinct is random?) has proved to be a good tool for parameter optimization. Furthermore I have no other way to decide which path is better. Vai na raça!  
 - [ ] Sensibility Analyses. What direction take based on moving average trend. What performs best? Prototype:  `What direction - Ema trend up-down.ipynb`.
   - [x] Ported backtestEngine to numba.  
   - [x] Created EstrategyTester class.  
@@ -46,8 +46,9 @@ Lessons learned:
   - [x] First evaluation variable to sort results : `eval=3*acc+2*p0+p10+p50+(1.-minprofit/max(minprofit))`  
   - [x] Mix random noise with correct moving average trend direction to analyze what's the needed accuracy for a NN Model.    Assuming adding 30% random directions, for example, corresponds to a model with a p50 of 70% of accuracy. Don't know how to approach it better.  
   - [x] Had results for parameters but missed to save profit and average number of orders per day. Final parameters were producing too few predictions?
-  - [ ] Save variables: money[p0, p1, p50], accuracy, average orders per day, final profit, sortino?, sharp?
-  - [ ] Implement better reward-to-variability ratio than sharp. To compare to risk-free, like CDI/SELIC, investment. 
+  - [x] Save variables: money[p0, p1, p50], accuracy, average orders per day, final profit, sortino-adapted `sortina`
+  - [x] Implement better reward-to-variability ratio than sharp. To compare to risk-free, like CDI/SELIC, investment. Linear sortino adapted `sortina`.
+
 
 1.  Pytorch NN Local Models Assuming P50 56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models. Using a week to predict 90 minutes. Made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model just after the validation-set, simulating "future" data when on real-world use. Models were trainned, and a fine-tune on the model was done. Models were trained using all the samples available without a validation-set to supervise but for very few epochs. Idea is to displace the weights just a little bit using the most recent data available. Preliminar results suggests that's a promising methodology. To divide good from bad models (entry points) the best result found was using an 'average' of trainging and validation accuracies avg = np.sqrt(score0*score1) Parameters : [ntrain= 4 60 5 week, ntest = 90 1 30 hours, nacc = 90 1 30 hours, finetunning 3 epochs]. Final results were ~ : p0 0.70 p1 0.70 p10 0.76 p50 0.90 p90 0.95. for avg > 0.93/94 with 1.5% showing frequency on ~1600 simulations ~3.5 per day.  
 
@@ -57,3 +58,9 @@ Lessons learned:
 - Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy on validation-set it is possible to have low accuracy on training due early stopping or randomness.  
 - [ ] Hyperperameter random? GridSearchCV for number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs for start fix 90 minutes for accuracy. That will guide less overfiting and too many parameters on model and others. Fundamental!  
 - [x] Create method fineTune to train the model without validation-set and early-stop control.  
+- [ ] Maybe changing how orders are placed, stop/loss, reduction, move stop/loss up, could improve accuracy.
+
+4. Risk, leverage and number of stocks to buy/sell. Quoting `Quora` answer about `How-do-I-reduce-losses-in-day-trading-of-stocks`.
+> Avoid excessive leverage. Leverage may be important when day trading to maximize gains, but not in excess, you must learn about position sizing. Don’t risk more than 2% (some say 1%, up to you) of your equity on a single trade. For example, if you have an equity of 100k, then 2% risk would be 2,000. Now if you're buying a stock worth Rs. 100 and your stop loss is Rs.99, then your risk per share is Rs. 1, divide 2000 by 1, which is 2000, the number of shares you can buy at most.
+
+Actual formula for number of stocks already uses risk-appetite in the form of minimal profit. The expected_var is the average volatility expected to happen. `risk-appetite = MinP/(capital*risk-reward))` ignoring taxes/costs. Default risk-appetite for a 50k capital is 2% per order?, `MinProfit=300`. How much you accept to lose if an order fails.

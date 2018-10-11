@@ -5,12 +5,29 @@ import pandas as pd
 import numpy as np
 import struct
 import datetime
+import seaborn as sns
+from numba import jit, njit, prange
+import talib as ta
 from Tools.util import progressbar
 from Tools import prepareData, torchNN, torchCV
 from Tools import meta5Ibov
-import seaborn as sns
-import talib as ta
 import Tools.backtestEnginen as engine
+
+@njit(nogil=True, parallel=True)
+def _sortina(money, risk_free):
+    """reward-to-variability ratio fast sortina numba"""
+    minutes = len(money) #
+    freemoney = np.linspace(1., risk_free, minutes) # lin aprox. risk free
+    swings = money - freemoney # variation based on a risk-free investment
+    mean = 0.
+    nswings = 1
+    for i in range(len(swings)): # punish negative swings only
+        if swings[i] < 0:
+            mean += -swings[i]
+            nswings += 1
+    mean /= nswings # average of negative swings
+    excessreturn = money[-1]/money[0]-risk_free
+    return excessreturn/(1+mean)
 
 class strategyTester(object):
     """
@@ -121,7 +138,7 @@ class strategyTester(object):
     #     for i in np.random.randint(0, ilast, size=nsize))
 
     def Scenario(self, begi, simperiodm, capital=50000, maxorders=10, norderperdt=1, perdt=60,
-                minprofit=100., expected_var=0.01, exp_time=90, verbose=True):
+                minprofit=100., expected_var=0.01, exp_time=90, rwr=3., verbose=True):
         """
         begi : time integer index defining the 'begin' of this scenario (max: len(self.dfpredictions))
         simperiodm : simulation size in minutes for this scenario (max: < len(self.dfpredictions))
@@ -137,19 +154,19 @@ class strategyTester(object):
         self.expredictions = input_predictions
         money, nc, no = engine.Simulator(input_prices, input_predictions,
                      self.orders_open, self.orders_closed, capital, maxorders,
-              norderperdt, perdt, minprofit, expected_var, exp_time)
+              norderperdt, perdt, minprofit, expected_var, exp_time, rwr)
         self.money = money
         self.nc = nc
         self.no = no
         self._executedOrders()
 
     def Simulate(self, capital=50000, maxorders=10, norderperdt=1, perdt=60,
-                minprofit=100., expected_var=0.01, exp_time=90, verbose=True):
+                minprofit=100., expected_var=0.01, exp_time=90, rwr=3., verbose=True):
         self.exprices = self.prices # latest used/run
         self.expredictions = self.predictions
         money, nc, no = engine.Simulator(self.prices, self.predictions,
                             self.orders_open,self.orders_closed, capital, maxorders,
-                     norderperdt, perdt, minprofit, expected_var, exp_time)
+                     norderperdt, perdt, minprofit, expected_var, exp_time, rwr)
         self.money = money
         self.nc = nc
         self.no = no
@@ -175,33 +192,18 @@ class strategyTester(object):
             return np.nan
         return np.min(self.money)/self.money[0]-1.
 
+    def profit(self):
+        """profit in percentage based on initial capital"""
+        if len(self.money) > 0:
+            return self.money[-1]/self.money[0]-1.
+        return np.nan
+
     def basePercentis(self):
         """P0, P10, 50 of money variation during simulation (decimal percentage)"""
         if len(self.orders) == 0:
             print('there are no executed orders')
             return np.zeros(3)*np.nan
         return np.percentile(self.money/self.money[0], [0, 10, 50])-1.
-
-    def sharp(self, risk_free=None):
-        """
-        sharp ratio: (return- return-free)/stdev
-        return : return in percentage
-        risk_free : risk free investment return (treasure bonds etc.)
-            depend on the simulation period (default: 1% month)
-        stdev : standard deviation money variation
-        sharp > 1 better than risk-free investment
-        sharp < 1 worse likewise
-        """
-        if len(self.orders) == 0:
-            print('there are no executed orders')
-            return np.nan
-        # based on daily interest rate 0.75 month SELIC
-        # corrected to business days 22 per month
-        if risk_free is None:
-            days = self.days()
-            risk_free = 1.00034**days
-        sim_return = (self.money[-1]/self.money[0])
-        return (sim_return-risk_free)/self.volatility()
 
     def volatility(self):
         """simple money volatility stdev"""
@@ -211,18 +213,26 @@ class strategyTester(object):
         var = strategytester.money[1:]/strategytester.money[:-1]
         return np.std(var, ddof=1)
 
-    def sortino(self):
+    def sortina(self, risk_free=None):
         """
-        same as sharp but the denominator is only the downside
-        volatility. Negative side variance, will not punish for positive
-        swings, only for negative ones.
-        ... TOdo implement.
+        reward-to-variability ratio
+        adapted sortino ratio with linear aproximation for fixed compound interest
+        risk_free : risk free investment return (treasure bonds etc.)
+            depend on the simulation period (default: daily SELIC)
         """
-        pass
+        if len(self.orders) == 0:
+            print('there are no executed orders')
+            return np.nan
+        # based on daily interest rate 0.75 month SELIC
+        # corrected to business days 22 per month
+        if risk_free is None:
+            days = self.days()
+            risk_free = 1.00034**days
+        return _sortina(self.money, risk_free)
 
     def days(self):
         """number of days on last simulation"""
-        ndays = len(np.unique(self.exprices[:,3])) # based on istart
+        ndays = len(np.unique(self.exprices[:,3])) # based on unique istart
         return ndays
 
     def avgOrdersDay(self):

@@ -37,32 +37,33 @@ Lessons learned:
 - [ ] What accuracy pdf should my model produce so I can profit?  
 
 3. Too many degrees of freedom, too many variables to explore. Random-search (gut instinct is random?) has proved to be a good tool for parameter optimization. Furthermore I have no other way to decide which path is better. Vai na raça!  
-- [ ] Sensibility Analyses and Optimal Parameters for lagged EMA Binary Strategy. 
+- [ ] Sensibility Analyses and Optimal Parameters for lagged EMA Binary Strategy.
     - Direction decision is based on the majority (sum) of the future predicted minutes.  
     - What is the sensibility to wrong predictions for this EMA trend strategy?  
     - What accuracy should a forecast model have to use this strategy?  
     - What are the optimal parameters for using this strategy?  
     - Prototype:  `What direction - Ema trend up-down.ipynb`.  
-  - [x] Ported backtestEngine to numba. Easier and cleaner. 
+  - [x] Ported backtestEngine to numba. Easier and cleaner.
   - [x] Created EstrategyTester class.  
   - [x] Random Grid Search for optimal parameters  `lag time`, `clip percentage (decision)` , `min. profit` , `expected. variation`
-      - [x] Run ~2000 simulations with scenarios of 1 month, capital of 50k, 10 orders per day max., 2 orders per hours max.   
+      - [x] Run ~2000 simulations with scenarios of 1 month, capital of 50k, 10 orders per day max., 2 orders per hours max. Assuming 3% frequency appearance of entry points by the forecast model.
       - [x] Varying variables have uniform distributions: lag=[60, 180], clip=[0.66, 0.96], var=[0.005, 0.025], minprofit=[70, 600]  
-      - [x] Saved metric variables: money[p0, p1, p50], accuracy, 
+      - [x] Saved metric variables: money[p0, p1, p50], accuracy,
       - [x] First evaluation variable to sort results: `eval=3*acc+2*p0+p10+p50+(1.-minprofit/max(minprofit))`  
       - [x] Mixed random noise with correct binary direction to analyze what's the needed accuracy for a NN Model.
           - Assuming adding 30% random (wrong) directions, for example, corresponds to a model with a p50 of 70% of accuracy. Don't know how to approach it better.        
       - [x] Discussion. I missed to save profit and average number of orders per day. Chosen parameters were producing too few predictions per day and low profit. Evaluation variable used doesn't account for profit. Not considering effect of wrong predictions during scenarios.
   - [x] Implement better reward-to-variability ratio than sharp and suitable for algorithm evaluation in month, week etc scenario. To compare to risk-free, like CDI/SELIC, investment. Sortino adapted to linear interest rate growth `sortina` with numba.
-  - [x] Changed way expected variation (average volatility expected) is used to make stop/loss and stop/gain. Included reward-to-risk as a parameter in the `Simulator` default `rwr=3`, `stop=exvar/rwr`, `gain=exvar`. 
-  - [x] Random Grid Search for optimal parameters `lag time`, `clip percentage (decision)` , `min. profit` , `expected. variation`, `reward-to-risk-ratio`, 
+  - [x] Changed way expected variation (average volatility expected) is used to make stop/loss and stop/gain. Included reward-to-risk as a parameter in the `Simulator` default `rwr=3`, `stop=exvar/rwr`, `gain=exvar`.
+  - [x] Random Grid Search for optimal parameters `lag time`, `clip percentage (decision)` , `min. profit` , `expected. variation`, `reward-to-risk-ratio`,
       - [x] Run ~6000 simulations same as above.
-      - [x] Additional variables varying: rwr=[2, 5], rand=[0.05, 0.40] (wrong predictions), 
+      - [x] Additional variables varying: rwr=[2, 7], rand=[0.05, 0.40] (wrong predictions). Changed exvar=[0.01, 0.07], minprofit=[300, 4300]  
       - [x] Additional metric variables saved: final profit, average orders per day, sortino-adapted `sortina`
-      - [x] Evaluation based only on bucketized `sortina` variable. Using seaborn factorplot due very spreaded variable space. 
-      - [x] Tunned parameters. clip < 0.8; mprof >> (as high as possible); exvar > 0.05; lag < 90; rand < 20% or NN acc > 80%. Choosen: clip 0.73, lag 71, exvar 0.05, mprof 1800. Ignored reward-risk-ratio not possible to find a best. 
+      - [x] Evaluation based only on bucketized `sortina` variable. Using seaborn factorplot due very spreaded variable space.
+      - [x] Tunned parameters. clip < 0.8; mprof >> (as high as possible); exvar > 0.05; lag < 90; rand < 20% or NN acc > 80%. Choosen: clip 0.73, lag 71, exvar 0.05, mprof 1800. Ignored reward-risk-ratio not possible to find a best.
+          - Too high lag values gave bad profit. Too high: mprof made a lot of nans, not enough money to make an order; clip, not sufficient entry points; lag, not sufficient entry points;
       - [x] Discussion. If you observe that in all cases simulated 60%++ of data is correct or more, it is almost abvious that the more money (`mprof`) or greater tolerance you have on stop loss (`exvar`) the more money you will make. Reward-risk-ratio can be ignored since the backtest engine probably closed the vast majority of orders by time. Interesting that 1800 gives an ~ 1.6% risk appetite for 50k capital.
-      - [x] Screening better over these parameters including even 40% of wrong directions proved still very profitable. 
+      - [x] Screening better over these parameters including even 40% of wrong directions (90k scenarios) proved very profitable. Percentiles of profit: p0: 0.03, p1: 0.04, p10: 0.067, p50: 0.134118. Always profitable exactly what we want!
 
 1.  Pytorch NN Local Models Assuming P50 56% validation accuracy isn't enough for proffiting. Did some tests moving from Global to Local models. Using a week to predict 90 minutes. Made some cross-validations using the draft code above, but added additional samples with size of prediction vector (90 minutes) to check accuracy of model just after the validation-set, simulating "future" data when on real-world use. Models were trainned, and a fine-tune on the model was done. Models were trained using all the samples available without a validation-set to supervise but for very few epochs. Idea is to displace the weights just a little bit using the most recent data available. Preliminar results suggests that's a promising methodology. To divide good from bad models (entry points) the best result found was using an 'average' of trainging and validation accuracies avg = np.sqrt(score0*score1) Parameters : [ntrain= 4 60 5 week, ntest = 90 1 30 hours, nacc = 90 1 30 hours, finetunning 3 epochs]. Final results were ~ : p0 0.70 p1 0.70 p10 0.76 p50 0.90 p90 0.95. for avg > 0.93/94 with 1.5% showing frequency on ~1600 simulations ~3.5 per day.  
 
@@ -79,5 +80,5 @@ Lessons learned:
 
 Actual formula for number of stocks to buy already uses risk-appetite in the form of minimal profit. The expected_var is the average volatility expected to happen. `risk-appetite = MinP/(capital*risk-reward))` ignoring taxes/costs. Default risk-appetite for a 50k capital is 0.2% per order `MinProfit=300`. This default seams to be really low. Maybe that is the reason for having so low profit even when accuracy is above 50% on many past experiments. I've seen algorithms with accuracy reported on Infomoney of 48% or less being profitable by having a 3:1 or more risk-to-reward rate.  
 
-- [ ] Write test case for `Simulator` 
-- [ ] Test `Simulator` sensibility to risk-appetite and expected-variation. 
+- [ ] Write test case for `Simulator` using some of the EMA trend on real data.
+- [ ] Analyze `Simulator` sensibility to risk-appetite, reward-risk-ratio and expected-variation.

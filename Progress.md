@@ -16,7 +16,7 @@ May 2018. Started using code from Forex experiments focusing on Ibovespa stocks 
 September 2018. Starting again.
 
 Lessons learned:
-- Progress Report.
+- Progress Report: Data science somewhere stated that 20% time should be used documenting. 
 - Write good unit tests, specially testing time of prediction. Use Python 3 API.
 - Don't spend much time with prototype notebooks. That means you are losing focus and objective. Instead write python modules from notebooks using the knowledge learned.
 
@@ -71,14 +71,16 @@ Lessons learned:
 
 - Generalization of the general parameters for the Model can be done by cross-validation on sequential folds.  
 - Training accuracy can also be used to divide which predictions are best. Although you can have a high accuracy on validation-set it is possible to have low accuracy on training due early stopping or randomness.  
+- [ ] Calculate entropy of data to assist division of bad and good predictions. Low entropy is bad? 
 - [ ] Hyperperameter random? GridSearchCV for number layers, train size, train-score ratio, fine-tune:nepochs, classifier:nepochs for start fix 90 minutes for accuracy. That will guide less overfiting and too many parameters on model and others. Fundamental!  
 - [x] Create method fineTune to train the model without validation-set and early-stop control.  
 - [ ] Maybe changing how orders are placed, stop/loss, reduction, move stop/loss up, could improve accuracy.
 
+
 4. Risk, leverage and number of stocks to buy/sell. Quoting `Quora` answer about `How-do-I-reduce-losses-in-day-trading-of-stocks`.
 > Avoid excessive leverage. Leverage may be important when day trading to maximize gains, but not in excess, you must learn about position sizing. Don’t risk more than 2% (some say 1%, up to you) of your equity on a single trade. For example, if you have an equity of 100k, then 2% risk would be 2,000. Now if you're buying a stock worth Rs. 100 and your stop loss is Rs.99, then your risk per share is Rs. 1, divide 2000 by 1, which is 2000, the number of shares you can buy at most.
 
-Actual formula for number of stocks to buy already uses risk-appetite in the form of minimal profit. The expected_var is the average volatility expected to happen. `risk-appetite = MinP/(capital*risk-reward))` ignoring taxes/costs. Default risk-appetite for a 50k capital is 0.2% per order `MinProfit=300`. This default seams to be really low. Maybe that is the reason for having so low profit even when accuracy is above 50% on many past experiments. I've seen algorithms with accuracy reported on Infomoney of 48% or less being profitable by having a 3:1 or more risk-to-reward rate.  
+-[ ] The formula for number of stocks to buy already used risk-appetite in the form of minimal profit. But the default was really low 0.2%. Maybe that is the reason for having so low profit even when accuracy was above 50% on many past experiments. I've seen algorithms with accuracy reported on Infomoney of 48% or less being profitable by having a 3:1 or more risk-to-reward rate. Also if could not achieve the defined minprofit order wasn't made. Change code to use a risk-appetite `riskap` in decimal. Low volatility problem should be dealt separately. 
 
 - [ ] Write test case for `Simulator` using some of the EMA trend on real data.
 - [ ] Analyze `Simulator` sensibility to risk-appetite, reward-risk-ratio and expected-variation.

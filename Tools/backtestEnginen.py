@@ -26,10 +26,10 @@ DY=10 # day identifier
 ordersbookdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
                       "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9, "DY": 10}
 
-@njit(nogil=True, parallel=True)
-def Nstocks(enterprice, dstop, capital, riskap=0.015):
+@njit(nogil=True)
+def MaxStocks(enterprice, dstop, capital, riskap=0.015):
     """
-    Needed number of stocks based on:
+    Maximum number number of stocks to buy/sell based on:
      - Enter Price
      - Stop variation in percent decimal
      - Capital available to support this operation
@@ -127,7 +127,6 @@ def tryCloseOrder(io, obook, irow, cbook,
     """
     close_price = 0 # different from zero only when
     # it will be closed
-
     #if direction: # is a buy order
     if obook[irow, DR] == 1: # buy order
         ## close with sucess or close with failure
@@ -153,9 +152,7 @@ def tryCloseOrders(io, obook, ic, cbook,
     io, ic are indexes of the last entry on each book
     """
     money=0 # money increment due to all orders
-    sucess=0
     status=0
-
     # closed in this loop
     for i in range(io):
         status = tryCloseOrder(io, obook, i, cbook[ic, :], time, high, low)
@@ -257,9 +254,9 @@ def norderslastHour(time, io, obook,
     return norders
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True)
 def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
-               money=60000., maxorders=12, norderperdt=3, perdt=15,
+               capital=60000., maxorders=12, norderperdt=3, perdt=15,
                minprofit=300., expected_var=0.008, exp_time=2*60,
                rwr=3., riskap=0.015):
     """
@@ -279,8 +276,9 @@ def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
         risk-appetite percentage of money you risk to loose per order
     """
     n = rates.shape[0] # minute-by-minute prices
-    dstop = expected_var # stop variation
-    dgain = dstop*rwr # gain variation using reward-to-risk ratio
+    dgain = expected_var # gain variation
+    dstop = dgain/rwr # stop variation using reward-to-risk ratio
+    money = capital # initial money
     norder_day=0 # number of orders already executed on this day
     # system variables
     # keeep track of money evolution
@@ -324,9 +322,13 @@ def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
             buy = guess_book[iguess, 0]
             # enter price or H or L (allways worst case scenario)
             enter_price = H if buy==1 else L
-            #  number of stocks based enter price, expected gain variance etc.
-            quantity = Nstocks(enter_price, dstop, capital, riskap)
-            if quantity*enter_price < money:   # is there money to buy?
+            # calculate how much to buy spreaded over max orders per day
+            acmoney = actualMoney(iro, book_orders_open, money, H, L)
+            quantity = int((acmoney/(maxorders*enter_price)/100))*100 # 100's
+            if quantity > 0: # has money to spend
+                #  max number of stocks based on risk appetite
+                maxstocks = MaxStocks(enter_price, dstop, acmoney, riskap)
+                quantity = maxstocks  if quantity > maxstocks else  quantity
                 moneyspent = ExecuteOrder(iro, book_orders_open,
                             enter_price, quantity, buy,
                             dgain, dstop, i, iday_start)

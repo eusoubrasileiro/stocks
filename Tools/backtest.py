@@ -1,16 +1,8 @@
-from matplotlib import pyplot as plt
-import os
-import sys
 import pandas as pd
 import numpy as np
-import struct
 import datetime
-import seaborn as sns
 from numba import jit, njit, prange
-import talib as ta
 from Tools.util import progressbar
-from Tools import prepareData, torchNN, torchCV
-from Tools import meta5Ibov
 import Tools.backtestEnginen as engine
 
 @njit(nogil=True, parallel=True)
@@ -37,6 +29,7 @@ class strategyTester(object):
         Some examples:
         - Buy on minute High and sell on minute Low
         - take-profit only in minute Low if direction is buy
+    Uses expire time for an order.
     """
     def __init__(self, dfprices, dfpredictions, start=datetime.timedelta(days=1),
                         end=datetime.timedelta(hours=2)):
@@ -138,7 +131,8 @@ class strategyTester(object):
     #     for i in np.random.randint(0, ilast, size=nsize))
 
     def Scenario(self, begi, simperiodm, capital=50000, maxorders=10, norderperdt=1, perdt=60,
-                minprofit=100., expected_var=0.01, exp_time=90, rwr=3., verbose=True):
+                minprofit=100., expected_var=0.01, exp_time=90,
+                rwr=3., riskap=0.015, verbose=True):
         """
         begi : time integer index defining the 'begin' of this scenario (max: len(self.dfpredictions))
         simperiodm : simulation size in minutes for this scenario (max: < len(self.dfpredictions))
@@ -154,19 +148,20 @@ class strategyTester(object):
         self.expredictions = input_predictions
         money, nc, no = engine.Simulator(input_prices, input_predictions,
                      self.orders_open, self.orders_closed, capital, maxorders,
-              norderperdt, perdt, minprofit, expected_var, exp_time, rwr)
+              norderperdt, perdt, minprofit, expected_var, exp_time, rwr, riskap)
         self.money = money
         self.nc = nc
         self.no = no
         self._executedOrders()
 
     def Simulate(self, capital=50000, maxorders=10, norderperdt=1, perdt=60,
-                minprofit=100., expected_var=0.01, exp_time=90, rwr=3., verbose=True):
+                minprofit=100., expected_var=0.01, exp_time=90,
+                rwr=3., riskap=0.015, verbose=True):
         self.exprices = self.prices # latest used/run
         self.expredictions = self.predictions
         money, nc, no = engine.Simulator(self.prices, self.predictions,
                             self.orders_open,self.orders_closed, capital, maxorders,
-                     norderperdt, perdt, minprofit, expected_var, exp_time, rwr)
+                     norderperdt, perdt, minprofit, expected_var, exp_time, rwr, riskap)
         self.money = money
         self.nc = nc
         self.no = no

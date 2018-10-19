@@ -27,26 +27,20 @@ ordersbookdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
                       "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9, "DY": 10}
 
 @njit(nogil=True, parallel=True)
-def Nstocks(enterprice, exgain,
-            minp=300., costorder=15., ir=0.2):
+def Nstocks(enterprice, dstop, capital, riskap=0.015):
     """
     Needed number of stocks based on:
-
-     - Minimal acceptable profit $MinP$ (in BRL)
-     - Cost per order $CostOrder$   (in BRL)
-     - Taxes: $IR$ imposto de renda  (in 0-1 fraction)
-     - Enter Price $EnterPrice$
-     - Expected gain on the operation $ExGain$ (reasonable)  (in 0-1 fraction)
-
-    $$ N_{stocks} \ge \frac{MinP+2 \ CostOrder}{(1-IR)\ EnterPrice \ ExGain} $$
-
+     - Enter Price
+     - Stop variation in percent decimal
+     - Capital available to support this operation
+     - Risk-Apettite in percent decimal.
+          How much you accept to loose of you capital.
+          Default 1.5%
     Be reminded that Number of Stocks MUST BE in 100s.
-    This guarantees a `MinP` per order
     """
-    # round stocks to 100's
-    ceil = int(int((minp+costorder*2)/((1.-ir)*enterprice*exgain))/100)
-    # numpy ceil avoid using it for perfomance
-    return ceil*100
+    loss = dstop*enterprice # loss per share
+    riskap *= capital # available to loose
+    return int((riskap/loss)/100)*100 # round stocks to 100's
 
 @njit(nogil=True, parallel=True)
 def MoneyBack(enter_price, close_price,
@@ -266,7 +260,8 @@ def norderslastHour(time, io, obook,
 @njit(nogil=True, parallel=True)
 def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
                money=60000., maxorders=12, norderperdt=3, perdt=15,
-               minprofit=300., expected_var=0.008, exp_time=2*60, rwr=3.):
+               minprofit=300., expected_var=0.008, exp_time=2*60,
+               rwr=3., riskap=0.015):
     """
     guess_book contains : {time index, direction, index endday, index startday}
     array of orders to be placed at {time index},
@@ -275,12 +270,17 @@ def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
     syncronized and included in the array  of rates
 
     rwr:
-        risk-reward-ratio default 3 (3:1) gain/stop ratio
+        reward-risk-ratio default 3 (3:1) gain/stop ratio
         stop is expected_var/rwr and gain is expected_var
     expected_var :
         expected variation in decimal percent is the expected average volatility
+
+    riskap:
+        risk-appetite percentage of money you risk to loose per order
     """
     n = rates.shape[0] # minute-by-minute prices
+    dstop = expected_var # stop variation
+    dgain = dstop*rwr # gain variation using reward-to-risk ratio
     norder_day=0 # number of orders already executed on this day
     # system variables
     # keeep track of money evolution
@@ -325,11 +325,11 @@ def Simulator(rates, guess_book, book_orders_open, book_orders_closed,
             # enter price or H or L (allways worst case scenario)
             enter_price = H if buy==1 else L
             #  number of stocks based enter price, expected gain variance etc.
-            quantity = Nstocks(enter_price, exgain=expected_var, minp=minprofit)
+            quantity = Nstocks(enter_price, dstop, capital, riskap)
             if quantity*enter_price < money:   # is there money to buy?
                 moneyspent = ExecuteOrder(iro, book_orders_open,
                             enter_price, quantity, buy,
-                            expected_var, expected_var/rwr, i, iday_start)
+                            dgain, dstop, i, iday_start)
                 iro +=1 # new entry on book
                 money -= moneyspent
                 norder_day += 1

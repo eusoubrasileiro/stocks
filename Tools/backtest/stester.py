@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 from numba import jit, njit, prange
 from Tools.util import progressbar
-import Tools.backtestEnginen as engine
+from Tools.backtest import Engine as engine
 
 @njit(nogil=True, parallel=True)
 def _sortina(money, risk_free):

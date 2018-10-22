@@ -13,20 +13,25 @@ May 2018. Started using code from Forex experiments focusing on Ibovespa stocks 
 9. Wrote ExpertAdvisor.mq5 . Backtesting inside Metatrader 5 results were increadible using predictions file. Also wrote daimonPredictor.py to create predictions to advisor in real time.
 10. When backtesting on Rico Hedge Demo Account found the biggest errors of all, predictions created by pytorch code were shift in time to the past 120 minutes. So results were wrong! Need to study a mathematical model that works (P1, P10, P50, acceptable) for prediction.
 
-September 2018. Starting again.
+**September 2018. Starting again.**
 
 Lessons learned:
 - Progress Report: Data science somewhere stated that 20% time should be used documenting.
 - Write good unit tests, specially testing time of prediction. Use Python 3 API.
 - Don't spend much time with prototype notebooks. That means you are losing focus and objective. Instead write python modules from notebooks using the knowledge learned.
 
-#### Table of Definitions
+##### Table of Definitions
 
 | variable    |     short-name             |               description                       |
 | ----------- | -------------------------- | ----------------------------------------------- |
-| rwr         | reward-to-risk-ratio       |       inverse of risk-reward-ratio              | 
+| rwr         | reward-to-risk-ratio       |       inverse of risk-reward-ratio              |
 | riskap      | risk appetite              |    percent capital accepting looose per order   |
 
+##### Algorithm trading can be divided:
+ 1. Mathematical model (if used)
+ 2. Trading strategy (stop-loss-gain size, time, trailing stop etc.)
+
+#### Progress  
 1. Pytorch NN Global Model - Wrote code to fit global NN on 5 years data using 1:30 hours shift. Removed samples overlapping days, 90 minutes in the morning and 90 minutes before session end - avoiding contamination between days assumption for day trade. Trained with 1 year and tested on the next 6 months. After training 66/33 with cross-validation 30 samples P50 accuracy is 56%.
 
 - [x] Write class to train model BinaryNN  

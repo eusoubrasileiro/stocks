@@ -99,8 +99,7 @@ Avoid excessive leverage. Leverage may be important when day trading to maximize
 • [ ] Write test case for Simulator using some of the EMA trend on real data.
 • [ ] Analyze Simulator sensibility to risk-appetite, reward-risk-ratio and expected-variation.
 
-More random thoughts / Ideas
 
-Future behavior are easier to predict on resistance levels? Once you label and training using past data? Use Fibonacci retracement on volume. Most day trade or strategies used by traders are based on resistance levels on different time frames (my experience trading/reading thousand blogs)!
 
-Strong tool is hedge trading! Rico has. Comment from USA trader: many positions open at the same  time buys and sells. He uses 72 hours limit expire time limit.  And only use take profit setup. According to him almost never loses money. 
+
+

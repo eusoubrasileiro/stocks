@@ -8,6 +8,8 @@
 
 Future behavior are easier to predict on resistance levels, according to `Wikipedia stock prediction`. Once you label and training using past data? Use Fibonacci retracement on volume. Most day trade or strategies used by traders are based on resistance levels on different time frames (my experience trading/reading thousand blogs)! 
 
+- [ ] Todo: Implement candle pattern next-day predictor. Implement next day prediction up or down based on 1 century historical data. Remember to set to unknown class classified with less than 0.6 certainty. Probably not an up or an down. 
+
 #### The multi-time-scale Market (**personal learning**)
 
 The market is also multi-scale that is multi-time-frame. It's fractal in time. This characteristic can be explored by using different moving averages. The market maybe going up in the yearly scale, e. g. like Brazil recovering from Dilma+Lula's bad administration, but one local event (monthly scale) may produce a big draw down but respecting the up-trend. Collection of events are normally responsible for defining the different trends in different time-scales.

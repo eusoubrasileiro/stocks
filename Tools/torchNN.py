@@ -126,8 +126,13 @@ class BinaryNN(th.nn.Module):
         end = start + batch
         # record training progress values
         # training loss [0], validation loss [1] and accuracy [2]
-        self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
-        self.prog.to(self.device)
+        if self.prog is not None: # it has been called before
+            pass
+            # need to implement this
+            # many things to take in account
+        else :
+            self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
+            self.prog.to(self.device)
         self.j=0
         self.bestv=10. # best validation loss
         self.bestacc=0. # accuracy

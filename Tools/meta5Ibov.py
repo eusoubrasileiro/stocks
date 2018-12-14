@@ -29,7 +29,7 @@ def calculateMissing(df):
     df['time'] = df.index.astype(np.int64)//10**9 # (to unix timestamp) from nano seconds 10*9 to seconds
     days = df.groupby(df.index.date)['time'].agg(['min', 'max', 'count']) # aggreagate on groupby
     missingmins = days['count']-((days['max']-days['min'])//60)-1 # -1 due count is +1
-    df.drop(columns='time', inplace=True)
+    df.drop('time', axis=1, inplace=True) # drop column
     return abs(missingmins.sum()/len(df))
 
 def removeDays(minutes=4*60):

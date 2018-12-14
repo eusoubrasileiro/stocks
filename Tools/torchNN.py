@@ -23,14 +23,17 @@ criterion = th.nn.CrossEntropyLoss()
 
 class BinaryNN(th.nn.Module):
     """binary classifier"""
-    def __init__(self, device, input_size=148, learn=5e-5, dropout=0.4, patience=5, nonlin=th.nn.ReLU()):
+    def __init__(self, device, input_size=148, learn=5e-5, dropout=0.5, patience=5, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
-        self.layers =  th.nn.Sequential(th.nn.Linear(input_size, 1024), th.nn.Dropout(dropout), nonlin,
-                th.nn.Linear(1024,2048), th.nn.Dropout(dropout), nonlin,
-                th.nn.Linear(2048,1024), th.nn.Dropout(dropout), nonlin,
-                th.nn.Linear(1024,280), th.nn.Dropout(dropout), nonlin,
-                th.nn.Linear(280, 70), th.nn.Dropout(dropout), nonlin,
-                th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        self.layers =  th.nn.Sequential(th.nn.Linear(input_size, 1024), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(1024,2048), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(2048,1024), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(1024,280), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(280, 70), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(70,280), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(280, 70), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(70, 333), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(333, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
         self.device = device
         self.layers.to(self.device)
         self.optimizer = th.optim.Adam(self.layers.parameters(), lr=learn)
@@ -41,7 +44,7 @@ class BinaryNN(th.nn.Module):
     def _saveState(self):
         """save a copy of actual weights"""
         self.saved = copy.deepcopy(self.layers.state_dict())
-    
+
     def _loadState(self):
         """load previously best weights from training"""
         self.layers.load_state_dict(self.saved)
@@ -86,7 +89,7 @@ class BinaryNN(th.nn.Module):
 
     def forward(self, X):
         return self.layers(X)
-        
+
     def fineTune(self, X, y, epochs=1, batch=32):
         """
         Training without cross-validation, for "fine-tunning"
@@ -152,7 +155,7 @@ class BinaryNN(th.nn.Module):
                 if self._earlyStop(): # check for early stop
                     print("early stopped: no progress on validation")
                     break
-                self.j += 1                
+                self.j += 1
         self._loadState() # load the best weights
         self.trainacc = modelAccuracy(self, X, y) # calculate final accuracy training-set
         return self.bestacc, self.trainacc # accuracy validation-set, training-set

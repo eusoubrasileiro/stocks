@@ -25,15 +25,11 @@ class BinaryNN(th.nn.Module):
     """binary classifier"""
     def __init__(self, device, input_size=148, learn=5e-5, dropout=0.5, patience=5, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
-        self.layers =  th.nn.Sequential(th.nn.Linear(input_size, 1024), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(1024,2048), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(2048,1024), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(1024,280), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(280, 70), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(70,280), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(280, 70), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(70, 333), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(333, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        self.layers =  th.nn.Sequential(
+                th.nn.Linear(input_size, 400), nonlin,  th.nn.Dropout(dropout),
+                th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
+                th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
         self.device = device
         self.layers.to(self.device)
         self.optimizer = th.optim.Adam(self.layers.parameters(), lr=learn)

@@ -125,33 +125,46 @@ class BinaryNN(th.nn.Module):
             self.optimizer.step()
             self.scheduler.step()
 
-    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, verbose=True):
+    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, verbose=False):
         """
         X, y         : vectors for training
         X_s, y_s     : vector for validation (scoring the model)
         epochs       : how many epochs to train the model
         score        : interval of epochs to validate model (default 1 epoch) can be float
         note:. X, y, Xs, ys should be on device the same device
+
+        If called a second time, training will be resumed using the previous
+        best model weights.
+        Note:. in that case cannot change `score` param.
+
+        verbose:
+            prints iteration, train-loss, validation acc., val-loss, learn. r.
         """
-        self.score = score # used by results
         nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
-        score = int(np.ceil(score*nepoch))
+        if hasattr(self, 'saved'): # it has been called before
+            self._loadState() # load the best weights
+            # score cannot be changed
+            # extend the tensor for new metrics
+            self.prog = th.cat((self.prog,
+                    th.zeros((int(np.ceil(iterations/score))+1, 3),
+                    requires_grad=False)))
+            self.prog.to(self.device)
+            # j will continue from where it stopped
+        else: # first time called
+            score = int(np.ceil(score*nepoch))
+            self.score = score # used by results
+            # record training progress values
+            # training loss [0], validation loss [1] and accuracy [2]
+            self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3),
+                    requires_grad=False)
+            self.prog.to(self.device)
+            self.j=0
         # Decay LR by a factor of 0.9 every score*epochs
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=score, gamma=gma)
         # random training slices indexes
         start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(self.device)
         end = start + batch
-        # record training progress values
-        # training loss [0], validation loss [1] and accuracy [2]
-        if self.prog is not None: # it has been called before
-            pass
-            # need to implement this
-            # many things to take in account
-        else:
-            self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
-            self.prog.to(self.device)
-        self.j=0
         self.bestv=10. # best validation loss
         self.bestacc=0. # accuracy
         for i in progressbar(range(iterations)): # range(iterations):
@@ -172,7 +185,7 @@ class BinaryNN(th.nn.Module):
                     print("iteration : {:<6d} train loss: {:<7.7f} valid acc: {:<7.7f}"
                           " valid loss :{:<7.7f} learn r.: {:<7.7f}".format(
                               i, loss, acc, lossv, self.optimizer.param_groups[0]['lr']))
-                if self._earlyStop(): # check for early stop
+                if self._earlyStop(): # check for early stop/save best weights
                     print("early stopped: no progress on validation")
                     break
                 self.j += 1

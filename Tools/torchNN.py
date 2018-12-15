@@ -23,13 +23,31 @@ criterion = th.nn.CrossEntropyLoss()
 
 class BinaryNN(th.nn.Module):
     """binary classifier"""
-    def __init__(self, device, input_size=148, learn=5e-5, dropout=0.5, patience=5, nonlin=th.nn.ReLU()):
+    def __init__(self, device, input_dim=148, learn=5e-5, dropout=0.5,
+                 patience=5, nneurons=None, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
-        self.layers =  th.nn.Sequential(
-                th.nn.Linear(input_size, 400), nonlin,  th.nn.Dropout(dropout),
-                th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
-                th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        if nneurons is None: # sequence of number of neurons for each layer
+            self.layers =  th.nn.Sequential(
+                    th.nn.Linear(input_dim, 400), nonlin,  th.nn.Dropout(dropout),
+                    th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
+                    th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
+                    th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+        else: # set number of hidden layers and neurons by nneurons array
+            assert type(nneurons) is list, "A list of layers with number \
+                of neurons is expected"
+            nlayers = len(nneurons)
+            # input layer
+            layers = [th.nn.Linear(input_dim, nneurons[0]), nonlin, th.nn.Dropout(dropout)]
+            prevn = nneurons[0] # previous layer out size
+            if nlayers > 1: # add hidden layers
+                for i in range(1, nlayers): # number of layers by array size
+                    layers.extend([th.nn.Linear(prevn, nneurons[i]),
+                                    nonlin, th.nn.Dropout(dropout)])
+                    prevn = nneurons[i]
+            # last layers (binary)
+            layers.extend([th.nn.Linear(prevn, 2), th.nn.Softmax(dim=1)])
+            self.layers = th.nn.Sequential(*layers) # create from list of modules
+
         self.device = device
         self.layers.to(self.device)
         self.optimizer = th.optim.Adam(self.layers.parameters(), lr=learn)
@@ -130,7 +148,7 @@ class BinaryNN(th.nn.Module):
             pass
             # need to implement this
             # many things to take in account
-        else :
+        else:
             self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3), requires_grad=False)
             self.prog.to(self.device)
         self.j=0
@@ -152,7 +170,8 @@ class BinaryNN(th.nn.Module):
                 self.prog[self.j, 2] = acc
                 if verbose:
                     print("iteration : {:<6d} train loss: {:<7.7f} valid acc: {:<7.7f}"
-                          " valid loss :{:<7.7f}".format(i, loss, acc, lossv))
+                          " valid loss :{:<7.7f} learn r.: {:<7.7f}".format(
+                              i, loss, acc, lossv, self.optimizer.param_groups[0]['lr']))
                 if self._earlyStop(): # check for early stop
                     print("early stopped: no progress on validation")
                     break
@@ -208,12 +227,12 @@ def tensorNormalize(X):
          X = (X-X.mean(0))/X.std(0)
     return X
 
-def initModel(input_size, model=None, device="cuda"):
+def initModel(input_dim, model=None, device="cuda"):
     """create a sequential NN or just copy the weights
     initiate optimizer and scheduler"""
     global modelinit
     if model is None: # create a new model
-        model = th.nn.Sequential(th.nn.Linear(input_size, 1024), th.nn.ReLU(), th.nn.Dropout(.1),
+        model = th.nn.Sequential(th.nn.Linear(input_dim, 1024), th.nn.ReLU(), th.nn.Dropout(.1),
                          th.nn.Linear(1024,280), th.nn.ReLU(), th.nn.Dropout(.3),
                          th.nn.Linear(280, 70), th.nn.ReLU(),  th.nn.Dropout(.05),
                          th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
@@ -228,7 +247,7 @@ def initModel(input_size, model=None, device="cuda"):
     return model, optimizer, scheduler
 
 
-def trainTorchNet(X, y, X_s, y_s, input_size, device="cuda", verbose=True,
+def trainTorchNet(X, y, X_s, y_s, input_dim, device="cuda", verbose=True,
         model=None, batch_size=256, nepochs=30):
     """
     X, y         : vectors for training
@@ -238,7 +257,7 @@ def trainTorchNet(X, y, X_s, y_s, input_size, device="cuda", verbose=True,
     after the nepochs of training
     """
 
-    model, optimizer, scheduler = initModel(input_size, model, device)
+    model, optimizer, scheduler = initModel(input_dim, model, device)
 
     best_model = None
     best_lossv = 1000.
@@ -344,7 +363,7 @@ def TrainPredictDecide(X, y, Xp, verbose=True):
     X = X.values.astype(np.float32) # due Float tensors
     Xp = Xp.values.astype(np.float32)
     y = y.values.astype(np.int64) # due Cross Entropy Loss requeires Tensor Long
-    input_size = X.shape[1]
+    input_dim = X.shape[1]
 
     device = getDevice()
     # get the latest npredict size samples (FUNDAMENTAL)
@@ -367,7 +386,7 @@ def TrainPredictDecide(X, y, Xp, verbose=True):
     y_s = y[ntraining:ntraining+nscore]
     # Xp predict on the last nforecast samples was provided
 
-    clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_size,
+    clfmodel, errort, errorv = trainTorchNet(X_t, y_t, X_s, y_s, input_dim,
                                              device, verbose)
     buy = predictDecideBuySell(errort, errorv, clfmodel, Xp)
 

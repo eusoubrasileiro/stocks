@@ -32,7 +32,7 @@ class BinaryNN(th.nn.Module):
                     th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
                     th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
                     th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
-        else: # set number of hidden layers and neurons by nneurons array
+        else: # set number of hidden layers and neurons by nneurons list
             assert type(nneurons) is list, "A list of layers with number \
                 of neurons is expected"
             nlayers = len(nneurons)
@@ -54,6 +54,7 @@ class BinaryNN(th.nn.Module):
         self.criterion = th.nn.CrossEntropyLoss()
         self.prog = None # saves training loss, validation and accuracy
         self.patience = patience # number of successive increases in validation loss that demands stop of training
+        self.lr = learn # learn rate
 
     def _saveState(self):
         """save a copy of actual weights"""
@@ -125,7 +126,7 @@ class BinaryNN(th.nn.Module):
             self.optimizer.step()
             self.scheduler.step()
 
-    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, verbose=False):
+    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, learn=None, verbose=False):
         """
         X, y         : vectors for training
         X_s, y_s     : vector for validation (scoring the model)
@@ -144,15 +145,17 @@ class BinaryNN(th.nn.Module):
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
         if hasattr(self, 'saved'): # it has been called before
             self._loadState() # load the best weights
-            # score cannot be changed
+            score = int(np.ceil(self.pscore*nepoch)) # score cannot be changed
             # extend the tensor for new metrics
             self.prog = th.cat((self.prog,
                     th.zeros((int(np.ceil(iterations/score))+1, 3),
                     requires_grad=False)))
             self.prog.to(self.device)
+            self.pcount = 0 # patience restarts to zero
             # j will continue from where it stopped
         else: # first time called
-            score = int(np.ceil(score*nepoch))
+            self.pscore = score #score param needed by secundary call
+            score = int(np.ceil(score*nepoch)) # save/n/score at every score epochs
             self.score = score # used by results
             # record training progress values
             # training loss [0], validation loss [1] and accuracy [2]
@@ -160,14 +163,18 @@ class BinaryNN(th.nn.Module):
                     requires_grad=False)
             self.prog.to(self.device)
             self.j=0
+            self.bestv=10. # best validation loss
+            self.bestacc=0. # accuracy
+        if learn is not None: # a new learn rate passed
+            self.lr = learn
+        # in case anything changed outside reset learn rate
+        self.optimizer = th.optim.Adam(self.layers.parameters(), lr=self.lr)
         # Decay LR by a factor of 0.9 every score*epochs
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=score, gamma=gma)
         # random training slices indexes
         start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(self.device)
         end = start + batch
-        self.bestv=10. # best validation loss
-        self.bestacc=0. # accuracy
-        for i in progressbar(range(iterations)): # range(iterations):
+        for i in progressbar(range(iterations)):
             Xt, yt = X[start[i]:end[i]], y[start[i]:end[i]]
             yp = self.layers(Xt)
             loss = self.criterion(yp, yt)

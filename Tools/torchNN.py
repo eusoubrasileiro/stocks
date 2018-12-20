@@ -105,6 +105,10 @@ class BinaryNN(th.nn.Module):
     def forward(self, X):
         return self.layers(X)
 
+    def predict(self, X):
+        """predict the binary probability of X"""
+        return modelPredict(self, X)
+
     def fineTune(self, X, y, epochs=1, batch=32):
         """
         Training without cross-validation, for "fine-tunning"
@@ -198,7 +202,9 @@ class BinaryNN(th.nn.Module):
                 self.j += 1
         self._loadState() # load the best weights
         self.trainacc = modelAccuracy(self, X, y) # calculate final accuracy training-set
-        return self.bestacc, self.trainacc # accuracy validation-set, training-set
+        if verbose:
+            print('final : train acc. {:<4.6f} val acc.{:<4.6f}'.format(self.trainacc, self.bestacc))
+        return self.trainacc, self.bestacc  # training-set acc, accuracy validation-set
 
 def dfvectorstoTensor(X, y, device):
     """
@@ -214,8 +220,11 @@ def dfvectorstoTensor(X, y, device):
     return Xn, yn
 
 def modelPredict(model, X):
-    y_prob = model(X)
-    y_pred = th.argmax(y_prob, 1) # binary class clip convertion
+    model.eval()
+    with th.no_grad(): # reduce unnecessary memory/process usage
+        y_prob = model(X)
+        y_pred = th.argmax(y_prob, 1) # binary class clip convertion
+        model.train()
     return y_prob, y_pred
 
 def modelAccuracy(model, X, y):

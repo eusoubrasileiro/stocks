@@ -24,10 +24,11 @@ Future behavior are easier to predict on resistance levels, according to `Wikipe
     4. 1 year, 6 months for validation
     5. different start year/month/day for each training/validation window
     5. Many tests with different parameters: patience, learning rate, optimizer, gamma, number of epochs.
-  9. Results averaged from 58% to 75% on validation set. Very Encouraging! Certainty much better than candle pattern.
+  9. Results averaged from 58% to 75% on training set. Very Encouraging! Certainty much better than candle pattern.
   10. Tried to use a cut-off  to overcome the problem of having an unprobable prediction, too close to 0.5 for class 0 or 1. Results were interesting but need to test more. Another possible reason for this working is the 3rd class not presend that is when did not go Up neither Down.
   11. Need to properly cross-validade it and maybe do a grid-search for parameters, network topology, number of previous days to use etc. Need also focus on the recent years data.
   12. Need to test if this works for Petrobras 2000 to 2018 data I have. Or Bovespa from 1993 to today from Metatrader 5.
+  13. New tests using EMA of 2/3 days and 22 previous has given an average from 58 to 75% of accuracy on the validation set. Now using `QuantileTransform` since it already clips outliers.
 
 
 #### The multi-time-scale Market (**personal learning**)

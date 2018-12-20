@@ -77,7 +77,7 @@ class sKFold(object):
             Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
             yield Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
 
-    def SplitI(self, X, Y, i):
+    def Spliti(self, X, Y, i):
         """
         return i'th split group of training and validation
             Xtrain, ytrain, Xscore, yscore
@@ -87,6 +87,18 @@ class sKFold(object):
         start, end = self.split_indexes[i]
         Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
         return Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
+
+    def pSplits(self, X, Y) :
+        """
+        Return training, validation and prediction sets
+            Xtrain, ytrain, Xscore, yscore, Xpred, ypred
+        """
+
+    def pSpliti(self, X, Y, i):
+        """
+        return i'th split group of training, validation and prediction
+            Xtrain, ytrain, Xscore, yscore, Xpred, ypred
+        """
 
 # def crossValidate(ntrain, ntest, nscore, Xn, Yn):
 #

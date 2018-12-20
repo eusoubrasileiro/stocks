@@ -36,9 +36,9 @@ class sKFold(object):
         """
         length = len(X) # max array size
         assert splits < length, "splits must be smaller than X length"
-        if splits != 4:
+        if splits < 2:
             assert splits > 2, "at least a split in two is expected"
-        if foldsize is not None: # fold calculated by number of splits or slices
+        if foldsize is None: # fold calculated by number of splits or slices
             foldsize = length//splits
         ntrain, ntest = int(foldsize*ratio), int(foldsize*(1.-ratio))
         # calculate split indexes and real number of splits/slices

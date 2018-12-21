@@ -227,6 +227,14 @@ def modelPredict(model, X):
         model.train()
     return y_prob, y_pred
 
+def modelPredictc(model, X, cutoff=0.5):
+    model.eval()
+    with th.no_grad(): # reduce unnecessary memory/process usage
+        y_prob = model(X)
+        y_pred = th.argmax(y_prob, 1) # binary class clip convertion
+        model.train()
+    return y_prob, y_pred
+
 def modelAccuracy(model, X, y):
     """use mse loss to calculate score error"""
     model.eval()

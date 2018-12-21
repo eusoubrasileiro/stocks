@@ -22,17 +22,21 @@ class sKFold(object):
     """
     Sequential folds suitable for stock prediction
     cross-validation 'alike' k-folds
+    Note:
+    another huge difference is that besides the validation group
+    to control the overfitting on the training set there is a prediction
+    group that score's again the validation accuracy ahead of the validation set.
     """
-    def __init__(self, X, foldsize=None, splits=4, ratio=0.75):
+    def __init__(self, X, foldsize=None, splits=4, percents=[70, 25, 5]):
         """
-        Create training and test sets based on number of splits.
+        Create training, test and prediction sets based on number of splits.
 
         `X` feature vector
         `foldsize` is the window size non-overlaping for X, Y vectors
         `splits` if `foldsize` is not specified this is the total number of splits.
         default is 4 slices/splits
-        `ratio` is the training set size divided by the window/fold number of samples.
-        default is 75% training and 25% validation
+        `percents` is the percentage of the fold window for each set, respectivly: training, validation and prediction.
+        default is 70% training, 20% validation and 5% prediction
         """
         length = len(X) # max array size
         assert splits < length, "splits must be smaller than X length"
@@ -40,12 +44,15 @@ class sKFold(object):
             assert splits > 2, "at least a split in two is expected"
         if foldsize is None: # fold calculated by number of splits or slices
             foldsize = length//splits
-        ntrain, ntest = int(foldsize*ratio), int(foldsize*(1.-ratio))
+        assert (np.sum(percents) > 100 or np.sum(percents) < 0), "not reasonable proportions for sets"
+        percents = (np.array(percents)*0.01*foldsize).astype(int)
+        ntrain, ntest, npred = percents
         # calculate split indexes and real number of splits/slices
         indexes, nsplits = indexSequentialFolds(length, foldsize, verbose=False)
 
         self.ntrain = ntrain # training set number of samples
         self.ntest = ntest # validaton set number of samples
+        self.npred = npred # prediction set number of samples
         self.split_indexes = indexes # start, end pair index for each fold
         self.nsplits = nsplits
 
@@ -65,7 +72,7 @@ class sKFold(object):
             Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
             yield Xfold, yfold
 
-    def Splits(self, X, Y) :
+    def kSplits(self, X, Y) :
         """
         alike to `kfold.split` sklearn
 
@@ -77,7 +84,7 @@ class sKFold(object):
             Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
             yield Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
 
-    def Spliti(self, X, Y, i):
+    def kSpliti(self, X, Y, i):
         """
         return i'th split group of training and validation
             Xtrain, ytrain, Xscore, yscore
@@ -88,17 +95,26 @@ class sKFold(object):
         Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
         return Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
 
-    def pSplits(self, X, Y) :
+    def Splits(self, X, Y) :
         """
         Return training, validation and prediction sets
             Xtrain, ytrain, Xscore, yscore, Xpred, ypred
         """
+        ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
+        for start, end in self.split_indexes:
+            Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
+            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xpred[-npred:], ypred[-npred:]
 
-    def pSpliti(self, X, Y, i):
+    def Spliti(self, X, Y, i):
         """
         return i'th split group of training, validation and prediction
             Xtrain, ytrain, Xscore, yscore, Xpred, ypred
         """
+        ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
+        assert i < self.nsplits, "index out of range"
+        start, end = self.split_indexes[i]
+        Xfold, yfold  = X[start:end].copy(), Y[start:end].copy()
+        return Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xpred[-npred:], ypred[-npred:]
 
 # def crossValidate(ntrain, ntest, nscore, Xn, Yn):
 #

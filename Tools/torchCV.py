@@ -131,20 +131,22 @@ class sKFold(object):
         Xfold, yfold  = X[start:end], Y[start:end]
         return Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
 
-# def crossValidate(ntrain, ntest, nscore, Xn, Yn):
-#
-#
-# ntrain= 4*60*5
-# ntest = 4*60*5*4*6
-# indexfolds, nfolds = indexSequentialFolds(len(Xn), ntrain+ntest)
-# accuracies = [] # validation accuracies
-# for n in range(30):
-#     i = np.random.randint(nfolds)
-#     Xfold, yfold  = Xn[indexfolds[i,0]:indexfolds[i,1]].copy(), Yn[indexfolds[i,0]:indexfolds[i,1]].copy()
-#     Xfold = (Xfold - Xfold.mean())/Xfold.std() # normalize variance=1 mean=0
-#     # tensors
-#     Xt, yt = torchNN.dfvectorstoTensor(Xfold[:ntrain], yfold[:ntrain], device)
-#     Xs, ys = torchNN.dfvectorstoTensor(Xfold[-ntest:], yfold[-ntest:], device)
-#     classifier = torchNN.BinaryNN(dropout=0.3, learn=5e-4, patience=7)
-#     accuracy = classifier.fit(Xt, yt, Xs, ys, device, epochs=15, batch=64, score=0.5, gma=0.925, verbose=False)
-#     accuracies.append(accuracy)
+# sklearn cross-validate, cross_val_score the inspiration as allways :-D
+def sCrossValidate(object):
+    """
+    Sequential Folds Model Cross-Validation
+    real cross-validation is made on prediction-set samples created
+    by sequential folds class `sKFold`
+    """
+    def __init__(self, X, Y, classifier, ratio=0.9, cv=None,
+    score=None, device='cpu'):
+    """
+    score list of metric functions to call over classifer after every `fit`
+    """
+    if cv is None: # ratio
+        kfold = torchCV.sKFold(X, foldsize=ntrain, ratio=0.9, device=device)
+    else:  # there will be cv steps
+        kfold = torchCV.sKFold(X, foldsize=ntrain, device=device)
+    accuracies = [] # whatever validation metrics stored by i
+    for i, vars in enumerate(kfold.Splits(X, Y)):
+        Xt, yt, Xs, ys, Xp, yp = vars

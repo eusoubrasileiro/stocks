@@ -8,6 +8,8 @@ from Tools.util import progressbar
 import torch as th
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
+from matplotlib import pyplot as plt
+
 
 nwasted = 120 + 120 + 7  # number of lost samples due (shift + EMA's + unknown)
 ntraining = 5*8*60 # previous 1 week of 8 hours for training
@@ -96,6 +98,7 @@ class BinaryNN(th.nn.Module):
         return (1.-errorv.item()), lossv.item(), loss.item()
 
     def results(self):
+        """create and return results data-frame"""
         epochs = np.arange(1, self.j+1)*self.score
         results = pd.DataFrame(self.prog.data.numpy()[:self.j, :],
                                index=epochs, columns=['t_loss', 'v_loss', 'accuracy'])
@@ -206,6 +209,31 @@ class BinaryNN(th.nn.Module):
             print('final : train acc. {:<4.6f} val acc.{:<4.6f}'.format(self.trainacc, self.bestacc))
         return self.trainacc, self.bestacc  # training-set acc, accuracy validation-set
 
+    def viewResults(self):
+        """plot traininig results with matplotlib"""
+        results = self.results()
+        epochs = results.index
+        losst = results.t_loss.values
+        lossv = results.v_loss.values
+        acc = results.accuracy.values
+        f, axr = plt.subplots(3, sharex=True, figsize=(15,5))
+        f.subplots_adjust(hspace=0)
+        axr[0].plot(epochs, acc, '.r')
+        axr[0].plot(epochs, acc, '-r', label='accuracy validation')
+        axr[0].grid()
+        axr[0].legend()
+        axr[1].plot(epochs, lossv, '.g')
+        axr[1].plot(epochs, lossv, '-g', label='loss validation')
+        axr[1].grid()
+        axr[1].legend()
+        axr[2].plot(epochs, losst, '.r')
+        axr[2].plot(epochs, losst, '-r', label='loss training')
+        axr[2].grid()
+        axr[2].legend()
+        axr[2].set_xlabel('epochs')
+        axr[2].set_xscale('log')
+
+
 def dfvectorstoTensor(X, y, device):
     """
     create tensors at device from:
@@ -227,13 +255,21 @@ def modelPredict(model, X):
         model.train()
     return y_prob, y_pred
 
-def modelPredictc(model, X, cutoff=0.5):
-    model.eval()
-    with th.no_grad(): # reduce unnecessary memory/process usage
-        y_prob = model(X)
-        y_pred = th.argmax(y_prob, 1) # binary class clip convertion
-        model.train()
-    return y_prob, y_pred
+def modelAccuracyc(model, X, y, cutoff=0.7, verbose=True):
+    """
+    clip predictions with probability bellow cutoff
+    use mse loss to calculate score error
+    """
+    yprob, ypred = modelPredict(model, X)
+    n = yprob.size(0)
+    ymax, argmax = th.max(yprob, dim=1) # dont need argmax but dont know any other func.
+    y = y[ ymax > cutoff] # y where prediction had probability > cutoff
+    ypred = ypred[ ymax > cutoff] # ypred ... same
+    if verbose:# percentage of data above cutoff
+        print('data above probability cutoff: {:.2f}'.format(ypred.size()[0]/n))
+    error = th.nn.functional.mse_loss(
+    ypred.float(), y.float())  # MSE accuracy
+    return 1-error.item()
 
 def modelAccuracy(model, X, y):
     """use mse loss to calculate score error"""

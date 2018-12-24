@@ -138,15 +138,20 @@ def sCrossValidate(object):
     real cross-validation is made on prediction-set samples created
     by sequential folds class `sKFold`
     """
-    def __init__(self, X, Y, classifier, ratio=0.9, cv=None,
+    def __init__(self, X, Y, classifier, foldsize, ratio=0.9, cv=None,
     score=None, device='cpu'):
     """
     score list of metric functions to call over classifer after every `fit`
     """
-    if cv is None: # ratio
-        kfold = torchCV.sKFold(X, foldsize=ntrain, ratio=0.9, device=device)
-    else:  # there will be cv steps
+    if cv is None: # use all possible splits
+        kfold = torchCV.sKFold(X, foldsize, ratio=ratio, device=device)
+    else:  # there will be cv steps evenly spaced on the possible space
         kfold = torchCV.sKFold(X, foldsize=ntrain, device=device)
+# include additional case where validation is just on the latest data possible
     accuracies = [] # whatever validation metrics stored by i
     for i, vars in enumerate(kfold.Splits(X, Y)):
         Xt, yt, Xs, ys, Xp, yp = vars
+
+# if score is empty use `classifier.score` 
+# easier to always use classifier.score and
+# just add the additional metrics

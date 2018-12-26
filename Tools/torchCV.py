@@ -1,6 +1,8 @@
 """Fitting a NN model tools for cross-validate the model"""
 import numpy as np
 import torch as th
+from Tools.torchUtil import *
+from Tools.util import progressbar
 
 def indexSequentialFolds(length, size, verbose=True):
     """
@@ -32,6 +34,8 @@ class sKFold(object):
         """
         Create training, test and prediction sets based on number of splits.
 
+        Main methods create split boundaries indexes.
+
         `X` feature vector
         `foldsize` is the window size non-overlaping for X, Y vectors
         `splits` if `foldsize` is not specified this is the total number of splits.
@@ -61,11 +65,6 @@ class sKFold(object):
         self.split_indexes = indexes # start, end pair index for each fold
         self.device = device
 
-    def init(self, X, Y):
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
-        return X, Y
-
     def GetnSplits(self):
         """return number of splits"""
         return self.nsplits
@@ -83,80 +82,106 @@ class sKFold(object):
             Xfold, yfold  = X[start:end], Y[start:end]
             yield Xfold, yfold
 
-    def kSplits(self, X, Y) :
-        """
-        alike to `kfold.split` sklearn
+    # def kSplits(self, X, Y) :
+    #     """
+    #     alike to `kfold.split` sklearn
+    #
+    #     Return train sets, validation sets
+    #         Xtrain, ytrain, Xscore, yscore
+    #     """
+    #     ntrain, ntest = self.ntrain, self.ntest
+    #     X, Y = binaryTensors(X, Y)
+    #     for start, end in self.split_indexes:
+    #         Xfold, yfold  = X[start:end], Y[start:end]
+    #         yield Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
+    #
+    # def kSpliti(self, X, Y, i):
+    #     """
+    #     return i'th split group of training and validation
+    #         Xtrain, ytrain, Xscore, yscore
+    #     """
+    #     ntrain, ntest = self.ntrain, self.ntest
+    #     assert i < self.nsplits, "index out of range"
+    #     start, end = self.split_indexes[i]
+    #     Xfold, yfold  = X[start:end], Y[start:end]
+    #     return Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
+    #
+    # def Spliti(self, X, Y, i):
+    #     """
+    #     return i'th split group of training, validation and prediction
+    #         Xtrain, ytrain, Xscore, yscore, Xpred, ypred
+    #     """
+    #     ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
+    #     assert i < self.nsplits, "index out of range"
+    #     start, end = self.split_indexes[i]
+    #     Xfold, yfold  = X[start:end], Y[start:end]
+    #     return Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
 
-        Return train sets, validation sets
-            Xtrain, ytrain, Xscore, yscore
+    def Splits(self) :
         """
-        ntrain, ntest = self.ntrain, self.ntest
-        X, Y = self.init(X, Y)
-        for start, end in self.split_indexes:
-            Xfold, yfold  = X[start:end], Y[start:end]
-            yield Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
-
-    def kSpliti(self, X, Y, i):
-        """
-        return i'th split group of training and validation
-            Xtrain, ytrain, Xscore, yscore
-        """
-        ntrain, ntest = self.ntrain, self.ntest
-        assert i < self.nsplits, "index out of range"
-        start, end = self.split_indexes[i]
-        Xfold, yfold  = X[start:end], Y[start:end]
-        return Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
-
-    def Splits(self, X, Y) :
-        """
-        Return training, validation and prediction sets
+        Return training, validation and prediction set boundary indexes
             Xtrain, ytrain, Xscore, yscore, Xpred, ypred
         """
-        X, Y = self.init(X, Y)
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
         for start, end in self.split_indexes:
-            Xfold, yfold  = X[start:end], Y[start:end]
-            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+            sval = start+ntrain
+            spred = start+ntrain+ntest
+            yield strain, sval, spred, end
 
-    def Spliti(self, X, Y, i):
+    def SplitsLastn(self, n):
         """
-        return i'th split group of training, validation and prediction
-            Xtrain, ytrain, Xscore, yscore, Xpred, ypred
+        yields last n split group boundary indexes,
+         4th dimensinal
+         start-training   : start
+         start-validation : sval
+         start-prediction : spred
+         end              : end
         """
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
-        assert i < self.nsplits, "index out of range"
-        start, end = self.split_indexes[i]
-        Xfold, yfold  = X[start:end], Y[start:end]
-        return Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
-
-    def SplitsLastn(self, X, Y, n):
-        """last n split groups"""
-        ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
-        X, Y = self.init(X, Y)
         assert n < self.nsplits, 'there are less splits'
         for i in range(n):
             start, end = self.split_indexes[-i]
-            Xfold, yfold  = X[start:end], Y[start:end]
-            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+            sval = start+ntrain
+            spred = start+ntrain+ntest
+            yield start, sval, spred, end
 
-    def SplitsRandn(self, X, Y, n):
-        """n random split groups"""
+    def SplitsRandn(self, n):
+        """
+        yields n random split groups boundary indexes
+         4th dimensinal
+         start-training   : start
+         start-validation : sval
+         start-prediction : spred
+         end              : end
+        """
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
-        X, Y = self.init(X, Y)
         assert n < self.nsplits, 'there are less splits'
         for i in range(n):
             start, end = self.split_indexes[np.random.randint(self.nsplits)]
-            Xfold, yfold  = X[start:end], Y[start:end]
-            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+            sval = start+ntrain
+            spred = start+ntrain+ntest
+            yield start, sval, spred, end
 
-def Accuracy(model, X, y, cutoff=0.7, verbose=True):
+# based on train-test split return vectors
+def TrainTestSplit(X, Y, cv=''):
     """
-    Use mse loss to calculate score error - 1. = accuracy
+    based on train-test split return vectors instead of indexes
+    cv: maybe
+        'lastn' - last subset
+        'randn' - random subset
+    default uses 1 'lastn'
+    """
+
+# this is equivalent to accuracy score of sklearn
+def accuracy(model, X, y, cutoff=None, verbose=False):
+    """
+    equivalent to `accuracy_score` sklearn but using pytorch
+    Use mse loss to calculate accuracy = (1-error)
     Clip predictions with probability bellow cutoff.
     """
     yprob, ypred = model.predict(X, cutoff=cutoff)
     n = ypred.size(0)
-    nans = th.isnan(ypred)
+    nans = ypred < 0 # remove -1 class meaning nans due cutoff
     ypred = ypred[~nans]
     y = y[~nans]
     if verbose and cutoff is not None:# percentage of data above cutoff
@@ -165,36 +190,88 @@ def Accuracy(model, X, y, cutoff=0.7, verbose=True):
         ypred.float(), y.float())  # MSE accuracy
     return 1-error.item()
 
-# sklearn cross-validate, cross_val_score the inspiration as allways :-D
-def sCrossValidate(object):
-    """
-    Sequential Folds Model Cross-Validation
-    real cross-validation is made on prediction-set samples created
-    by sequential folds class `sKFold`
-    """
-    def __init__(self, X, Y, classifier, foldsize, ratio=0.9, cv=None, fit_params = dict(), scores=[], device='cpu'):
-        """
-         * scores : list of metric functions to call over classifer after every `fit`
-         * fit_params : dict of params to pass to `classifer.fit` method
-        """
-    if cv is None: # use all possible splits
-        kfold = torchCV.sKFold(X, foldsize, ratio=ratio, device=device)
-    else:  # there will be cv steps using the last data
-        kfold = torchCV.sKFold(X, foldsize, ratio=ratio, device=device)
-        # include additional case where validation is just on the latest data possible
-    if not scores: # empty score function
-        scores  = Accuracy # default accuracy metric
-    accuracies = [] # whatever validation metrics stored by i
-    metricvalues = [] # store score values for each metric
-    for i, vars in enumerate(kfold.Splits(X, Y)):
-        Xt, yt, Xs, ys, Xp, yp = vars
-        # faster than isinstanciate a new class?
-        classifier.reset() # reset weights and everything else
+# from sklearn.metrics import classification_report
+# print(classification_report(yp, ys))
+# def balanced_accuracy(model, X, y, cutoff=0.7, verbose=True):
+#     """
+#     equivalent to `balanced_accuracy_score` sklearn
+#     Average of recall obtained on each class.
+#     Clip predictions with probability bellow cutoff.
+#     """
+#     yprob, ypred = model.predict(X, cutoff=cutoff)
+#     n = ypred.size(0)
+#     nans = th.isnan(ypred)
+#     ypred = ypred[~nans]
+#     y = y[~nans]
+#     if verbose and cutoff is not None:# percentage of data above cutoff
+#         print('data above probability cutoff: {:.2f}'.format(ypred.size()[0]/n))
 
-        trainscore, valscore = classifer.fit(Xt, yt, Xs, ys, **fit_params)
-        for score in scores:
-            metricvalues.append(score(classifer, Xp, yp))
-        accuracies.append([i, trainscore, valscore, *metricvalues])
+
+# sklearn cross-validate, cross_val_score the inspiration as allways :-D
+"""
+Walk-forward Validation or
+Sequential Folds Model Cross-Validation
+global (real) cross-validation is made on prediction-set samples created
+by sequential folds class `sKFold`
+"""
+def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', report_simple=False, fit_params = dict(), scores=[], predict=False, device='cpu'):
+    """
+     * scores : list of metric functions to call over classifer after every `fit` default `torchCV.accuracy`
+     * fit_params : dict of params to pass to `classifer.fit` method
+     * kind : any one those
+        'lastn' : last n folds 'use latest data principle' (default)
+        'randn' : n random folds
+        'all'   : all folds possible (ignore cv)
+    * cv : maybe a int number (used in combination with kind) or
+        iterable/generator that yields splitted groups of
+        training, validation and prediction (accuracy)
+    * report_simple:
+        True  : returns only the average of default score function
+        False : returns array with columns
+            index, train. score, valid. score, metric values ...
+    * predict:
+        True to save as the three last column the prediction probabilities
+        for each class and the correct prediction
+    """
+    kfold = sKFold(X, foldsize, ratio=ratio, device=device)
+    if kind == 'all':
+        iterable = kfold.Splits()
+    else:
+        if type(cv) is int: # use specified kind or 'lastn' default
+            if kind == 'lastn':
+                iterable = kfold.SplitsLastn(cv)
+            if kind == 'randn':
+                iterable = kfold.SplitsRandn(cv)
+    scorefuncs = [accuracy] # default accuracy metric function
+    scorefuncs.extend(scores) # extend adding additonal metric functions
+    accuracies = [] # whatever validation metrics values stored by i
+    metricvalues = [] # store score values for each metric
+    for start, sval, spred, end in iterable:
+        # indexes are referenced to X, Y parent vectors
+        # strain, sval, spred, end = vars
+        Xt, yt = X[start:sval], Y[start:sval]
+        Xs, ys = X[sval:spred], Y[sval:spred]
+        # use :end on slicing to avoid using unsqueze
+        Xp, yp = X[spred:end], Y[spred:end] # only ONE sample
+        trainscore, valscore = classifier.fit(Xt, yt, Xs, ys, **fit_params)
+        metricvalues.clear() # clean the list for new values
+        for score in scorefuncs: # calculate every metric
+            metricvalues.append(score(classifier, Xp, yp))
+        if predict: # wether save the prediction probabilities
+            yprobs, ypred = classifier.predict(Xp)
+            metricvalues.extend(yprobs.tolist()[0])
+            metricvalues.append(yp) # the expected class
+        # spred: index position of the prediction
+        accuracies.append([spred, trainscore, valscore, *metricvalues])
+        # faster than isinstanciate a new class??
+        classifier.reset() # reset weights and everything else
+    accuracies = np.array(accuracies)
+    if report_simple: # just the mean accuracy
+        return np.mean(accuracies[:, 3])
+    else:
+        return accuracies
+
+# cross val predict
 
 # if score is empty use `classifier.score`
 # easier to always use classifier.score and

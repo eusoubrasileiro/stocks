@@ -35,3 +35,17 @@ Train-test-split : K-fold vs Sequential-Fold
 Quotting article Random-testtrain-split-is-not-always-enough A trading strategy is always tested only on data that is entirely from the future of any data used in training. Nobody ever builds a trading strategy using a random subset of the days from 2014 and then claims it is a good strategy if it makes money on a random set of test days from 2014. Finance would happily use random test-train split — it is much easier to implement and less sensitive to seasonal effects — if it worked for them. But it does not work, due to unignorable details of their application domain, so they have to use domain knowledge to build more representative splits.
 
 That was the base to write the `SequentialFolds` code.
+
+#### About metrics and model evaluation
+
+I would implement  ´Balanced accuracy score´ to correct for the effect
+of  of inbalanced datasets from https://scikit-learn.org/stable/modules/model_evaluation.html#accuracy-score
+But since my data-sets are huge and there almost no class-inbalance in Validation I don't see a reason to do so. All the rest is accounted in the cross-entropy loss or log-loss.
+
+To take a look at Receiver operating characteristic (ROC)¶
+To take a look at TimeSeriesSplit
+To take a lookt at Rolling Window Analysis https://www.mathworks.com/help/econ/rolling-window-estimation-of-state-space-models.html
+
+https://machinelearningmastery.com/backtest-machine-learning-models-time-series-forecasting/
+Walk-forward validation is the gold standard of model evaluation. It is the k-fold cross validation of the time series world and is recommended for your own projects.
+https://en.wikipedia.org/wiki/Walk_forward_optimization

@@ -5,11 +5,7 @@ import copy
 import random # for reproducible results
 from sklearn.model_selection import train_test_split
 from Tools.util import progressbar
-import torch as th
-import torch.nn.functional as F
-from torch.optim import lr_scheduler
-from matplotlib import pyplot as plt
-
+from Tools.torchUtil import *
 
 nwasted = 120 + 120 + 7  # number of lost samples due (shift + EMA's + unknown)
 ntraining = 5*8*60 # previous 1 week of 8 hours for training
@@ -33,7 +29,7 @@ class BinaryNN(th.nn.Module):
                     th.nn.Linear(input_dim, 400), nonlin,  th.nn.Dropout(dropout),
                     th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
                     th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
-                    th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+                    th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 columns add up to 1 probability
         else: # set number of hidden layers and neurons by nneurons list
             assert type(nneurons) is list, "A list of layers with number \
                 of neurons is expected"
@@ -116,7 +112,7 @@ class BinaryNN(th.nn.Module):
 
     def results(self):
         """create and return results data-frame"""
-        epochs = np.arange(1, self.j+1)*self.score
+        epochs = np.arange(1, self.j+1)*self.iscore
         results = pd.DataFrame(self.prog.data.numpy()[:self.j, :],
                                index=epochs, columns=['t_loss', 'v_loss', 'accuracy'])
         results.index.name = 'epochs'
@@ -128,7 +124,7 @@ class BinaryNN(th.nn.Module):
     def predict(self, X, cutoff=None):
         """
         predict the binary class for X vector
-        * cutoff : value to clip probabilities setting to 'nan'
+        * cutoff : value to clip probabilities setting to -1 class
         predictions bellow this
         """
         self.layers.eval()
@@ -137,15 +133,19 @@ class BinaryNN(th.nn.Module):
             y_pred = th.argmax(y_prob, 1) # binary class clip convertion
             self.layers.train()
             if cutoff is not None: # clip probabilities by cutoff, nan if bellow
-                n = yprob.size(0)
+                n = y_prob.size(0)
                 # dont need argmax but dont know any other func.
-                probmax, argmax = th.max(yprob, dim=1)
-                y_pred = th.where(probmax > cutoff, y_pred, th.zeros(n)*float('nan'))
-                y_prob = th.where(probmax > cutoff, y_prob, th.zeros(n)*float('nan'))
+                probmax, argmax = th.max(y_prob, dim=1)
+                y_pred = th.where(probmax > cutoff, y_pred, th.ones_like(y_pred)*-1)
+                # makes values o probability < cutoff = -1
+                probmax = probmax.repeat(2,1).transpose(dim0=1, dim1=0)
+                y_prob = th.where(probmax > cutoff, y_prob, th.ones_like(y_prob)*-1)
         return y_prob, y_pred
 
+    def score(self, X, y, cutoff=None, verbose=True):
+        return torchCV.accuracy(self, X, y, cutoff, verbose)
 
-
+    # def
 
     def fineTune(self, X, y, epochs=1, batch=32):
         """
@@ -168,17 +168,17 @@ class BinaryNN(th.nn.Module):
             self.optimizer.step()
             self.scheduler.step()
 
-    def fit(self, X, y, Xs, ys, epochs=5, batch=32, score=1, gma=0.9, learn=None, verbose=False):
+    def fit(self, X, y, Xs, ys, epochs=5, batch=32, iscore=1, gma=0.9, learn=None, verbose=False):
         """
         X, y         : vectors for training
         X_s, y_s     : vector for validation (scoring the model)
         epochs       : how many epochs to train the model
-        score        : interval of epochs to validate model (default 1 epoch) can be float
+        iscore        : interval of epochs to validate model (default 1 epoch) can be float
         note:. X, y, Xs, ys should be on device the same device
 
         If called a second time, training will be resumed using the previous
         best model weights.
-        Note:. in that case cannot change `score` param.
+        Note:. in that case cannot change `iscore` param.
 
         verbose:
             prints iteration, train-loss, validation acc., val-loss, learn. r.
@@ -187,21 +187,21 @@ class BinaryNN(th.nn.Module):
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
         if hasattr(self, 'saved'): # it has been called before
             self._loadState() # load the best weights
-            score = int(np.ceil(self.pscore*nepoch)) # score cannot be changed
+            iscore = int(np.ceil(self.pscore*nepoch)) # iscore cannot be changed
             # extend the tensor for new metrics
             self.prog = th.cat((self.prog,
-                    th.zeros((int(np.ceil(iterations/score))+1, 3),
+                    th.zeros((int(np.ceil(iterations/iscore))+1, 3),
                     requires_grad=False)))
             self.prog.to(self.device)
             self.pcount = 0 # patience restarts to zero
             # j will continue from where it stopped
         else: # first time called
-            self.pscore = score #score param needed by secundary call
-            score = int(np.ceil(score*nepoch)) # save/n/score at every score epochs
-            self.score = score # used by results
+            self.pscore = iscore #score param needed by secundary call/by
+            iscore = int(np.ceil(iscore*nepoch)) # save/n/score at every score epochs
+            self.iscore = iscore
             # record training progress values
             # training loss [0], validation loss [1] and accuracy [2]
-            self.prog = th.zeros((int(np.ceil(iterations/score))+1, 3),
+            self.prog = th.zeros((int(np.ceil(iterations/iscore))+1, 3),
                     requires_grad=False)
             self.prog.to(self.device)
             self.j=0
@@ -211,8 +211,8 @@ class BinaryNN(th.nn.Module):
             self.lr = learn
         # in case anything changed outside reset learn rate
         self.optimizer = th.optim.Adam(self.layers.parameters(), lr=self.lr)
-        # Decay LR by a factor of 0.9 every score*epochs
-        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=score, gamma=gma)
+        # Decay LR by a factor of 0.9 every iscore*epochs
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=iscore, gamma=gma)
         # random training slices indexes
         start = th.randint(X.shape[0]-batch, (iterations,), dtype=th.int64).to(self.device)
         end = start + batch
@@ -225,7 +225,7 @@ class BinaryNN(th.nn.Module):
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
-            if (i+1)%score == 0: # record training loss, validation (+1, avoid i=0 conditon validation)
+            if (i+1)%iscore == 0: # record training loss, validation (+1, avoid i=0 conditon validation)
                 acc, lossv, loss = self._validate(X, y, Xs, ys)
                 self.prog[self.j, 0] = loss
                 self.prog[self.j, 1] = lossv
@@ -239,7 +239,7 @@ class BinaryNN(th.nn.Module):
                     break
                 self.j += 1
         self._loadState() # load the best weights
-        self.trainacc = modelAccuracy(self, X, y) # calculate final accuracy training-set
+        self.trainacc = self.score(X, y) # calculate final accuracy training-set
         if verbose:
             print('final : train acc. {:<4.6f} val acc.{:<4.6f}'.format(self.trainacc, self.bestacc))
         return self.trainacc, self.bestacc  # training-set acc, accuracy validation-set
@@ -299,7 +299,7 @@ def setSeed(device, seed=10):
     th.manual_seed(seed)
 
 def tensorNormalize(X):
-    """mean zero and variance one in each collumn"""
+    """mean zero and variance one in each column"""
     with th.no_grad():
          X = (X-X.mean(0))/X.std(0)
     return X
@@ -312,7 +312,7 @@ def initModel(input_dim, model=None, device="cuda"):
         model = th.nn.Sequential(th.nn.Linear(input_dim, 1024), th.nn.ReLU(), th.nn.Dropout(.1),
                          th.nn.Linear(1024,280), th.nn.ReLU(), th.nn.Dropout(.3),
                          th.nn.Linear(280, 70), th.nn.ReLU(),  th.nn.Dropout(.05),
-                         th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 collumns add up to 1 probability
+                         th.nn.Linear(70, 2), th.nn.Softmax(dim=1)) # dim == 1 columns add up to 1 probability
         model = model.to(device)
         modelinit = copy.deepcopy(model.state_dict())
     else: # just set the params for the beginning (reset weights)
@@ -480,7 +480,7 @@ def backtestPredictions(X, y, inputsize, device="cuda",
     vectors.
 
     X : historical data X vector
-        with all cross feature collumns and standardized
+        with all cross feature columns and standardized
     y : target binary class
         pair of X vector above
 
@@ -550,6 +550,7 @@ def backtestPredictions(X, y, inputsize, device="cuda",
     predictions['time'] = time[predictions['time'].values.astype(int)]
 
     return predictions
+
 
 # Remember LOSS includes probability of classification (cross-class)
 # is not as simple as eclidian error (ms_loss).

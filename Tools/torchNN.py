@@ -25,7 +25,7 @@ criterion = th.nn.CrossEntropyLoss()
 
 class BinaryNN(th.nn.Module):
     """binary classifier"""
-    def __init__(self, device, input_dim=148, learn=5e-5, dropout=0.5,
+    def __init__(self, device, input_dim=148, learn=5e-3, dropout=0.5,
                  patience=5, nneurons=None, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
         if nneurons is None: # sequence of number of neurons for each layer
@@ -97,6 +97,23 @@ class BinaryNN(th.nn.Module):
         self.layers.train()
         return (1.-errorv.item()), lossv.item(), loss.item()
 
+    def reset(self):
+        """
+        reset everything:
+        * reset all linear layers weights (will erase any training progress)
+        * reset counters: patiance, progress report, best validation etc...
+        """
+        def _weights_reset(m):
+            if isinstance(m, th.nn.Linear):
+                m.reset_parameters() # method from linear layers to reset weights
+        self.apply(_weights_reset)
+        self.prog = None
+        del self.saved
+        self.j=0
+        self.bestv=10. # best validation loss
+        self.bestacc=0. # accuracy
+        self.pcount=0 # patiance counter
+
     def results(self):
         """create and return results data-frame"""
         epochs = np.arange(1, self.j+1)*self.score
@@ -108,9 +125,27 @@ class BinaryNN(th.nn.Module):
     def forward(self, X):
         return self.layers(X)
 
-    def predict(self, X):
-        """predict the binary probability of X"""
-        return modelPredict(self, X)
+    def predict(self, X, cutoff=None):
+        """
+        predict the binary class for X vector
+        * cutoff : value to clip probabilities setting to 'nan'
+        predictions bellow this
+        """
+        self.layers.eval()
+        with th.no_grad(): # reduce unnecessary memory/process usage
+            y_prob = self.layers(X)
+            y_pred = th.argmax(y_prob, 1) # binary class clip convertion
+            self.layers.train()
+            if cutoff is not None: # clip probabilities by cutoff, nan if bellow
+                n = yprob.size(0)
+                # dont need argmax but dont know any other func.
+                probmax, argmax = th.max(yprob, dim=1)
+                y_pred = th.where(probmax > cutoff, y_pred, th.zeros(n)*float('nan'))
+                y_prob = th.where(probmax > cutoff, y_prob, th.zeros(n)*float('nan'))
+        return y_prob, y_pred
+
+
+
 
     def fineTune(self, X, y, epochs=1, batch=32):
         """
@@ -247,40 +282,9 @@ def dfvectorstoTensor(X, y, device):
     yn = th.tensor(yn.astype(np.int64)).to(device)
     return Xn, yn
 
-def modelPredict(model, X):
-    model.eval()
-    with th.no_grad(): # reduce unnecessary memory/process usage
-        y_prob = model(X)
-        y_pred = th.argmax(y_prob, 1) # binary class clip convertion
-        model.train()
-    return y_prob, y_pred
 
-def modelAccuracyc(model, X, y, cutoff=0.7, verbose=True):
-    """
-    clip predictions with probability bellow cutoff
-    use mse loss to calculate score error
-    """
-    yprob, ypred = modelPredict(model, X)
-    n = yprob.size(0)
-    ymax, argmax = th.max(yprob, dim=1) # dont need argmax but dont know any other func.
-    y = y[ ymax > cutoff] # y where prediction had probability > cutoff
-    ypred = ypred[ ymax > cutoff] # ypred ... same
-    if verbose:# percentage of data above cutoff
-        print('data above probability cutoff: {:.2f}'.format(ypred.size()[0]/n))
-    error = th.nn.functional.mse_loss(
-    ypred.float(), y.float())  # MSE accuracy
-    return 1-error.item()
 
-def modelAccuracy(model, X, y):
-    """use mse loss to calculate score error"""
-    model.eval()
-    with th.no_grad(): # reduce unnecessary memory/process usage
-        yp = model(X)
-        yp = th.argmax(yp, 1)
-        error = th.nn.functional.mse_loss(
-        yp.float(), y.float())  # MSE accuracy
-    model.train()
-    return 1-error.item()
+
 
 def getDevice():
     """get CUDA GPU device if available"""

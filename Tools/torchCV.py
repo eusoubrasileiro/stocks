@@ -4,10 +4,10 @@ import torch as th
 
 def indexSequentialFolds(length, size, verbose=True):
     """
-    Given lenght (maximum array size) and fold size (window size):
-    Returns a tuple of two itens:
+    Given length (maximum array size) and fold size (window size):
+    Returns
      * array dim=2: start and end index of each fold
-     * total number of folds
+    Total number of folds is the len()
     """
     nfolds = length-size
     indexfold = np.zeros((nfolds, 2), dtype=int) # begin and end 2
@@ -15,7 +15,7 @@ def indexSequentialFolds(length, size, verbose=True):
         indexfold[i, :] = np.array([i, i+size], dtype=int)
     if verbose:
         print('number folds', nfolds)
-    return indexfold, nfolds
+    return indexfold
 
 
 class sKFold(object):
@@ -52,14 +52,19 @@ class sKFold(object):
         ntrain = int(foldf*ratio)
         ntest  = foldf - ntrain
         # calculate split indexes and real number of splits/slices
-        indexes, nsplits = indexSequentialFolds(length, foldsize, verbose=False)
+        indexes = indexSequentialFolds(length, foldsize, verbose=False)
 
+        self.nsplits  = len(indexes)
         self.ntrain = ntrain # training set number of samples
         self.ntest = ntest # validaton set number of samples
         self.npred = npred # prediction set number of samples
         self.split_indexes = indexes # start, end pair index for each fold
-        self.nsplits = nsplits
         self.device = device
+
+    def init(self, X, Y):
+        X = th.tensor(X, device=self.device, dtype=th.float32)
+        Y = th.tensor(Y, device=self.device, dtype=th.long)
+        return X, Y
 
     def GetnSplits(self):
         """return number of splits"""
@@ -73,8 +78,7 @@ class sKFold(object):
         Use in case you need some preprocessing on the fold set.
         Otherwise use `splits` that return ready made trainging and validation sets.
         """
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
+        X, Y = self.init(X, Y)
         for start, end in self.split_indexes:
             Xfold, yfold  = X[start:end], Y[start:end]
             yield Xfold, yfold
@@ -87,8 +91,7 @@ class sKFold(object):
             Xtrain, ytrain, Xscore, yscore
         """
         ntrain, ntest = self.ntrain, self.ntest
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
+        X, Y = self.init(X, Y)
         for start, end in self.split_indexes:
             Xfold, yfold  = X[start:end], Y[start:end]
             yield Xfold[:ntrain], yfold[:ntrain], Xfold[-ntest:], yfold[-ntest:]
@@ -99,8 +102,6 @@ class sKFold(object):
             Xtrain, ytrain, Xscore, yscore
         """
         ntrain, ntest = self.ntrain, self.ntest
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
         assert i < self.nsplits, "index out of range"
         start, end = self.split_indexes[i]
         Xfold, yfold  = X[start:end], Y[start:end]
@@ -111,8 +112,7 @@ class sKFold(object):
         Return training, validation and prediction sets
             Xtrain, ytrain, Xscore, yscore, Xpred, ypred
         """
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
+        X, Y = self.init(X, Y)
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
         for start, end in self.split_indexes:
             Xfold, yfold  = X[start:end], Y[start:end]
@@ -123,13 +123,47 @@ class sKFold(object):
         return i'th split group of training, validation and prediction
             Xtrain, ytrain, Xscore, yscore, Xpred, ypred
         """
-        X = th.tensor(X, device=self.device, dtype=th.float32)
-        Y = th.tensor(Y, device=self.device, dtype=th.long)
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
         assert i < self.nsplits, "index out of range"
         start, end = self.split_indexes[i]
         Xfold, yfold  = X[start:end], Y[start:end]
         return Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+
+    def SplitsLastn(self, X, Y, n):
+        """last n split groups"""
+        ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
+        X, Y = self.init(X, Y)
+        assert n < self.nsplits, 'there are less splits'
+        for i in range(n):
+            start, end = self.split_indexes[-i]
+            Xfold, yfold  = X[start:end], Y[start:end]
+            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+
+    def SplitsRandn(self, X, Y, n):
+        """n random split groups"""
+        ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
+        X, Y = self.init(X, Y)
+        assert n < self.nsplits, 'there are less splits'
+        for i in range(n):
+            start, end = self.split_indexes[np.random.randint(self.nsplits)]
+            Xfold, yfold  = X[start:end], Y[start:end]
+            yield Xfold[:ntrain], yfold[:ntrain], Xfold[ntrain:ntrain+ntest], yfold[ntrain:ntrain+ntest], Xfold[-npred:], yfold[-npred:]
+
+def Accuracy(model, X, y, cutoff=0.7, verbose=True):
+    """
+    Use mse loss to calculate score error - 1. = accuracy
+    Clip predictions with probability bellow cutoff.
+    """
+    yprob, ypred = model.predict(X, cutoff=cutoff)
+    n = ypred.size(0)
+    nans = th.isnan(ypred)
+    ypred = ypred[~nans]
+    y = y[~nans]
+    if verbose and cutoff is not None:# percentage of data above cutoff
+        print('data above probability cutoff: {:.2f}'.format(ypred.size()[0]/n))
+    error = th.nn.functional.mse_loss(
+        ypred.float(), y.float())  # MSE accuracy
+    return 1-error.item()
 
 # sklearn cross-validate, cross_val_score the inspiration as allways :-D
 def sCrossValidate(object):
@@ -138,20 +172,30 @@ def sCrossValidate(object):
     real cross-validation is made on prediction-set samples created
     by sequential folds class `sKFold`
     """
-    def __init__(self, X, Y, classifier, foldsize, ratio=0.9, cv=None,
-    score=None, device='cpu'):
-    """
-    score list of metric functions to call over classifer after every `fit`
-    """
+    def __init__(self, X, Y, classifier, foldsize, ratio=0.9, cv=None, fit_params = dict(), scores=[], device='cpu'):
+        """
+         * scores : list of metric functions to call over classifer after every `fit`
+         * fit_params : dict of params to pass to `classifer.fit` method
+        """
     if cv is None: # use all possible splits
         kfold = torchCV.sKFold(X, foldsize, ratio=ratio, device=device)
-    else:  # there will be cv steps evenly spaced on the possible space
-        kfold = torchCV.sKFold(X, foldsize=ntrain, device=device)
-# include additional case where validation is just on the latest data possible
+    else:  # there will be cv steps using the last data
+        kfold = torchCV.sKFold(X, foldsize, ratio=ratio, device=device)
+        # include additional case where validation is just on the latest data possible
+    if not scores: # empty score function
+        scores  = Accuracy # default accuracy metric
     accuracies = [] # whatever validation metrics stored by i
+    metricvalues = [] # store score values for each metric
     for i, vars in enumerate(kfold.Splits(X, Y)):
         Xt, yt, Xs, ys, Xp, yp = vars
+        # faster than isinstanciate a new class?
+        classifier.reset() # reset weights and everything else
 
-# if score is empty use `classifier.score` 
+        trainscore, valscore = classifer.fit(Xt, yt, Xs, ys, **fit_params)
+        for score in scores:
+            metricvalues.append(score(classifer, Xp, yp))
+        accuracies.append([i, trainscore, valscore, *metricvalues])
+
+# if score is empty use `classifier.score`
 # easier to always use classifier.score and
 # just add the additional metrics

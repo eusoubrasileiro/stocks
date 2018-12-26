@@ -69,18 +69,18 @@ class sKFold(object):
         """return number of splits"""
         return self.nsplits
 
-    def Folds(self, X, Y):
-        """
-        Returns: X, y fold sets as a generator
-            Xfold, yfold
-
-        Use in case you need some preprocessing on the fold set.
-        Otherwise use `splits` that return ready made trainging and validation sets.
-        """
-        X, Y = self.init(X, Y)
-        for start, end in self.split_indexes:
-            Xfold, yfold  = X[start:end], Y[start:end]
-            yield Xfold, yfold
+    # def Folds(self, X, Y):
+    #     """
+    #     Returns: X, y fold sets as a generator
+    #         Xfold, yfold
+    #
+    #     Use in case you need some preprocessing on the fold set.
+    #     Otherwise use `splits` that return ready made trainging and validation sets.
+    #     """
+    #     X, Y = self.init(X, Y)
+    #     for start, end in self.split_indexes:
+    #         Xfold, yfold  = X[start:end], Y[start:end]
+    #         yield Xfold, yfold
 
     # def kSplits(self, X, Y) :
     #     """
@@ -126,7 +126,7 @@ class sKFold(object):
         for start, end in self.split_indexes:
             sval = start+ntrain
             spred = start+ntrain+ntest
-            yield strain, sval, spred, end
+            yield start, sval, spred, end
 
     def SplitsLastn(self, n):
         """
@@ -163,14 +163,14 @@ class sKFold(object):
             yield start, sval, spred, end
 
 # based on train-test split return vectors
-def TrainTestSplit(X, Y, cv=''):
-    """
-    based on train-test split return vectors instead of indexes
-    cv: maybe
-        'lastn' - last subset
-        'randn' - random subset
-    default uses 1 'lastn'
-    """
+# def TrainTestSplit(X, Y, cv=''):
+#     """
+#     based on train-test split return vectors instead of indexes
+#     cv: maybe
+#         'lastn' - last subset
+#         'randn' - random subset
+#     default uses 1 'lastn'
+#     """
 
 # this is equivalent to accuracy score of sklearn
 def accuracy(model, X, y, cutoff=None, verbose=False):

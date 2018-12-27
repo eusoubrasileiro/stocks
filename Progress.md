@@ -105,7 +105,12 @@ Quotting article Random-testtrain-split-is-not-always-enough.
   4. Calculated Up or Down binary class based on the Close price
   5. Scaled that with `RobustScaler` clipping (10%, 90%) already creates mean 0. and stdev 1.
   6. Made feature vector using 5 previous days and concatenating it with a total size of 25.
-  7. Create target vector/class with the following day direction 1 or 0.
+  7. Create target vector/class with the following day residues direction 1 or 0. (HUGE FIX NOTE)
+    - This is not the up/down daily class but instead the up/down of the difference to the SMA.
+    - I calculated the SMA for 2 days over Close Price
+    - Calculated the residues by removing the Close prices from it
+    - if the residues[i+1] > residues[i] -> class 1
+    - if the residues[i+1] <= residues[i] -> class 0
   8. Trainned Torch binary classifier with different scenarios:
     1. 3 to 6 layers
     2. 1024 to 200 neurons in each layer
@@ -128,6 +133,14 @@ Quotting article Random-testtrain-split-is-not-always-enough.
     4. Made another experiment. Using 2 months for training and ~4 days for validation for local classifiers. I run CV on the entire data-set using local classifiers with same parameters as in 1 and 2. Found average accuracy of 75% on entire data-set only for the clipped version. Clipped version had better percentiles with [0, 1, 10, 50, 90] for average of one week of [0.4, 0.43, 0.65, 0.75, 0.85].
     5. Evaluating also with local model cross-validation, training scores using 'model score = sqrt(acc train*acc valid)' had a pearson of 0.46 (positive correlation) on the unclipped version averaged by week accuracy. Using a threadshould (based on the joint-plot kde) of 0.77 on the `model score` percentiles went from [0.15 0.3  0.4  0.55 0.75] to [0.3  0.4  0.5  0.65 0.8 ], again unclipped version. With a reduction to 20% of all predictions.
     6. Dicussion: comparing 4/5 with 2/3 results it seams that 2 months plus 4 days of validation is far inferior than the 5 years approach. One hypotheses is that 5 years contain more lessons from the past, on the same line the model may be too simple. Also one day percentis on the best case do not give p90 > 0.5. The best shortest period found was 2/3 days using cutoff of 0.85 that gives and p99 of 0.5 and p90 of 0.66. Param GridSearchCV would be nice but for while I don't care.
+
+-HUGE FIX NOTE for two points above: Target vector/class above was the next day residues direction 1 or 0.
+  - This is not the up/down daily class but instead the up/down of the difference to the SMA.
+  - I calculated the SMA for 2 days over Close Price
+  - Calculated the residues by removing the Close prices from it
+  - if the residues[i+1] > residues[i] -> class 1
+  - if the residues[i+1] <= residues[i] -> class 0
+  - it has 74% coincidence with up/down next-day class by notebook above.
 
 - [ ] Need to backtest on Metatrader 5 the best results found above. Altough I could try to backtest on my engine that would not work well for the 2H time-frame, stop-loss would be hitted too often and unrealistically.
  - [ ] Create predictions vector on 2H time-frame.

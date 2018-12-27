@@ -49,3 +49,7 @@ To take a lookt at Rolling Window Analysis https://www.mathworks.com/help/econ/r
 https://machinelearningmastery.com/backtest-machine-learning-models-time-series-forecasting/
 Walk-forward validation is the gold standard of model evaluation. It is the k-fold cross validation of the time series world and is recommended for your own projects.
 https://en.wikipedia.org/wiki/Walk_forward_optimization
+
+### About learning
+
+Aewsome course and reference.

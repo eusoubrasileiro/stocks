@@ -140,7 +140,7 @@ class sKFold(object):
         ntrain, ntest, npred = self.ntrain, self.ntest, self.npred
         assert n < self.nsplits, 'there are less splits'
         for i in range(n):
-            start, end = self.split_indexes[-i]
+            start, end = self.split_indexes[-(1+i)]
             sval = start+ntrain
             spred = start+ntrain+ntest
             yield start, sval, spred, end

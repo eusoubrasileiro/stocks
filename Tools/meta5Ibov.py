@@ -176,8 +176,8 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
     #masterdf.drop('SPREAD', axis=1, level=1).head(1)
 
     masterdf = pd.concat(dfsymbols, axis=1)
-    masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
-    masterdf.dropna(inplace=True)
+    # masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+    # masterdf.dropna(inplace=True)
 
     if cleandays:
         removeDays() # remove useless days for training less than xx minutes
@@ -200,11 +200,11 @@ def getSymbol(symbol):
     """
     get the corresponding collumns for that symbol
     consider the following collumns for each symbol
-     [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
+     [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL-SPREAD]
     """
     global masterdf
-    ifirst_collumn = SYMBOLS[SYMBOLS==symbol].index[0]*6
-    return masterdf.iloc[:, ifirst_collumn:ifirst_collumn+6]
+    ifirst_collumn = SYMBOLS[SYMBOLS==symbol].index[0]*7
+    return masterdf.iloc[:, ifirst_collumn:ifirst_collumn+7]
 
 
 def simpleColumnNames():
@@ -220,9 +220,9 @@ def simpleColumnNames():
     #df = df[:int(len(df)*percentdata*0.01)]
     # new collumn names otherwise create_indicators break
     # [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
-    # O-H-L-C-T-V colum suffixes
+    # O-H-L-C-T-V-S colum suffixes
     newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0]
-            for i in range(len(SYMBOLS)) for j in range(6) ]
+            for i in range(len(SYMBOLS)) for j in range(7) ]
     df.columns = newnames
 
     return df

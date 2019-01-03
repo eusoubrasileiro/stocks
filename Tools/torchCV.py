@@ -30,7 +30,7 @@ class sKFold(object):
     group default (one sample) that score's again the validation accuracy
     ahead of the validation set.
     """
-    def __init__(self, X, foldsize=None, splits=4, ratio=0.75, npred=1, device='cpu'):
+    def __init__(self, X, foldsize=None, splits=4, ratio=0.75, npred=1):
         """
         Create training, test and prediction sets based on number of splits.
 
@@ -63,7 +63,6 @@ class sKFold(object):
         self.ntest = ntest # validaton set number of samples
         self.npred = npred # prediction set number of samples
         self.split_indexes = indexes # start, end pair index for each fold
-        self.device = device
 
     def GetnSplits(self):
         """return number of splits"""
@@ -208,12 +207,12 @@ def accuracy(model, X, y, cutoff=None, verbose=False):
 
 
 # sklearn cross-validate, cross_val_score the inspiration as allways :-D
-"""
-Walk-forward Validation or
-Sequential Folds Model Cross-Validation
-global (real) cross-validation is made on prediction-set samples created
-by sequential folds class `sKFold`
-"""
+# """
+# Walk-forward Validation or
+# Sequential Folds Model Cross-Validation
+# global (real) cross-validation is made on prediction-set samples created
+# by sequential folds class `sKFold`
+# """
 def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', report_simple=False, fit_params = dict(), scores=[], predict=False, device='cpu'):
     """
      * scores : list of metric functions to call over classifer after every `fit` default `torchCV.accuracy`

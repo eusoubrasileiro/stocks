@@ -88,7 +88,7 @@ unsigned int nstocks(double enterprice){
     // # round stocks to 100's
     double exgain=0.01;
     // double minp=; minprofit
-    double costorder=15;
+    double costorder=5;
     double ir=0.2;
     int ceil;
     ceil = int(int((minprofit+costorder*2)/((1-ir)*enterprice*exgain))/100);
@@ -115,7 +115,7 @@ datetime dayBegin(datetime timenow){
     // no orders on the first 2 hours, starts at 10 but cannot place orders until 12
     // calculate begin of the day
     daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return daybegin+12*3600;
+    return daybegin+10*3600;
 }
 
 //  number of orders oppend on the last n minutes defined on Definitons.mqh

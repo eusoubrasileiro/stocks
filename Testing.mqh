@@ -14,7 +14,7 @@ bool TestReadPredictions(){
         return false;
     }
     Print("file read:", fname);
-    ArrayResize(predictions, 18478); // Resize the array.
+    ArrayResize(predictions, 6939); // Resize the array.
     //--- read all data from the file to the array
     FileReadArray(handle, predictions);
     FileClose(handle);

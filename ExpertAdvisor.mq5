@@ -27,22 +27,30 @@ int OnInit()
 bool PlaceOrderNow(int direction){
     MqlTradeResult result = {0};
     MqlTradeRequest request = {0};
+    int nbuys;
+    int ncontracts;
 
+    ncontracts = MathAbs(direction);  // number to buy or sell 
     //--- parameters of request
     request.action    = TRADE_ACTION_DEAL;                     // type of trade operation
-    request.symbol    = "PETR4";                               // symbol
-    if(direction == 1){ // buy order
+    request.symbol    = "WIN@";                               // symbol
+    if(direction > 0){ //+ postivie buy order
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
         request.type      = ORDER_TYPE_BUY;                        // order type
     }
-    else{ //  -1 sell order
+    else{ //  -negative sell order
+        nbuys=PositionsTotal(); // number of open positions      
+        if(nbuys < 0 ) // cannot sell what was not bought
+            return false;
+        else // sell only the same quantity bought to not enter in a short position
+            ncontracts = MathMin(nbuys, ncontracts);            
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
         request.type      = ORDER_TYPE_SELL;                        // order type
     }
     // stop loss and take profit 3:1
     request.tp =request.price*(1+direction*expect_var*3);
     request.sl = request.price*(1-direction*expect_var);
-    request.volume    = nstocks(request.price);                // volume in 100s lot
+    request.volume    = 50*ncontracts; // volume executed in contracts 
     request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
     if(!OrderSend(request,result))     //--- send the request
@@ -76,7 +84,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
                 //--- setting the operation parameters
                 request.action   = TRADE_ACTION_DEAL;        // type of trade operation
                 request.position = position_ticket;          // ticket of the position
-                request.symbol   = "PETR4";          // symbol
+                request.symbol   = "WIN@";          // symbol
                 request.volume   = volume;                   // volume of the position
                 request.deviation = 7;                        // 7*0.01 tick size : 7 cents
                 request.magic    =EXPERT_MAGIC;             // MagicNumber of the position
@@ -113,7 +121,7 @@ void OnTimer(){
     dayend = dayEnd(timenow); // 15 minutes before closing the stock market
     daybegin = dayBegin(timenow); // 2 hours after openning
     // check to see if we should close any order
-    ClosePositionsbyTime(timenow, dayend, 3600*2); // 2 hours expire time
+    ClosePositionsbyTime(timenow, dayend, 2700); // 45 min expire time
 
     // we can work
     if(!TESTINGW_FILE){ // not testing
@@ -134,8 +142,8 @@ void OnTimer(){
     if(pnow.direction == plast.direction && pnow.time == plast.time)
         return;
     // moved to here so we can check if something is wrong
-    // do not place orders 1:30 before the end of the day
-    if(timenow > dayend - (90*60))
+    // do not place orders 30 mins before the end of the day
+    if(timenow > dayend - (30*60))
         return;
     // do not place orders in the begin of the day
     if(timenow < daybegin)

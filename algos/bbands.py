@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from numba import jit
+from numba import jit, prange
 import sys
 from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
@@ -11,7 +11,7 @@ debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
-@jit(nopython=True) # 1000x faster than using padas for loop
+@jit(nopython=True) # 1000x faster than using pandas for loop
 def traverseBand(bandsg, yband, ask, bid, day):
     """
     buy at ask = High at minute time-frame
@@ -25,8 +25,8 @@ def traverseBand(bandsg, yband, ask, bid, day):
     for i in range(bandsg.size):
         if day[i] != previous_day: # a new day reset everything
             if history == 1:
-                # the previous batch o/f signals will be saved with this class (hold)
-                yband[buyindex] = 0
+                # the previous batch o/f signals will be saved with Nan don't want to train with that
+                yband[buyindex] = np.nan
             buyprice = 0
             history = -1 # nothing, buy = 1, sell = 2
             buyindex = 0
@@ -57,7 +57,7 @@ def traverseBand(bandsg, yband, ask, bid, day):
         yband[buyindex] = np.nan # set it to be ignored
     return yband
 
-@jit(nopython=True)
+@jit(nopython=True, parallel=True)
 def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
@@ -69,7 +69,10 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     y = np.zeros(len(df))*np.nan
     time = np.zeros(len(df)) # let it be float after we convert back to int
     nt = 0 # number of training vectors
-    for i in range(window, df.shape[0]):
+with nogil():
+    # prange here otherwise will have to sort
+     # will work even with increment counter?
+    for i in prange(window, df.shape[0]):
         for j in range(nbands): # each band look at the ys' target class
             if df[i , j] == df[i, j]: # if y' is not nan than we have a training pair X, y
                 # X feature vector is the last window (signals + askv and bidv 8 dimension)
@@ -142,6 +145,8 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
         plt.close()
     ### Latest Signal - not standardized - used for predicting future
     signal = bars.loc[:, ['bandsg0', 'bandsg1', 'bandsg2']].tail(1).values
+If np.all(signal == 0):
+      return None*4
     #### Traverse bands
     for j in range(nbands): # for each band you might need to save training-feature-target vectors
         # save batch from here to behind (batch-size)

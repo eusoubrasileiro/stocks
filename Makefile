@@ -7,4 +7,7 @@ meta5:
 clean:
 	for f in `echo ${MT5EXPATH}*.mq*`; do unlink $f; done
 
+# test is
+# python -m algos.mt5daemons.buybandsd.py
+
 all: clean meta5

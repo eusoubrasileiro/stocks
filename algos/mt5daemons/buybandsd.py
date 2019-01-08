@@ -8,9 +8,9 @@ import calendar
 import time
 import argparse
 import sys
-sys.path.append('..')
-from Tools.util import progressbar
-from Tools import bbands, meta5Ibov
+from .. import bbands, meta5Ibov
+from ..util import progressbar
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',

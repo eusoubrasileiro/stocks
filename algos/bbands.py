@@ -79,7 +79,7 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     return X[:nt], y[:nt], time[:nt]
 
 # window=21; nbands=3 # number of bbands
-def getTrainingForecastVectors(bars, verbose=False, window=21, nbands=3):
+def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
     """
     return Xpredict, Xtrain, ytrain
 

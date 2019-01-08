@@ -153,30 +153,32 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
 
     symbols = pd.Series(symbols)
     indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
-    # get the intersecting indexes
-    # remove if exist (some case there are) duplicated indexes
-    inner_index = indexes[0]
-    for index in indexes[1:]:
-        inner_index = inner_index.join(index, how='inner')
-    inner_index = inner_index.index.drop_duplicates()
-    # apply inner_index on all data -- all indexes not in the inner list of indexes are dropped
-    for i in range(len(symbols)):
-        dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
-        dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
 
-    ### The Master DataFrame with
-    #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
-    #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
-    #index = pd.MultiIndex.from_product(iterables, names=['SYMBOL', 'ATRIB',])
-    #index
-    #masterdf.columns = index
-    #masterdf.head(1)
-    #masterdf.drop([0, 1], axis=0, level=0)
-    #masterdf.drop('SPREAD', axis=1, level=1).head(1)
+    if len(indexes) > 0: # more than one symbol
+        # get the intersecting indexes
+        # remove if exist (some case there are) duplicated indexes
+        inner_index = indexes[0]
+        for index in indexes[1:]:
+            inner_index = inner_index.join(index, how='inner')
+        inner_index = inner_index.index.drop_duplicates()
+        # apply inner_index on all data -- all indexes not in the inner list of indexes are dropped
+        for i in range(len(symbols)):
+            dfsymbols[i] = dfsymbols[i][~dfsymbols[i].index.duplicated(keep='first')]
+            dfsymbols[i] = dfsymbols[i].loc[inner_index] # get just the intersecting indexes
 
-    masterdf = pd.concat(dfsymbols, axis=1)
-    # masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
-    # masterdf.dropna(inplace=True)
+        ### The Master DataFrame with
+        #### AMAZING MULTINDEX FOR LABELS --- will be left for the future for while
+        #iterables = [symbols,['OPEN', 'HIGH', 'LOW', 'CLOSE', 'TICKVOL', 'VOL', 'SPREAD']]
+        #index = pd.MultiIndex.from_product(iterables, names=['SYMBOL', 'ATRIB',])
+        #index
+        #masterdf.columns = index
+        #masterdf.head(1)
+        #masterdf.drop([0, 1], axis=0, level=0)
+        #masterdf.drop('SPREAD', axis=1, level=1).head(1)
+
+        masterdf = pd.concat(dfsymbols, axis=1)
+        # masterdf.drop('S', axis=1, inplace=True) # useless so far S=Spread
+        # masterdf.dropna(inplace=True)
 
     if cleandays:
         removeDays() # remove useless days for training less than xx minutes
@@ -202,7 +204,10 @@ def getSymbol(symbol):
      [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL-SPREAD]
     """
     global masterdf
-    ifirst_collumn = symbols[symbols==symbol].index[0]*7
+    if len(symbols) > 1:
+        ifirst_collumn = symbols[symbols==symbol].index[0]*7
+    else:
+        ifirst_collumn = 0
     return masterdf.iloc[:, ifirst_collumn:ifirst_collumn+7]
 
 

@@ -7,6 +7,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 import talib as ta
 from matplotlib import pyplot as plt
 
+debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
@@ -138,6 +139,7 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
             plt.ylabel('signal-code')
         plt.legend()
         plt.savefig('bbands.png')
+        plt.close()
     ### Latest Signal - not standardized - used for predicting future
     signal = bars.loc[:, ['bandsg0', 'bandsg1', 'bandsg2']].tail(1).values
     #### Traverse bands
@@ -218,7 +220,7 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
 
     #assert len(y[y == 1]) == len(y[y == 2])
 
-    return Xforecast, X, y
+    return signal, Xforecast, X, y
 
 def fitPredict(X, y, Xp):
     trees = ExtraTreesClassifier(n_estimators=70, verbose=0, max_features=300)
@@ -227,7 +229,9 @@ def fitPredict(X, y, Xp):
         # if don't have 3-classes for training cannot train model
         if len(np.unique(y)) == 3:
             trees.fit(X, y)
-            ypred = trees.predict_proba(X)
+            ypred = trees.predict_proba(Xp.reshape(1, -1))
     except Exception as e:
         print(e, file=sys.stderr)
+        if debug:
+            raise(e)
     return ypred

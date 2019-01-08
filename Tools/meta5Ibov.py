@@ -7,7 +7,7 @@ Minute data.
 There might be missing minutes, no workaround found to recover every minute.
 There will be allways some minute bar missing.
 
-$DOL data starts only on 2013 in XP servers
+$DOL/@WIN data starts only on 2013 in XP servers
 
 """
 
@@ -50,16 +50,16 @@ path_data_bundle = ""
 """path to *.bin metatrader5 - 1 minute data"""
 path_bin_data = ""
 """ all symbols loaded (stocks or currency) """
-SYMBOLS = None
+symbols = None
 """ pandas dataframe all symbols loaded stored here """
 masterdf = None
 
 def loadExistent(verbose=True):
     global masterdf
-    global SYMBOLS
+    global symbols
     ### Try to load already created data from data bundle folder
     masterdf_filepath = os.path.join(path_data_bundle,'masterdf.pickle')
-    symbols_filepath  = os.path.join(path_data_bundle,'SYMBOLS.pickle')
+    symbols_filepath  = os.path.join(path_data_bundle,'symbols.pickle')
     filem = Path(masterdf_filepath)
     files = Path(symbols_filepath)
     if filem.is_file():
@@ -71,10 +71,10 @@ def loadExistent(verbose=True):
             print('Must load metatrader 5 *.mt5bin files!', file=sys.stderr)
         return
     if files.is_file():
-        SYMBOLS = pd.read_pickle(symbols_filepath)
+        symbols = pd.read_pickle(symbols_filepath)
         if verbose:
-            print('Symbols loaded:', file=sys.stderr)
-            print(SYMBOLS.values[:], file=sys.stderr)
+            print('symbols loaded:', file=sys.stderr)
+            print(symbols.values[:], file=sys.stderr)
     else:
         if verbose:
             print('Couldnt find symbols file', file=sys.stderr)
@@ -126,16 +126,18 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
 
     cleandays : remove days with less than x-hours of trading
     preload : reuse previous lodaded data
+
+    Return number of symbols loaded.
     """
 
-    global SYMBOLS
+    global symbols
     global masterdf
 
     if preload: # use preloaded data
         loadExistent(verbose)
-        if (not(masterdf is None)) and (not(SYMBOLS is None)):
+        if (not(masterdf is None)) and (not(symbols is None)):
             print('Using previous loaded data!', file=sys.stderr)
-            return masterdf
+            return len(symbols)
 
     # move to path_bin_data
     os.chdir(path_bin_data)
@@ -148,11 +150,7 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
         symbol = filename.split(suffix)[0]
         symbols.append(symbol)
 
-    if len(symbols) < 9: # 9 symbols
-        print("Couldn't load data! Missing *{:} files!".format(suffix), file=sys.stderr)
-        return
-
-    SYMBOLS = pd.Series(symbols)
+    symbols = pd.Series(symbols)
     indexes = [pd.DataFrame(index=df.index) for df in dfsymbols]
     # get the intersecting indexes
     # remove if exist (some case there are) duplicated indexes
@@ -183,16 +181,16 @@ def loadMeta5Data(verbose=True, suffix='M1.mt5bin', cleandays=True, preload=True
         removeDays() # remove useless days for training less than xx minutes
 
     if verbose:
-        print('Symbols loaded:', file=sys.stderr)
-        print(SYMBOLS.values[:], file=sys.stderr)
+        print('symbols loaded:', file=sys.stderr)
+        print(symbols.values[:], file=sys.stderr)
         print("percent missing: ", calculateMissing(masterdf), file=sys.stderr)
 
     # move to data_bundle_path and save data
     os.chdir(path_data_bundle)
-    SYMBOLS.to_pickle('SYMBOLS.pickle')
+    symbols.to_pickle('symbols.pickle')
     masterdf.to_pickle('masterdf.pickle')
 
-    return masterdf
+    return len(symbols)
 
 
 # collum mapping which collums are from which symbol
@@ -203,16 +201,13 @@ def getSymbol(symbol):
      [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL-SPREAD]
     """
     global masterdf
-    ifirst_collumn = SYMBOLS[SYMBOLS==symbol].index[0]*7
+    ifirst_collumn = symbols[symbols==symbol].index[0]*7
     return masterdf.iloc[:, ifirst_collumn:ifirst_collumn+7]
 
 
 def simpleColumnNames():
     """
-    Create Data Frame for random forest up down prediction
-    targetquote is the target symbol
-    #percentdata how much data to use default 15%
-    prediction will train and work on 'CLOSE' default
+    Create Data Frame with all symbols loaded
     """
     global masterdf
 
@@ -221,8 +216,8 @@ def simpleColumnNames():
     # new collumn names otherwise create_indicators break
     # [OPEN-HIGH-LOW-CLOSE-TICKVOL-VOL]
     # O-H-L-C-T-V-S colum suffixes
-    newnames = [ SYMBOLS[i]+'_'+masterdf.columns[j][0]
-            for i in range(len(SYMBOLS)) for j in range(7) ]
+    newnames = [ symbols[i]+'_'+masterdf.columns[j][0]
+            for i in range(len(symbols)) for j in range(7) ]
     df.columns = newnames
 
     return df

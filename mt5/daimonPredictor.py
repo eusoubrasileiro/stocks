@@ -8,8 +8,7 @@ import calendar
 import time
 import argparse
 from Tools.util import progressbar
-from Tools import prepareData, torchNN
-from Tools import meta5Ibov
+from Tools import bbands, meta5Ibov
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',
@@ -42,18 +41,11 @@ def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
 # Use same path that can be read by the expert advisor
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 os.chdir(meta5filepath)
-# statistical mean and variance from 2013+2018 used to make data
-# with variance < 1 and mean close to 0, that is how it works!
-stocks_stats = pd.read_csv('stocks_stats_2018.csv', index_col=0)
-# selected columns by backtesting best performance accuracy
-with open('collumns_selected.txt', 'r') as f: # txt column names divided by spaces
-    columns = f.read()
-selected_columns = columns.split(' ')[:-1]
 # clear terminal to start
 os.system('cls' if os.name == 'nt' else 'clear')
 # clear folder
 try:
-    os.system('rm *.mt5bin masterdf.pickle SYMBOLS.pickle processedminutes.txt')
+    os.system('rm *.mt5bin masterdf.pickle symbols.pickle processedminutes.txt')
 except:
     pass
 # first previous time
@@ -64,10 +56,10 @@ while(True): # daemon allways running
         entrytime = datetime.datetime.now()
         meta5Ibov.setDataPath(meta5filepath, meta5filepath, verbose=False)
         # don't want masterdf to be reused
-        masterdf = meta5Ibov.loadMeta5Data(suffix='RTM1.mt5bin',
+        loaded = meta5Ibov.loadMeta5Data(suffix='RTM1.mt5bin',
                     cleandays=False, preload=False, verbose=False)
-        X = meta5Ibov.simpleColumnNames()
-        meta5time = pd.Timestamp(X.index.values[-1])
+        bars = meta5Ibov.getSymbol('@WIN')
+        meta5time = pd.Timestamp(bars.index.values[-1])
     except Exception as e:
         print('Exception while reading *RTM1.mt5bin files: ',
                 str(e), file=sys.stderr)
@@ -81,7 +73,7 @@ while(True): # daemon allways running
     else: # dont make a prediction twice
         time.sleep(args.delay) # wait a bit before next read
         continue
-    sizeread = len(X) # samples read
+    sizeread = len(bars) # samples read
     # effective missing data
     percmiss = meta5Ibov.calculateMissing(meta5Ibov.masterdf[-3200:])
     # change this to evaluate the percentage of missing data? future!
@@ -90,17 +82,30 @@ while(True): # daemon allways running
         recordMinute(entrytime, meta5time, sizeread, percmiss)
         continue # too few data
     # Prepare data for training classification : creating features etc.
-    # stats and selected columns from backtesting
-    X, y, Xp = prepareData.GetTrainingPredictionVectors(
-        X, targetsymbol='PETR4_C', verbose=False,
-        selected=selected_columns, stats=stocks_stats)
-    # classifier training and use
-    buy = torchNN.TrainPredictDecide(X, y, Xp, verbose=False)
-    device = torchNN.getDevice() # get cpu or cuda
-    if buy==0: # no entry point
+    Xp, X, y  = bbands.getTrainingForecastVectors(bars, verbose=True)
+
+    if Xp is None: # no entry point
         daimontime = datetime.datetime.now()
         recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
         continue
+
+    ypred = bbands.fitPredict(X, y, Xp)
+
+    if buy is None:
+        # no entry point
+        daimontime = datetime.datetime.now()
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+        continue
+
+    # decide base on prediction and probability clip
+    ypred = np.argmax(ypred, axis=-1)
+    yprob = np.max(ypred, axis=-1)
+    if yprob < 0.8: # must be 80% sure this is the class
+        # no entry point
+        daimontime = datetime.datetime.now()
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+        continue
+
     # Create Prediction Binary File 12 bytes
     predtime = pd.Timestamp(meta5time) # to save on txt file
     # prediction time to long
@@ -109,7 +114,7 @@ while(True): # daemon allways running
         try: # write prediction for meta5 read
             with open('prediction.bin','wb') as f:
                 # struct of ulong and int 8+4 = 12 bytes
-                dbytes = struct.pack('<Qi', predtime, np.int32(buy))
+                dbytes = struct.pack('<Qi', predtime, np.int32(ypred))
                 if f.write(dbytes) == 12:
                     break
         except: # keep trying read

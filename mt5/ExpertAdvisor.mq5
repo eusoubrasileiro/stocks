@@ -1,5 +1,5 @@
 #property copyright "Andre L. F"
-#property version   "1.00"
+#property version   "1.01"
 #include "PatternNN.mqh"
 #include "Testing.mqh"
 
@@ -30,7 +30,7 @@ bool PlaceOrderNow(int direction){
     int nbuys;
     int ncontracts;
 
-    ncontracts = MathAbs(direction);  // number to buy or sell 
+    ncontracts = MathAbs(direction);  // number to buy or sell
     //--- parameters of request
     request.action    = TRADE_ACTION_DEAL;                     // type of trade operation
     request.symbol    = "WIN@";                               // symbol
@@ -39,18 +39,18 @@ bool PlaceOrderNow(int direction){
         request.type      = ORDER_TYPE_BUY;                        // order type
     }
     else{ //  -negative sell order
-        nbuys=PositionsTotal(); // number of open positions      
+        nbuys=PositionsTotal(); // number of open positions
         if(nbuys < 0 ) // cannot sell what was not bought
             return false;
         else // sell only the same quantity bought to not enter in a short position
-            ncontracts = MathMin(nbuys, ncontracts);            
+            ncontracts = MathMin(nbuys, ncontracts);
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
         request.type      = ORDER_TYPE_SELL;                        // order type
     }
     // stop loss and take profit 3:1
     request.tp =request.price*(1+direction*expect_var*3);
     request.sl = request.price*(1-direction*expect_var);
-    request.volume    = 50*ncontracts; // volume executed in contracts 
+    request.volume    = 50*ncontracts; // volume executed in contracts
     request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
     if(!OrderSend(request,result))     //--- send the request

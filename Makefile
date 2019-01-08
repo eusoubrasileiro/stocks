@@ -1,18 +1,11 @@
-PY := python
-MT5EXPATH := /home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors
-MT5CMPATH := /home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
+MT5EXPATH := /home/andre/.wine/drive_c/Program Files/Rico\ MetaTrader 5/MQL5/Experts/Advisors/
+MT5CMPATH := /home/andre/.wine/drive_c/users/andre/Application\ Data/MetaQuotes/Terminal/Common/Files/
 
-data:
-	ln -s /home/andre/PycharmProjects/stocks/data/collumns_selected.txt $(MT5CMPATH)
-	ln -s /home/andre/PycharmProjects/stocks/data/stocks_stats_2018.csv $(MT5CMPATH)
-mt5:
+meta5:
+	for f in /home/andre/Projects/stocks/mt5/*.mq*; do ln -s $f "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Experts/Advisors/"`basename $f`; done
 	# make symlinks from stocks folder to Metatrader folder
-	ln -s /home/andre/PycharmProjects/stocks/*.mq* $(MT5EXPATH)
-	ln -s /home/andre/PycharmProjects/stocks/Tools/*.mq* $(MT5EXPATH)
-cython:
-	$(PY) setup.py build_ext --inplace
 
 clean:
-	rm $(MT5EXPATH)/*.mq*
+	rm -f ${MT5CMPATH}*.mq*
 
-all:  clean data mt5 cython
+all: clean meta5

@@ -1,8 +1,8 @@
 #define EXPERT_MAGIC 777707777  // MagicNumber of the expert
-#define TESTINGW_FILE true // testin with predictions files
+#define TESTINGW_FILE false // testin with predictions files
 
 // symbols neeeded for training and prediction 
-string symbols[1] = {"WIN@"};
+string symbols[2] = {"WIN@", "PETR4"};
 
 // stores a prediction time and direction
 struct prediction {

@@ -7,6 +7,8 @@ import datetime
 import calendar
 import time
 import argparse
+import sys
+sys.path.append('..')
 from Tools.util import progressbar
 from Tools import bbands, meta5Ibov
 
@@ -19,7 +21,7 @@ def zeroTime():
     return datetime.datetime(year=1970, month=1, day=1)
 
 def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
-        percmiss=-1, daimontime=0, direction=-9, device='unknown'):
+        percmiss=-1, daimontime=0, direction=-9):
     """ record on file/print on stderr minute processed"""
     if entrytime==0:
         entrytime = zeroTime()
@@ -31,9 +33,9 @@ def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
     meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")
     daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")
     with open('processedminutes.txt', 'a') as f:
-        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d} {:>8}".format(
+        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d}".format(
         entrytime, daimontime, meta5time, sizeread, 100*percmiss,
-        direction, str(device))
+        direction)
         f.write(msg+'\n')
         print(msg, file=sys.stderr)
 
@@ -58,7 +60,7 @@ while(True): # daemon allways running
         # don't want masterdf to be reused
         loaded = meta5Ibov.loadMeta5Data(suffix='RTM1.mt5bin',
                     cleandays=False, preload=False, verbose=False)
-        bars = meta5Ibov.getSymbol('@WIN')
+        bars = meta5Ibov.getSymbol('WIN@')
         meta5time = pd.Timestamp(bars.index.values[-1])
     except Exception as e:
         print('Exception while reading *RTM1.mt5bin files: ',
@@ -86,15 +88,15 @@ while(True): # daemon allways running
 
     if Xp is None: # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, -1)
         continue
 
     ypred = bbands.fitPredict(X, y, Xp)
 
-    if buy is None:
+    if ypred is None:
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, -1)
         continue
 
     # decide base on prediction and probability clip
@@ -103,7 +105,7 @@ while(True): # daemon allways running
     if yprob < 0.8: # must be 80% sure this is the class
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, ypred)
         continue
 
     # Create Prediction Binary File 12 bytes
@@ -121,4 +123,4 @@ while(True): # daemon allways running
             continue
     # end
     daimontime = datetime.datetime.now()
-    recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, buy, device)
+    recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, ypred)

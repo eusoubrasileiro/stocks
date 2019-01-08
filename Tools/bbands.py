@@ -1,8 +1,11 @@
 import pandas as pd
 import numpy as np
+from numba import jit
 import sys
 from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
+import talib as ta
+from matplotlib import pyplot as plt
 
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
@@ -54,7 +57,7 @@ def traverseBand(bandsg, yband, ask, bid, day):
     return yband
 
 @jit(nopython=True)
-def xyTrainingPairs(df, window, nsignal_features=8):
+def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
 
@@ -82,7 +85,7 @@ def getTrainingForecastVectors(bars, verbose=False, window=21, nbands=3):
 
     if Xpredict has signal all zero return None
     """
-    del bars.S
+    #del bars.S
     #bars['OHLC'] = symbols.apply(lambda row: np.mean([row['O'], row['H'], row['L'], row['C']]), axis=1)
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
@@ -203,8 +206,7 @@ def getTrainingForecastVectors(bars, verbose=False, window=21, nbands=3):
         bars.iloc[:, list(range(fi,nind))].values)
     bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
                              bars.iloc[:, id].std()) # normalize variance=1 mean=0
-    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *ibandsgs, *list(range(fi,nind)), id]].values,
-                                 window, nsignal_features=nfeatures)
+    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *ibandsgs, *list(range(fi,nind)), id]].values, window, nfeatures, nbands)
     time = time.astype(int)
     y = y.astype(int)
 
@@ -214,7 +216,7 @@ def getTrainingForecastVectors(bars, verbose=False, window=21, nbands=3):
         Xforecast = bars.iloc[-window:, [*ibandsgs, *list(range(fi,nind)), id]]
         Xforecast = Xforecast.values.flatten()
 
-    assert len(y[y == 1]) == len(y[y == 2])
+    #assert len(y[y == 1]) == len(y[y == 2])
 
     return Xforecast, X, y
 

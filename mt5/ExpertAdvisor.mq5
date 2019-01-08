@@ -50,7 +50,7 @@ bool PlaceOrderNow(int direction){
     // stop loss and take profit 3:1
     request.tp =request.price*(1+direction*expect_var*3);
     request.sl = request.price*(1-direction*expect_var);
-    request.volume    = 50*ncontracts; // volume executed in contracts
+    request.volume    = 5*ncontracts; // volume executed in contracts
     request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
     if(!OrderSend(request,result))     //--- send the request

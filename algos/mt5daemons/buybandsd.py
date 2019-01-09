@@ -15,9 +15,9 @@ from ..util import progressbar
 # Use same path that can be read by the expert advisor
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 debug=True
-testingpath = r"C:\Users\alferreira\Documents\stocks\algos\tests"
-meta5filepath = testingpath
-cname="WIN@"# "WING19"
+# testingpath = '/home/andre/Projects/stocks/algos/tests'
+# meta5filepath = testingpath
+cname= "WING19" #"WIN@"# "WING19"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',
@@ -64,7 +64,7 @@ while(True): # daemon allways running
         # don't want masterdf to be reused
         loaded = meta5Ibov.loadMeta5Data(suffix='RTM1.mt5bin',
                     cleandays=False, preload=False, verbose=False)
-        bars = meta5Ibov.getSymbol('WIN@')
+        bars = meta5Ibov.getSymbol(cname)
         meta5time = pd.Timestamp(bars.index.values[-1])
     except Exception as e:
         print('Exception while reading *RTM1.mt5bin files: ',
@@ -83,7 +83,7 @@ while(True): # daemon allways running
     # effective missing data
     percmiss = meta5Ibov.calculateMissing(meta5Ibov.masterdf[-3200:])
     # change this to evaluate the percentage of missing data? future!
-    if sizeread < 3200: # cannot make indicators or predictions with
+    if sizeread < 3200 or percmiss > 0.05: # cannot make indicators or predictions with
         print('Too few data, cannot work!', file=sys.stderr)
         recordMinute(entrytime, meta5time, sizeread, percmiss)
         continue # too few data

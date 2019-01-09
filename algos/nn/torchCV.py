@@ -1,8 +1,8 @@
 """Fitting a NN model tools for cross-validate the model"""
 import numpy as np
 import torch as th
-from Tools.torchUtil import *
-from Tools.util import progressbar
+from .torchUtil import *
+from ..util import progressbar
 
 def indexSequentialFolds(length, size, verbose=True):
     """

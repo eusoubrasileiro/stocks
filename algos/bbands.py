@@ -11,6 +11,27 @@ debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
+@jit(nopython=True, parallel=True)
+def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
+    """
+    Based on a bollinger band defined by upper-band and lower-band
+    return signal:
+        buy 1 : crossing from down-outside to inside it's buy
+        sell 2 : crossing from up-outside to inside it's sell
+        hold : nothing usefull happend
+    m1 stands for minus one, the sample before.
+    """
+    signal = np.zeros(price.size+1)
+    signal[0] = 0 # cannot decide class without past info
+    for i in prange(1, price.size):
+        if price[i] > lband[i] and pricem1[i] <= lbandm1[i]: # crossing from down to up
+            signal[i] = 1
+        elif price[i] < uband[i] and pricem1[i] >= ubandm1[i]: # crossing from up to down
+            signal[i] = 2
+        else:
+            signal[i] = 0
+    return signal
+
 @jit(nopython=True) # 1000x faster than using pandas for loop
 def traverseBand(bandsg, yband, ask, bid, day):
     """
@@ -57,7 +78,7 @@ def traverseBand(bandsg, yband, ask, bid, day):
         yband[buyindex] = np.nan # set it to be ignored
     return yband
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
@@ -69,10 +90,8 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     y = np.zeros(len(df))*np.nan
     time = np.zeros(len(df)) # let it be float after we convert back to int
     nt = 0 # number of training vectors
-with nogil():
-    # prange here otherwise will have to sort
-     # will work even with increment counter?
-    for i in prange(window, df.shape[0]):
+    # prange break this here, cannot use this way
+    for i in range(window, df.shape[0]):
         for j in range(nbands): # each band look at the ys' target class
             if df[i , j] == df[i, j]: # if y' is not nan than we have a training pair X, y
                 # X feature vector is the last window (signals + askv and bidv 8 dimension)
@@ -101,52 +120,39 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
     inc = 0.5
     # if verbose plotting
     lastn=-500
+    price = bars.OHLC.values
     for i in range(nbands):
-        upband, sma, lwband =  ta.BBANDS(bars.OHLC.values, window*inc)
+        upband, sma, lwband =  ta.BBANDS(price, window*inc)
         bars['bandlw'+str(i)] = lwband
         bars['bandup'+str(i)] = upband
+        signals = bollingerSignal(price[1:], price[:-1],
+                                  upband[1:], upband[:-1], lwband[1:], lwband[:-1])
+        bars['bandsg'+str(i)] = signals # signal for this band
         inc += 0.5
     bars.dropna(inplace=True)
 
-    # can improve here too slw with conditions
     if verbose:
-        figure = plt.figure(figsize=(15,7))
+        plt.figure(figsize=(15,7))
         plt.subplot(2, 1, 1)
-        plt.plot(bars.OHLC.values[lastn:], 'k-')
-    for i in range(nbands):
-        bars['bandsg'+str(i)] = np.nan # signal for this band
-        # buy signal condition combination
-        bars['bandlwabv'] = bars.OHLC > bars['bandlw'+str(i)] # above lower band now
-        bars['bandlwblw'] = bars.OHLC <= bars['bandlw'+str(i)] # bellow lower band before
-        # sell signal condition combinatoin
-        bars['bandupblw'] = bars.OHLC < bars['bandup'+str(i)] # bellow upper band now
-        bars['bandupabv'] = bars.OHLC >= bars['bandup'+str(i)] # above upper band before
-        # use condition combination to get buy and sell signals for each band
-        buy = np.logical_and(bars['bandlwabv'].values[1:], bars['bandlwblw'].values[:-1])
-        buy = np.append(False, buy) # first index cannot be used due past comparison
-        bars.loc[buy, 'bandsg'+str(i)] = 1
-        sell = np.logical_and(bars['bandupblw'].values[1:], bars['bandupabv'].values[:-1])
-        sell = np.append(False, sell) # first index ...
-        bars.loc[sell, 'bandsg'+str(i)] = 2 # set signal
-        bars.loc[~(buy|sell), 'bandsg'+str(i)] = 0 # everything else is hold
-        # plot bands
-        if verbose:
-            plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-            plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-    # clean-up temp rows
-    bars.drop(['bandupblw', 'bandupabv'], axis=1, inplace=True) # clean-up temp rows
-    if verbose:
+        plt.plot(price[lastn:], 'k-')
+        for i in range(nbands):
+            # plot bands
+            plt.plot(dow['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
+            plt.plot(dow['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
         plt.subplot(2, 1, 2)
         for i in range(nbands):
-            plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
+            plt.plot(dow['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
             plt.ylabel('signal-code')
         plt.legend()
         plt.savefig('bbands.png')
         plt.close()
+
     ### Latest Signal - not standardized - used for predicting future
     signal = bars.loc[:, ['bandsg0', 'bandsg1', 'bandsg2']].tail(1).values
-If np.all(signal == 0):
-      return None*4
+
+    if np.all(signal == 0): # no signal no training
+      return None, None, None, None
+
     #### Traverse bands
     for j in range(nbands): # for each band you might need to save training-feature-target vectors
         # save batch from here to behind (batch-size)
@@ -217,13 +223,10 @@ If np.all(signal == 0):
     time = time.astype(int)
     y = y.astype(int)
 
-    # is there a signal?
-    Xforecast = None
-    if np.any(signal != 0): # create prediction vector X
-        Xforecast = bars.iloc[-window:, [*ibandsgs, *list(range(fi,nind)), id]]
-        Xforecast = Xforecast.values.flatten()
-
-    #assert len(y[y == 1]) == len(y[y == 2])
+    # create prediction vector X
+    Xforecast = bars.iloc[-window:, [*ibandsgs, *list(range(fi,nind)), id]]
+    Xforecast = Xforecast.values.flatten()
+    # assert len(y[y == 1]) == len(y[y == 2])
 
     return signal, Xforecast, X, y
 

@@ -13,10 +13,11 @@ from ..util import progressbar
 
 # Working Path for Expert Advisor Metatrader 5
 # Use same path that can be read by the expert advisor
-# meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
+meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 debug=True
 testingpath = r"C:\Users\alferreira\Documents\stocks\algos\tests"
 meta5filepath = testingpath
+cname="WIN@"# "WING19"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',

@@ -31,16 +31,17 @@ bool PlaceOrderNow(int direction){
     int ncontracts;
 
     ncontracts = MathAbs(direction);  // number to buy or sell
+    direction = direction/MathAbs(direction); // just sign  -1 or 1
     //--- parameters of request
     request.action    = TRADE_ACTION_DEAL;                     // type of trade operation
-    request.symbol    = "WIN@";                               // symbol
+    request.symbol    = sname;                               // symbol
     if(direction > 0){ //+ postivie buy order
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
         request.type      = ORDER_TYPE_BUY;                        // order type
     }
     else{ //  -negative sell order
         nbuys=PositionsTotal(); // number of open positions
-        if(nbuys < 0 ) // cannot sell what was not bought
+        if(nbuys < 1 ) // cannot sell what was not bought
             return false;
         else // sell only the same quantity bought to not enter in a short position
             ncontracts = MathMin(nbuys, ncontracts);
@@ -50,7 +51,7 @@ bool PlaceOrderNow(int direction){
     // stop loss and take profit 3:1
     request.tp =request.price*(1+direction*expect_var*3);
     request.sl = request.price*(1-direction*expect_var);
-    request.volume    = 5*ncontracts; // volume executed in contracts
+    request.volume    = nv*ncontracts; // volume executed in contracts
     request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
     if(!OrderSend(request,result))     //--- send the request
@@ -84,7 +85,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
                 //--- setting the operation parameters
                 request.action   = TRADE_ACTION_DEAL;        // type of trade operation
                 request.position = position_ticket;          // ticket of the position
-                request.symbol   = "WIN@";          // symbol
+                request.symbol   = sname;          // symbol
                 request.volume   = volume;                   // volume of the position
                 request.deviation = 7;                        // 7*0.01 tick size : 7 cents
                 request.magic    =EXPERT_MAGIC;             // MagicNumber of the position

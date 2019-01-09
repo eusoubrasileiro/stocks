@@ -11,7 +11,7 @@ debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True,  parallel=True)
 def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
     """
     Based on a bollinger band defined by upper-band and lower-band
@@ -21,9 +21,9 @@ def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
         hold : nothing usefull happend
     m1 stands for minus one, the sample before.
     """
-    signal = np.zeros(price.size+1)
-    signal[0] = 0 # cannot decide class without past info
-    for i in prange(1, price.size):
+    n = len(price)
+    signal = np.zeros(n)
+    for i in prange(n):
         if price[i] > lband[i] and pricem1[i] <= lbandm1[i]: # crossing from down to up
             signal[i] = 1
         elif price[i] < uband[i] and pricem1[i] >= ubandm1[i]: # crossing from up to down
@@ -102,14 +102,14 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     return X[:nt], y[:nt], time[:nt]
 
 # window=21; nbands=3 # number of bbands
-def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
+def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
     """
     return Xpredict, Xtrain, ytrain
 
     if Xpredict has signal all zero return None
     """
     #del bars.S
-    #bars['OHLC'] = symbols.apply(lambda row: np.mean([row['O'], row['H'], row['L'], row['C']]), axis=1)
+    bars = obars.copy() # avoid warnings
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
     # needed to reset orders by day
@@ -125,9 +125,10 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
         bars['bandlw'+str(i)] = lwband
         bars['bandup'+str(i)] = upband
+        bars['bandsg'+str(i)] = 0 # signal for this band
         signals = bollingerSignal(price[1:], price[:-1],
                                   upband[1:], upband[:-1], lwband[1:], lwband[:-1])
-        bars['bandsg'+str(i)] = signals # signal for this band
+        bars.loc[1:, 'bandsg'+str(i)] = signals.astype(int) # signal for this band
         inc += 0.5
     bars.dropna(inplace=True)
 
@@ -151,7 +152,7 @@ def getTrainingForecastVectors(bars, window=21, nbands=3, verbose=False):
     signal = bars.loc[:, ['bandsg0', 'bandsg1', 'bandsg2']].tail(1).values
 
     if np.all(signal == 0): # no signal no training
-      return None, None, None, None
+      return signal, None, None, None
 
     #### Traverse bands
     for j in range(nbands): # for each band you might need to save training-feature-target vectors

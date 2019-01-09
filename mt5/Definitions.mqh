@@ -2,7 +2,7 @@
 #define TESTINGW_FILE false // testin with predictions files
 
 // symbols neeeded for training and prediction
-string symbols[1] = {"WING19"};//, {"WIN@"};
+string symbols[2] = {"WING19", "WIN@"};
 string sname = "WING19"; //"WING19";
 int nv = 2; // number of contracts to buy for each direction/quantity
 // stores a prediction time and direction

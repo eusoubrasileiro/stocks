@@ -17,7 +17,7 @@ meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuot
 debug=True
 # testingpath = '/home/andre/Projects/stocks/algos/tests'
 # meta5filepath = testingpath
-cname= "WING19" #"WIN@"# "WING19"
+cname= "WIN@" #"WIN@"# "WING19"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',
@@ -40,8 +40,8 @@ def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
     meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")
     daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")
     with open('processedminutes.txt', 'a') as f:
-        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.1f}%  {:>3d}".format(
-        entrytime, daimontime, meta5time, sizeread, 100*percmiss,
+        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.2f}  {:>3d}".format(
+        entrytime, daimontime, meta5time, sizeread, percmiss,
         direction)
         f.write(msg+'\n')
         print(msg, file=sys.stderr)
@@ -67,8 +67,9 @@ while(True): # daemon allways running
         bars = meta5Ibov.getSymbol(cname)
         meta5time = pd.Timestamp(bars.index.values[-1])
     except Exception as e:
-        print('Exception while reading *RTM1.mt5bin files: ',
-                str(e), file=sys.stderr)
+        if debug:
+            print('Exception while reading *RTM1.mt5bin files: ',
+                    str(e), file=sys.stderr)
         recordMinute(entrytime)
         time.sleep(args.delay) # wait a bit before next read
         continue
@@ -81,11 +82,12 @@ while(True): # daemon allways running
         continue
     sizeread = len(bars) # samples read
     # effective missing data
-    percmiss = meta5Ibov.calculateMissing(meta5Ibov.masterdf[-3200:])
+    missing = meta5Ibov.calculateMissing(bars.iloc[-3200:].copy())
+
     # change this to evaluate the percentage of missing data? future!
-    if sizeread < 3200 or percmiss > 0.05: # cannot make indicators or predictions with
+    if sizeread < 3200: # cannot make indicators or predictions with
         print('Too few data, cannot work!', file=sys.stderr)
-        recordMinute(entrytime, meta5time, sizeread, percmiss)
+        recordMinute(entrytime, meta5time, sizeread, missing)
         continue # too few data
 
     # Prepare data for training classification : creating features etc.
@@ -94,7 +96,7 @@ while(True): # daemon allways running
 
     if Xp is None: # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, 0)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, 0)
         continue
 
     # training window latest data
@@ -104,7 +106,7 @@ while(True): # daemon allways running
     if ypred is None:
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, 0)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, 0)
         continue
 
     # decide base on prediction and probability clip
@@ -114,7 +116,7 @@ while(True): # daemon allways running
     if yprob < 0.8: # must be 80% sure this is the class
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, ypred)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, ypred)
         continue
 
     # turn in -1/1 class + quantity
@@ -141,4 +143,4 @@ while(True): # daemon allways running
             continue
     # end
     daimontime = datetime.datetime.now()
-    recordMinute(entrytime, meta5time, sizeread, percmiss, daimontime, ypred)
+    recordMinute(entrytime, meta5time, sizeread, missing, daimontime, ypred)

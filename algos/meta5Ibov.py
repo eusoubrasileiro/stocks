@@ -20,18 +20,25 @@ import os
 import sys
 from pathlib import Path
 
-def calculateMissing(df):
+def calculateMissing(odf):
     """
     Calculate the percentage of missing minutes in the df data set
     Consider first and last minute as boundaries
     """
+    df = odf.copy()
     # Calculate last minute of operation for each day in `df`
     df.loc[:, 'time'] = np.nan
     df.loc[:, 'time'] = df.index.astype(np.int64)//10**9 # (to unix timestamp) from nano seconds 10*9 to seconds
     days = df.groupby(df.index.date)['time'].agg(['min', 'max', 'count']) # aggreagate on groupby
-    missingmins = days['count']-((days['max']-days['min'])//60)-1 # -1 due count is +1
-    df.drop('time', axis=1, inplace=True) # drop column
-    return abs(missingmins.sum()/len(df))
+    # total number of minutes on the day
+    totalminday = (days['max']-days['min'])//60
+    # minutes with data by day
+    countminday = days['count'] # -1 due count is +1
+    missminday = totalminday-countminday
+    percmissminday = missminday/totalminday
+
+    # print('not working on daemon just on jupyter notebook!!!')
+    return np.mean(percmissminday) # average of missing minutes
 
 def removeDays(minutes=4*60):
     """remove days with less than minutes data"""

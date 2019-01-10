@@ -114,56 +114,65 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
     }
 }
 
+void sendPrediction(prediction pred, datetime timenow, datetime daybegin, datetime dayend){
+  // nexec;
+  // execute or not a prediction
+  if(pred.direction < 0){ // no matter the time allways send sells
+    PlaceOrderNow(pred.direction);
+    executed_predictions[nexec] = pred;
+    nexec++;
+  }
+  // no orders older than 2 minutes, the second condition almost never used
+  if(pred.time > timenow + 2*60 || pred.time < timenow - 2*60 )
+      return;
+  // moved to here so we can check if something is wrong
+  // do not place orders in the end of the day
+  // do not place orders in the begin of the day
+  if(timenow > dayend && timenow < daybegin)
+    return;
+  // cannot place more than xxx orders per dt
+  // dont open more than yyy positions per day
+  if(nlastOrders() >= dtnorders || nordersDay() >= maxorders)
+      return;    // number of open positions dont open more than that per day
+
+  PlaceOrderNow(pred.direction);
+  executed_predictions[nexec] = pred;
+  nexec++;
+}
 
 //| Timer function -- Every 1 minutes
 void OnTimer(){
-    prediction pnow;
-    datetime dayend, daybegin;
-    datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
+  prediction toexecute[]; // new predictions to be executed
+  datetime dayend, daybegin;
+  datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
+  dayend = dayEnd(timenow); // 15 minutes before closing the stock market
+  daybegin = dayBegin(timenow); // 2 hours after openning
+  // check to see if we should close any order
+  ClosePositionsbyTime(timenow, dayend, expire_time);
+  // we can work
+  if(!TESTINGW_FILE){ // not testing
+      SaveDataNow(timenow);
+      // read predictions file even if with zeroed... with date and time
+      nread = readPredictions();
+      if(nread==0){
+        return;
+      }
+      // check for new predictions
+      int nnew = newPredictions(toexecute); // get new predictions
+      if(nnew == 0) // nothing new
+        return;
+      for(int i; i< nnew; i++)
+        sendPrediction(toexecute[i], timenow, daybegin, dayend);
 
-    dayend = dayEnd(timenow); // 15 minutes before closing the stock market
-    daybegin = dayBegin(timenow); // 2 hours after openning
-    // check to see if we should close any order
-    ClosePositionsbyTime(timenow, dayend, 2700); // 45 min expire time
-
-    // we can work
-    if(!TESTINGW_FILE){ // not testing
-        SaveDataNow(timenow);
-        Sleep(12000); // sleep enough time for the python worker make
-        //a new prediction file
-        // read prediction file... with date and time
-        if(!GetPrediction(pnow)) // something wrong there was no prediction
-            return;
-    }
-    else{ // when testing
-        // when testing doesn't need to save data
-        //Sleep(10); //sleep few 10 ms
-        if(!TestGetPrediction(pnow, timenow)) // not time to place an order
-            return;
-    }
-    // same prediction or there was no prediction
-    if(pnow.direction == plast.direction && pnow.time == plast.time)
-        return;
-    // moved to here so we can check if something is wrong
-    // do not place orders 30 mins before the end of the day
-    if(timenow > dayend - (30*60))
-        return;
-    // do not place orders in the begin of the day
-    if(timenow < daybegin)
-        return;
-    // no orders older than 4 minutes, the second condition almost never used
-    if(pnow.time > timenow + 2*60 || pnow.time < timenow - 5*60 )
-        return;
-    if(nlastOrders() >= norders) // cannot place more than xxx orders per
-        return;    // number of open positions dont open more than that per day
-    if(nordersDay() >= maxorders) // dont open more than yyy positions
-        return;
-
-    // place
-    PlaceOrderNow(pnow.direction);
-
-    // update last prediction
-    plast = pnow;
+  }
+  else{ // when testing
+      // when testing doesn't need to save data
+      //Sleep(10); //sleep few 10 ms
+      prediction pnow;
+      if(!TestGetPrediction(pnow, timenow)) // not time to place an order
+          return;
+      sendPrediction(pnow, timenow, daybegin, dayend);
+  }
 }
 
 //+------------------------------------------------------------------+
@@ -171,7 +180,6 @@ void OnTimer(){
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-    //--- destroy timer
     EventKillTimer();
 }
 //+------------------------------------------------------------------+
@@ -179,7 +187,6 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-    //---
 }
 
 //+------------------------------------------------------------------+
@@ -187,8 +194,6 @@ void OnTick()
 //+------------------------------------------------------------------+
 void OnTrade()
 {
-    //---
-
 }
 //+------------------------------------------------------------------+
 //| TradeTransaction function                                        |
@@ -197,20 +202,14 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
     const MqlTradeRequest& request,
     const MqlTradeResult& result)
 {
-    //---
-
 }
 //+------------------------------------------------------------------+
 //| TesterInit function                                              |
 //+------------------------------------------------------------------+
 void OnTesterInit()
 {
-    //---
-
 }
 //+------------------------------------------------------------------+
 void OnTesterDeinit()
 {
-    //---
-
 }

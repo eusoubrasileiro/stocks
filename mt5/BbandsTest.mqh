@@ -1,4 +1,4 @@
-#include "Definitions.mqh"
+#include "BbandsDefinitions.mqh"
 
 bool TestReadPredictions(){
     // read 12 bytes prediction file {datetime:long, direction:int}

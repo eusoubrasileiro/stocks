@@ -51,27 +51,54 @@ void SaveDataNow(datetime timenow){
 }
 
 
-bool GetPrediction(prediction &pred){
-    // read 12 bytes prediction file {datetime:long, direction:int}
-    // if the prediction date is equal the last ignore
-    // return the prediction direction or 0 if it's the same as the last'
+long readPredictions(void){
+    // read 12 bytes predictions file {datetime:long, direction:int}
     string fname = "predictions.bin";
     //FILE_COMMON location of the file in a shared folder for all client terminals \Terminal\Common\Files
     ///home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
-    for(int try=0; try<5; try++){ // try 5 times
-        // int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
-        long nread =  FileLoad(filename, read_predictions, FILE_COMMON);
-        if(nread == -1)
-            continue
-        npredictions = nread; // number of predictions read (12 bytes struct size)
-        Print("prediction datetime: ", pred.time, " direction: ", pred.direction);
-        return true;
+    long nread = 0;
+    while(true){ // try inf
+      // int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
+      nread =  FileLoad(fname, read_predictions, FILE_COMMON);
+      if(nread == -1){
+        Sleep(1000); // wait a bit
+        continue;
+      }
+      else {
+        Print("read ", nread, " predictions");
+        if(nread > 0){
+          Print("last: prediction datetime: ", read_predictions[nread-1].time, " direction: ", read_predictions[nread-1].direction);
         }
-        else
-            Sleep(2000); // cannot read so wait a bit
+        break;
+      }
     }
-    Print("Something is Wrong couldnt read Prediction file");
-    return false;
+    return nread;
+}
+
+
+bool isInPredictions(prediction value, prediction &array[]){
+  // check wether the value is in the array
+  n = ArraySize(array);
+  for(int j=0; j<n; j++){
+    if(value == array[j])
+      return true;
+  false;
+}
+
+int newPredictions(prediction &newpredictions[]){
+  // compare read_predictions with executed_predictions
+  // return number of new orders 'toexecute_predictions'
+  nread = ArraySize(read_predictions);
+  ArrayResize(newpredictions, nread); // maximum is the number read
+  int nnew = 0;
+  for(int i=0; i<nread; i++){
+    // check if it has already been executed
+    if(!isInPredictions(read_predictions[i], executed_predictions)){
+      newpredictions[nnew] = read_predictions
+      nnew++; // new prediction
+    }
+  }
+  return int(nnew);
 }
 
 unsigned int nstocks(double enterprice){

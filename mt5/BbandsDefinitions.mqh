@@ -12,27 +12,30 @@ struct prediction {
     // for example -3 is sell -3
     // +1 buy 1
 };
-
-// Testing
-// array of predictions for testing only
-prediction test_predictions[];
-// index in array of predictions
-int ipred = 0;
-int npred = 0; // number of test predictions
-// Real Operation
-prediction read_predictions[]; // latest predictions read
-prediction executed_predictions[]; // executed predictions
-prediction toexecute_predictions[]; // to be executed 
+//////////////////////////////////
+///////// Real-Time Operation
+//////////////////////////////////
+const int expire_time=45*60;
 //expected variation of price 3:1 for sl, tp
-const double expect_var=0.005;
-// number of open positions
-//int openpositions;
+const double expect_var=0.0025;
 // desired minprofit
 const double minprofit=160;
 // control of number of orders per ndt (minutes)
-// 3 orders maximum allowed on the last 15 minutes
-const int norders=8;
+// maximum allowed on the last 15 minutes (perdt)
+const int dtnorders=8;
 // per dt in minutes
 const int perdt=15;
 // maximum orders per day
 const int maxorders=8;
+/////////// Predictions
+prediction read_predictions[]; // latest predictions read
+// executed predictions per day maxorders*2 (buy and sell)
+prediction executed_predictions[maxorders*2];
+int nexec = 0; // count executed_predictions (dont like resize)
+//////////////////////////////////
+///////// Back-Testing
+//////////////////////////////////
+prediction test_predictions[];
+// index in array of predictions
+int ipred = 0;
+int npred = 0; // number of test predictions

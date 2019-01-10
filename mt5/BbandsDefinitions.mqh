@@ -17,9 +17,13 @@ struct prediction {
 //////////////////////////////////
 const int expire_time=45*60;
 //expected variation of price 3:1 for sl, tp
-const double expect_var=0.0025;
+const double expect_var=0.0015;
 // desired minprofit
 const double minprofit=160;
+// tick-size
+const double ticksize=5; // minicontratos ibovespa 5 points price variation
+// deviation accept by price
+const double deviation=3;
 // control of number of orders per ndt (minutes)
 // maximum allowed on the last 15 minutes (perdt)
 const int dtnorders=8;
@@ -27,6 +31,8 @@ const int dtnorders=8;
 const int perdt=15;
 // maximum orders per day
 const int maxorders=8;
+// number of deals counter
+int ndeals=0;
 /////////// Predictions
 prediction read_predictions[]; // latest predictions read
 // executed predictions per day maxorders*2 (buy and sell)

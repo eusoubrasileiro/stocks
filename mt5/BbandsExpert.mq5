@@ -23,8 +23,25 @@ int OnInit()
     return(INIT_SUCCEEDED);
 }
 
-bool PlaceOrderNow(int direction){
-    MqlTradeResult result = {0};
+// wait the execution of an order until it turns in a deal
+void waitDeal(MqlTradeResult &result){
+  if(result.recode == TRADE_RETCODE_DONE)
+    return;
+  if(result.recode == TRADE_RETCODE_PLACED || result.recode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
+    // result deal is not filled properly due the trading server
+    // not having executed it yet so we will keep looking
+    ulong order_ticket = result.order;
+    long code = 0;
+    while(True){ // wait until order is fully executed in a deal
+        OrderSelect(order_ticket);
+        code = OrderGetInteger(order_ticket, ENUM_ORDER_STATE)
+        if(code == ORDER_STATE_FILLED) // fully executed
+          break;
+    }
+  }
+}
+
+bool PlaceOrderNow(int direction, MqlTradeResult &result){
     MqlTradeRequest request = {0};
     int nbuys;
     int ncontracts;
@@ -50,17 +67,18 @@ bool PlaceOrderNow(int direction){
     }
     // stop loss and take profit 3:1 rount to 5
     request.tp =request.price*(1+direction*expect_var*3);
-    request.tp = MathFloor(request.tp/5)*5;
+    request.tp = MathFloor(request.tp/ticksize)*ticksize;
     request.sl = request.price*(1-direction*expect_var);
-    request.sl = MathCeil(request.sl/5)*5;
+    request.sl = MathCeil(request.sl/ticksize)*ticksize;
     request.volume    = nv*ncontracts; // volume executed in contracts
-    request.deviation = 15;                                  // 0.07 cents : allowed deviation from the price
+    request.deviation = deviation*ticksize;                                  //  allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
-    if(!OrderSend(request,result))     //--- send the request
+    if(!OrderSend(request, result))     //--- send the request
         PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
         return false;
     //--- information about the operation
-    PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+    PrintFormat("retcode=%d  deal=%d  order=%d",result.retcode,result.deal,result.order);
+    waitDeal(result);
     return true;
 }
 
@@ -89,30 +107,33 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
                 request.position = position_ticket;          // ticket of the position
                 request.symbol   = sname;          // symbol
                 request.volume   = volume;                   // volume of the position
-                request.deviation = 15;                        // 7*0.01 tick size : 7 cents
+                request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
                 request.magic    =EXPERT_MAGIC;             // MagicNumber of the position
                 //--- set the price and order type depending on the position type
                 if(type==POSITION_TYPE_BUY)
                 {
-                    request.price=SymbolInfoDouble("PETR4",SYMBOL_BID);
+                    request.price=SymbolInfoDouble(sname, SYMBOL_BID);
                     request.type =ORDER_TYPE_SELL;
                 }
                 else
                 {
-                    request.price=SymbolInfoDouble("PETR4",SYMBOL_ASK);
+                    request.price=SymbolInfoDouble(sname, SYMBOL_ASK);
                     request.type =ORDER_TYPE_BUY;
                 }
                 //--- output information about the closure by opposite position
-                PrintFormat("Close #%I64d %s %s by #%I64d",position_ticket, EnumToString(type),request.position_by);
+                PrintFormat("Close position %s %s by %d", position_ticket, EnumToString(type), request.position_by);
                 //--- send the request
                 if(!OrderSend(request,result))
-                    PrintFormat("OrderSend error %d",GetLastError()); // if unable to send the request, output the error code
+                    PrintFormat("OrderSend error %d", GetLastError()); // if unable to send the request, output the error code
                 //--- information about the operation
-                PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+                PrintFormat("retcode=%d  deal=%d  order=%d",result.retcode,result.deal,result.order);
+
+                waitDeal(result);
             }
         }
     }
 }
+
 
 void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datetime dayend){
   // nexec;

@@ -1,0 +1,9 @@
+#.*  # ignore all hidden files and folders
+**/.ipynb_checkpoints/*.ipynb
+**/__pycache___/*
+*.pyc
+*.ipynb
+*.pickle
+*.csv
+*.npy
+*.pdf

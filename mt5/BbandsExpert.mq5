@@ -25,24 +25,25 @@ int OnInit()
 
 // wait the execution of an order until it turns in a deal
 void waitDeal(MqlTradeResult &result){
-  if(result.recode == TRADE_RETCODE_DONE)
+  if(result.retcode == TRADE_RETCODE_DONE)
     return;
-  if(result.recode == TRADE_RETCODE_PLACED || result.recode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
+  if(result.retcode == TRADE_RETCODE_PLACED || result.retcode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
     // result deal is not filled properly due the trading server
     // not having executed it yet so we will keep looking
     ulong order_ticket = result.order;
     long code = 0;
-    while(True){ // wait until order is fully executed in a deal
+    while(true){ // wait until order is fully executed in a deal
         OrderSelect(order_ticket);
-        code = OrderGetInteger(order_ticket, ENUM_ORDER_STATE)
+        code = OrderGetInteger(ORDER_STATE);
         if(code == ORDER_STATE_FILLED) // fully executed
           break;
     }
   }
 }
 
-bool PlaceOrderNow(int direction, MqlTradeResult &result){
+bool PlaceOrderNow(int direction){
     MqlTradeRequest request = {0};
+   MqlTradeResult result = {0}; 
     int nbuys;
     int ncontracts;
 

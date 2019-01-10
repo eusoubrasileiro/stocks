@@ -30,7 +30,7 @@ const int maxorders=8;
 /////////// Predictions
 prediction read_predictions[]; // latest predictions read
 // executed predictions per day maxorders*2 (buy and sell)
-prediction executed_predictions[maxorders*2];
+prediction executed_predictions[16];
 int nexec = 0; // count executed_predictions (dont like resize)
 //////////////////////////////////
 ///////// Back-Testing

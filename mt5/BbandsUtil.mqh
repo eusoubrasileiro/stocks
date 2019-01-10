@@ -24,7 +24,8 @@ void SaveDataNow(datetime timenow){
     int nwindow=5000; // minimal needed data for training validating and predicting now
     MqlRates mqlrates[];
     int nsymbols = ArraySize(symbols);
-    int copied, error;
+    int copied=-1;
+    int error;
     int totalcopied=0;
 
     for(int i=0; i<nsymbols; i++)
@@ -76,25 +77,25 @@ long readPredictions(void){
 }
 
 
-bool isInPredictions(prediction value, prediction &array[]){
+bool isInPredictions(prediction &value, prediction &array[]){
   // check wether the value is in the array
-  n = ArraySize(array);
-  for(int j=0; j<n; j++){
-    if(value == array[j])
+  uint n = ArraySize(array);
+  for(uint j=0; j<n; j++)
+    if(value.direction == array[j].direction && value.time == array[j].time)
       return true;
-  false;
+  return false;
 }
 
 int newPredictions(prediction &newpredictions[]){
   // compare read_predictions with executed_predictions
   // return number of new orders 'toexecute_predictions'
-  nread = ArraySize(read_predictions);
+  uint nread = ArraySize(read_predictions);
   ArrayResize(newpredictions, nread); // maximum is the number read
   int nnew = 0;
-  for(int i=0; i<nread; i++){
+  for(uint i=0; i<nread; i++){
     // check if it has already been executed
     if(!isInPredictions(read_predictions[i], executed_predictions)){
-      newpredictions[nnew] = read_predictions
+      newpredictions[nnew] = read_predictions[i];
       nnew++; // new prediction
     }
   }

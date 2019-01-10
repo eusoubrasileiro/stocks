@@ -114,7 +114,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
     }
 }
 
-void sendPrediction(prediction pred, datetime timenow, datetime daybegin, datetime dayend){
+void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datetime dayend){
   // nexec;
   // execute or not a prediction
   if(pred.direction < 0){ // no matter the time allways send sells
@@ -153,7 +153,7 @@ void OnTimer(){
   if(!TESTINGW_FILE){ // not testing
       SaveDataNow(timenow);
       // read predictions file even if with zeroed... with date and time
-      nread = readPredictions();
+      int nread = readPredictions();
       if(nread==0){
         return;
       }
@@ -161,7 +161,7 @@ void OnTimer(){
       int nnew = newPredictions(toexecute); // get new predictions
       if(nnew == 0) // nothing new
         return;
-      for(int i; i< nnew; i++)
+      for(int i=0; i< nnew; i++)
         sendPrediction(toexecute[i], timenow, daybegin, dayend);
 
   }

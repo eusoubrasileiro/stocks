@@ -34,7 +34,7 @@ void SaveDataNow(datetime timenow){
             // -1 if it has not complet it yet
             copied = CopyRates(symbols[i], PERIOD_M1, 0,  nwindow, mqlrates);
             if(copied < nwindow){ //  sleep time(1 seconds) for downloading the data
-                Sleep(7000);
+                Sleep(5000);
                 // 4401 Request history not found, no data yet
                 error =  GetLastError();
             }
@@ -55,18 +55,17 @@ bool GetPrediction(prediction &pred){
     // read 12 bytes prediction file {datetime:long, direction:int}
     // if the prediction date is equal the last ignore
     // return the prediction direction or 0 if it's the same as the last'
-    string fname = "prediction.bin";
+    string fname = "predictions.bin";
     //FILE_COMMON location of the file in a shared folder for all client terminals \Terminal\Common\Files
     ///home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
     for(int try=0; try<5; try++){ // try 5 times
-        int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
-        if(handle!=INVALID_HANDLE){
-//            pred.time = (datetime) FileReadLong(handle);
-//            pred.direction = (int) FileReadInteger(handle, 4);
-            FileReadStruct(handle, pred);
-            FileClose(handle);
-            Print("prediction datetime: ", pred.time, " direction: ", pred.direction);
-            return true;
+        // int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
+        long nread =  FileLoad(filename, read_predictions, FILE_COMMON);
+        if(nread == -1)
+            continue
+        npredictions = nread; // number of predictions read (12 bytes struct size)
+        Print("prediction datetime: ", pred.time, " direction: ", pred.direction);
+        return true;
         }
         else
             Sleep(2000); // cannot read so wait a bit

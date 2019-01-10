@@ -18,6 +18,7 @@ debug=True
 # testingpath = '/home/andre/Projects/stocks/algos/tests'
 # meta5filepath = testingpath
 cname= "WIN@" #"WIN@"# "WING19"
+predictions = []
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',
@@ -129,14 +130,20 @@ while(True): # daemon allways running
     predtime = pd.Timestamp(meta5time) # to save on txt file
     # prediction time to long
     predtime = np.int64(calendar.timegm(predtime.timetuple()))
+    ypred = np.int32(ypred) # to int32
+    # store in the sequence so we can use * to unpack on struck
+    predictions.append(predtime)
+    predictions.append(ypred)
+    predsize = len(predictions)//2
     while(True): # try until is able to write prediction file
         try: # write prediction for meta5 read
-            with open('prediction.bin','wb') as f:
+            with open('predictions.bin','wb') as f:
                 # struct of ulong and int 8+4 = 12 bytes
-                dbytes = struct.pack('<Qi', predtime, np.int32(ypred))
-                if f.write(dbytes) == 12:
+                # sequence of structs
+                dbytes = struct.pack('<'+'Qi'*predsize, *predictions)
+                if f.write(dbytes) == 12*predsize:
                     break
-        except Exception as e: # keep trying read
+        except Exception as e: # keep trying write
             print(e, ypred, file=sys.stderr)
             if debug:
                 raise(e)

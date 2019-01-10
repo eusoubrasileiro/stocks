@@ -13,13 +13,16 @@ struct prediction {
     // +1 buy 1
 };
 
+// Testing
 // array of predictions for testing only
-prediction predictions[];
+prediction test_predictions[];
 // index in array of predictions
 int ipred = 0;
-int npred = 0; // number of predictions
-// last prediction
-prediction plast={0};
+int npred = 0; // number of test predictions
+// Real Operation
+prediction read_predictions[]; // latest predictions read
+prediction executed_predictions[]; // executed predictions
+prediction toexecute_predictions[]; // to be executed 
 //expected variation of price 3:1 for sl, tp
 const double expect_var=0.005;
 // number of open positions

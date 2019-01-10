@@ -1,26 +1,25 @@
 #include "Definitions.mqh"
 
-
 bool TestReadPredictions(){
     // read 12 bytes prediction file {datetime:long, direction:int}
     // if the prediction date is equal the last ignore
     // return the prediction direction or 0 if it's the same as the last'
-    string fname = "predictions.bin";
+    string fname = "test_predictions.bin";
     //FILE_COMMON location of the file in a shared folder for all client terminals \Terminal\Common\Files
     ///home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
     int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
     if(handle<0){
-        Print("Something is wrong couldnt read predictions file");
+        Print("Something is wrong couldnt read test_predictions.bin file");
         return false;
     }
     Print("file read:", fname);
-    ArrayResize(predictions, 6939); // Resize the array.
+    ArrayResize(test_predictions, 6939); // Resize the array.
     //--- read all data from the file to the array
-    FileReadArray(handle, predictions);
+    FileReadArray(handle, test_predictions);
     FileClose(handle);
-    npred = ArraySize(predictions);
-    Print("Total number of predictions: ",  npred);
-    Print("First read : ", predictions[0].time, predictions[0].direction);
+    npred = ArraySize(test_predictions);
+    Print("Total number of test predictions: ",  npred);
+    Print("First read : ", test_predictions[0].time, test_predictions[0].direction);
     // set the begin of the predictions
     ipred = 0;
     return true;
@@ -37,10 +36,10 @@ bool TestReadPredictions(){
 //            return t
 //    # couldn\'t find any. time to stop simulation
 //    return -1
-    
+
 int nextIndexPrediction(int index, datetime time){
     for(int i=index; i<npred; i++)
-        if(predictions[i].time >= time)
+        if(test_predictions[i].time >= time)
             return i;
     return npred-1; // no more predictions give the last
 }
@@ -48,8 +47,8 @@ int nextIndexPrediction(int index, datetime time){
 bool TestGetPrediction(prediction &pnow, datetime timenow){
     ipred = nextIndexPrediction(ipred, timenow);
     // if the prediction date is equal the last ignore
-    pnow.time = predictions[ipred].time;        
-    pnow.direction = predictions[ipred].direction;    
+    pnow.time = test_predictions[ipred].time;
+    pnow.direction = test_predictions[ipred].direction;
     // the prediction time will not be exactly coincident with time now
     //  but we may have some tolerance
     if(timenow >= pnow.time && timenow <= pnow.time + 60)

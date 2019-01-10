@@ -43,7 +43,7 @@ void waitDeal(MqlTradeResult &result){
 
 bool PlaceOrderNow(int direction){
     MqlTradeRequest request = {0};
-   MqlTradeResult result = {0}; 
+   MqlTradeResult result = {0};
     int nbuys;
     int ncontracts;
 
@@ -144,13 +144,13 @@ void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datet
     executed_predictions[nexec] = pred;
     nexec++;
   }
-  // no orders older than 2 minutes, the second condition almost never used
-  if(pred.time > timenow + 2*60 || pred.time < timenow - 2*60 )
+  // no orders older than 2 minutes
+  if(pred.time < timenow - 2*60)
       return;
   // moved to here so we can check if something is wrong
   // do not place orders in the end of the day
   // do not place orders in the begin of the day
-  if(timenow > dayend && timenow < daybegin)
+  if(timenow > dayend || timenow < daybegin)
     return;
   // cannot place more than xxx orders per dt
   // dont open more than yyy positions per day

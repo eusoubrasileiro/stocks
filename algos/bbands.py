@@ -101,6 +101,36 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
                 nt+=1
     return X[:nt], y[:nt], time[:nt]
 
+def standardizeFeatures(bars, nbands):
+    """"
+    standardize features for signal vector
+    return index of feature columns
+    """
+    nindfeatures = 3*nbands*7 # number of indicator features
+    #nbands=nbands
+    nfeatures = nindfeatures+1+nbands #175
+    # print('number of feature signals', nfeatures)
+    # columns corresponding to the indicator features
+    fi = len(bars.columns)-(nbands*7*3+1)# first column corresponding to a indicator feature
+    nind = fi+nindfeatures # last column of the indicator features
+    # print(fi, nind)
+    # standardize
+    bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
+    bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
+    # signal vector needed columns
+    ibandsgs = [ bars.columns.get_loc('bandsg'+str(j)) for j in range(nbands) ]
+    # y target class
+    id = bars.columns.get_loc('dated')
+    # can only have values 0, 1, 2 turn it in normalized floats
+    bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
+                             bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
+    bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
+        bars.iloc[:, list(range(fi,nind))].values)
+    bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
+                             bars.iloc[:, id].std()) # normalize variance=1 mean=0
+    # return index of feature columns
+    return [*ibandsgs, *list(range(fi,nind)), id]
+
 # window=21; nbands=3 # number of bbands
 def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
     """
@@ -149,7 +179,7 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
         plt.close()
 
     ### Latest Signal - not standardized - used for predicting future
-    signal = bars.loc[:, ['bandsg0', 'bandsg1', 'bandsg2']].tail(1).values
+    signal = bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
 
     if np.all(signal == 0): # no signal no training
       return signal, None, None, None
@@ -197,35 +227,17 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
     for i, vars in enumerate(bars.groupby(bars.date)):
         day, group = vars
         bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
-    nindfeatures = 3*nbands*7 # number of indicator features
-    #nbands=nbands
-    nfeatures = nindfeatures+1+nbands #175
-    # print('number of feature signals', nfeatures)
-    # columns corresponding to the indicator features
-    fi = len(bars.columns)-(nbands*7*3+1)# first column corresponding to a indicator feature
-    nind = fi+nindfeatures # last column of the indicator features
-    # print(fi, nind)
-    # standardize
-    bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
-    bars = bars.apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
-    # signal vector needed columns
-    ibandsgs = [ bars.columns.get_loc('bandsg'+str(j)) for j in range(nbands) ]
-    # y target class
+
+    isgfeatures = standardizeFeatures(bars, nbands); # signal features standardized
+    # y target class column index
     iybands = [ bars.columns.get_loc('y'+str(j)) for j in range(nbands)]
-    id = bars.columns.get_loc('dated')
-    # can only have values 0, 1, 2 turn it in normalized floats
-    bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
-                             bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
-    bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
-        bars.iloc[:, list(range(fi,nind))].values)
-    bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
-                             bars.iloc[:, id].std()) # normalize variance=1 mean=0
-    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *ibandsgs, *list(range(fi,nind)), id]].values, window, nfeatures, nbands)
+    # assembly training pairs
+    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, window, len(isgfeatures), nbands)
     time = time.astype(int)
     y = y.astype(int)
 
     # create prediction vector X
-    Xforecast = bars.iloc[-window:, [*ibandsgs, *list(range(fi,nind)), id]]
+    Xforecast = bars.iloc[-window:, isgfeatures]
     Xforecast = Xforecast.values.flatten()
     # assert len(y[y == 1]) == len(y[y == 2])
 

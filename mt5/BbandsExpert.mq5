@@ -1,7 +1,7 @@
 #property copyright "Andre L. F"
 #property version   "1.01"
-#include "PatternNN.mqh"
-#include "Testing.mqh"
+#include "BbandsUtil.mqh"
+#include "BbandsTest.mqh"
 
 //| Expert initialization function
 int OnInit()
@@ -18,8 +18,7 @@ int OnInit()
         // read all predictions at once
         TestReadPredictions();
     }
-
-    Print("Begining now: ", timenow);
+    Print("Begining Bbands Expert now: ", timenow);
 
     return(INIT_SUCCEEDED);
 }
@@ -40,19 +39,20 @@ bool PlaceOrderNow(int direction){
         request.type      = ORDER_TYPE_BUY;                        // order type
     }
     else{ //  -negative sell order
-        nbuys=PositionsTotal(); // number of open positions
+        nbuys = PositionsTotal(); // number of open positions
         if(nbuys < 1 ) // cannot sell what was not bought
             return false;
-        else // sell only the same quantity bought to not enter in a short position
+        else{ // sell only the same quantity bought to not enter in a short position
             ncontracts = MathMin(nbuys, ncontracts);
+        }
         request.price     = SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
         request.type      = ORDER_TYPE_SELL;                        // order type
     }
-    // stop loss and take profit 3:1
+    // stop loss and take profit 3:1 rount to 5
     request.tp =request.price*(1+direction*expect_var*3);
-    request.tp = MathCeil(request.tp/5)*5;
+    request.tp = MathFloor(request.tp/5)*5;
     request.sl = request.price*(1-direction*expect_var);
-    request.sl = MathFloor(request.sl/5)*5;
+    request.sl = MathCeil(request.sl/5)*5;
     request.volume    = nv*ncontracts; // volume executed in contracts
     request.deviation = 15;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
@@ -89,7 +89,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
                 request.position = position_ticket;          // ticket of the position
                 request.symbol   = sname;          // symbol
                 request.volume   = volume;                   // volume of the position
-                request.deviation = 7;                        // 7*0.01 tick size : 7 cents
+                request.deviation = 15;                        // 7*0.01 tick size : 7 cents
                 request.magic    =EXPERT_MAGIC;             // MagicNumber of the position
                 //--- set the price and order type depending on the position type
                 if(type==POSITION_TYPE_BUY)

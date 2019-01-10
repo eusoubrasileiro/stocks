@@ -1,4 +1,4 @@
-#include "Definitions.mqh"
+#include "BbandsDefinitions.mqh"
 
 void WriteSymbol(string symbol, MqlRates &arr[]){
     ResetLastError();
@@ -97,7 +97,7 @@ unsigned int nstocks(double enterprice){
 
 datetime dayEnd(datetime timenow){
     // set end of THIS day for operations, 15 minutes before closing the stock market
-    // http://www.bmfbovespa.com.br/pt_br/servicos/negociacao/puma-trading-system-bm-fbovespa/para-participantes-e-traders/horario-de-negociacao/acoes/
+    // http://www.b3.com.br/en_us/solutions/platforms/puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
     datetime endofday;
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);

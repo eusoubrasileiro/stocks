@@ -50,9 +50,11 @@ bool PlaceOrderNow(int direction){
     }
     // stop loss and take profit 3:1
     request.tp =request.price*(1+direction*expect_var*3);
+    request.tp = MathCeil(request.tp/5)*5;
     request.sl = request.price*(1-direction*expect_var);
+    request.sl = MathFloor(request.sl/5)*5;
     request.volume    = nv*ncontracts; // volume executed in contracts
-    request.deviation = 7;                                  // 0.07 cents : allowed deviation from the price
+    request.deviation = 15;                                  // 0.07 cents : allowed deviation from the price
     request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
     if(!OrderSend(request,result))     //--- send the request
         PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
@@ -150,7 +152,7 @@ void OnTimer(){
     if(timenow < daybegin)
         return;
     // no orders older than 4 minutes, the second condition almost never used
-    if(pnow.time > timenow + 5*60 || pnow.time < timenow - 5*60 )
+    if(pnow.time > timenow + 2*60 || pnow.time < timenow - 5*60 )
         return;
     if(nlastOrders() >= norders) // cannot place more than xxx orders per
         return;    // number of open positions dont open more than that per day

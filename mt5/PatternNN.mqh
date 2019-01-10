@@ -103,19 +103,16 @@ datetime dayEnd(datetime timenow){
     TimeToStruct(timenow, mqltime);
     // calculate begin of the day
     endofday = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return endofday+16*3600+45*60;// 16:45 min
+    return endofday+17*3600+45*60;// 17:45 min
 }
 
 datetime dayBegin(datetime timenow){
-    // set end of THIS day for operations, 15 minutes before closing the stock market
-    // http://www.bmfbovespa.com.br/pt_br/servicos/negociacao/puma-trading-system-bm-fbovespa/para-participantes-e-traders/horario-de-negociacao/acoes/
     datetime daybegin;
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
-    // no orders on the first 2 hours, starts at 10 but cannot place orders until 12
-    // calculate begin of the day
+    // no orders on the first 30 minutes
     daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return daybegin+10*3600;
+    return daybegin+int(9.5*3600);
 }
 
 //  number of orders oppend on the last n minutes defined on Definitons.mqh

@@ -23,29 +23,30 @@ int OnInit()
     return(INIT_SUCCEEDED);
 }
 
-// wait the execution of an order until it turns in a deal
-void waitDeal(MqlTradeResult &result){
-  if(result.retcode == TRADE_RETCODE_DONE)
-    return;
-  if(result.retcode == TRADE_RETCODE_PLACED || result.retcode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
-    // result deal is not filled properly due the trading server
-    // not having executed it yet so we will keep looking
-    ulong order_ticket = result.order;
-    long code = 0;
-    while(true){ // wait until order is fully executed in a deal
-        OrderSelect(order_ticket);
-        code = OrderGetInteger(ORDER_STATE);
-        if(code == ORDER_STATE_FILLED) // fully executed
-          break;
-    }
-  }
-}
+// // wait the execution of an order until it turns in a deal
+// void waitDeal(MqlTradeResult &result){
+//   if(result.retcode == TRADE_RETCODE_DONE)
+//     return;
+//   if(result.retcode == TRADE_RETCODE_PLACED || result.retcode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
+//     // result deal is not filled properly due the trading server
+//     // not having executed it yet so we will keep looking
+//     ulong order_ticket = result.order;
+//     long code = 0;
+//     while(true){ // wait until order is fully executed in a deal
+//         OrderSelect(order_ticket);
+//         code = OrderGetInteger(ORDER_STATE);
+//         if(code == ORDER_STATE_FILLED) // fully executed
+//           break;
+//     }
+//   }
+// }
 
 bool PlaceOrderNow(int direction){
     MqlTradeRequest request = {0};
-   MqlTradeResult result = {0};
-    int nbuys;
+    MqlTradeResult result = {0};
+    int buy;
     int ncontracts;
+    ulong  position_ticket = 0;
 
     ncontracts = MathAbs(direction);  // number to buy or sell
     direction = direction/MathAbs(direction); // just sign  -1 or 1
@@ -53,85 +54,125 @@ bool PlaceOrderNow(int direction){
     request.action    = TRADE_ACTION_DEAL;                     // type of trade operation
     request.symbol    = sname;                               // symbol
     if(direction > 0){ //+ postivie buy order
-        request.price     = SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
+        request.price     = SymbolInfoDouble(request.symbol, SYMBOL_ASK); // price for opening
         request.type      = ORDER_TYPE_BUY;                        // order type
+        // stop loss and take profit 3:1 rount to 5
+        request.tp =request.price*(1+direction*expect_var*3);
+        request.tp = MathFloor(request.tp/ticksize)*ticksize;
+        request.sl = request.price*(1-direction*expect_var);
+        request.sl = MathCeil(request.sl/ticksize)*ticksize;
+        request.volume    = nv*ncontracts; // volume executed in contracts
+        request.deviation = deviation*ticksize;    //  allowed deviation from the price
     }
     else{ //  -negative sell order
-        nbuys = PositionsTotal(); // number of open positions
-        if(nbuys < 1 ) // cannot sell what was not bought
+        buy = PositionsTotal(); // number of open positions can only be ONE (NETTING MODE)
+        if(buy < 1 ) // cannot sell what was not bought
             return false;
-        else{ // sell only the same quantity bought to not enter in a short position
-            ncontracts = MathMin(nbuys, ncontracts);
-        }
-        request.price     = SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
+        // sell only the same quantity bought to not enter in a short position
+        position_ticket = PositionGetTicket(0);
+        double volume = PositionGetDouble(POSITION_VOLUME);
+        double decrease = nv*ncontracts;
+        if(decrease > volume) // cannot sell more thant what is open
+            decrease = volume;
+        request.price     = SymbolInfoDouble(request.symbol, SYMBOL_BID); // price for opening
         request.type      = ORDER_TYPE_SELL;                        // order type
+        request.volume = decrease;
     }
-    // stop loss and take profit 3:1 rount to 5
-    request.tp =request.price*(1+direction*expect_var*3);
-    request.tp = MathFloor(request.tp/ticksize)*ticksize;
-    request.sl = request.price*(1-direction*expect_var);
-    request.sl = MathCeil(request.sl/ticksize)*ticksize;
-    request.volume    = nv*ncontracts; // volume executed in contracts
-    request.deviation = deviation*ticksize;                                  //  allowed deviation from the price
-    request.magic     = EXPERT_MAGIC;                          // MagicNumber of the order
-    if(!OrderSend(request, result))     //--- send the request
-        PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
-        return false;
+    request.magic     = EXPERT_MAGIC;           // MagicNumber of the order
+    if(!OrderSend(request,result))
+        Print("OrderSend error ", GetLastError());
     //--- information about the operation
-    PrintFormat("retcode=%d  deal=%d  order=%d",result.retcode,result.deal,result.order);
-    waitDeal(result);
+    Print("retcode ",result.retcode, "  deal ", result.deal);
+    //--- output information about the closure by opposite position
+    if(direction < 0)
+        Print("Decreased position ",  position_ticket, " by ", request.volume);
     return true;
 }
+
+// double decreasePosition(ulong position_ticket, double dvolume){
+//     MqlTradeRequest request;
+//     MqlTradeResult  result;
+//     // Can only be called after a PositionGetTicket
+//     ulong  magic = PositionGetInteger(POSITION_MAGIC);
+//     //--- if the MagicNumber matches MagicNumber of the position
+//     if(magic!=EXPERT_MAGIC)
+//         continue;
+//     double volume = PositionGetDouble(POSITION_VOLUME);
+//     ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);  // type of the position
+//
+//     //--- zeroing the request and result values
+//     ZeroMemory(request);
+//     ZeroMemory(result);
+//     //--- setting the operation parameters
+//     request.action   = TRADE_ACTION_DEAL;        // type of trade operation
+//     request.position = position_ticket;          // ticket of the position
+//     request.symbol   = sname;                   // symbol
+//     if(dvolume > volume) // cannot sell more thant what is open
+//         dvolume = volume
+//     request.volume   = dvolume;                   // volume of the position
+//     request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
+//     request.magic    = EXPERT_MAGIC;             // MagicNumber of the position
+//     //--- set the price and order type depending on the position type
+//     if(type==POSITION_TYPE_BUY)
+//     {
+//         request.price=SymbolInfoDouble(sname, SYMBOL_BID);
+//         request.type =ORDER_TYPE_SELL;
+//     }
+//     //--- output information about the closure by opposite position
+//     Print("Decreased position ",  position_ticket, " by ", request.volume);
+//     //--- send the request
+//     // if unable to send the request, output the error code
+//     if(!OrderSend(request,result))
+//         Print("OrderSend error ", GetLastError());
+//     //--- information about the operation
+//     Print("retcode ",result.retcode, "deal ", result.deal);
+// }
+
 
 void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
     MqlTradeRequest request;
     MqlTradeResult  result;
     int total=PositionsTotal(); // number of open positions
-    for(int i=total-1; i>=0; i--) //--- iterate over all open positions, avoid the top
-    {
+    //--- iterate over all open positions, avoid the top
+    for(int i=total-1; i>=0; i--){
         //--- parameters of the order
         ulong  position_ticket = PositionGetTicket(i);                                    // ticket of the position
-        ulong  magic = PositionGetInteger(POSITION_MAGIC);                                // MagicNumber of the position
+        ulong  magic = PositionGetInteger(POSITION_MAGIC);
+        //--- if the MagicNumber matches MagicNumber of the position
+        if(magic!=EXPERT_MAGIC)
+            continue;
         double volume=PositionGetDouble(POSITION_VOLUME);
         datetime opentime = PositionGetInteger(POSITION_TIME);                            // time when the position was open
         ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);  // type of the position
-        if(magic==EXPERT_MAGIC) //--- if the MagicNumber matches
-        {
-            // time to close
-            if(timenow > opentime+expiretime || timenow > endday)
-            {
-                //--- zeroing the request and result values
-                ZeroMemory(request);
-                ZeroMemory(result);
-                //--- setting the operation parameters
-                request.action   = TRADE_ACTION_DEAL;        // type of trade operation
-                request.position = position_ticket;          // ticket of the position
-                request.symbol   = sname;          // symbol
-                request.volume   = volume;                   // volume of the position
-                request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
-                request.magic    =EXPERT_MAGIC;             // MagicNumber of the position
-                //--- set the price and order type depending on the position type
-                if(type==POSITION_TYPE_BUY)
-                {
-                    request.price=SymbolInfoDouble(sname, SYMBOL_BID);
-                    request.type =ORDER_TYPE_SELL;
-                }
-                else
-                {
-                    request.price=SymbolInfoDouble(sname, SYMBOL_ASK);
-                    request.type =ORDER_TYPE_BUY;
-                }
-                //--- output information about the closure by opposite position
-                PrintFormat("Close position %s %s by %d", position_ticket, EnumToString(type), request.position_by);
-                //--- send the request
-                if(!OrderSend(request,result))
-                    PrintFormat("OrderSend error %d", GetLastError()); // if unable to send the request, output the error code
-                //--- information about the operation
-                PrintFormat("retcode=%d  deal=%d  order=%d",result.retcode,result.deal,result.order);
 
-                waitDeal(result);
-            }
+        if(timenow < opentime+expiretime && timenow < endday)
+            continue; // continue open
+
+        //--- zeroing the request and result values
+        ZeroMemory(request);
+        ZeroMemory(result);
+        //--- setting the operation parameters
+        request.action   = TRADE_ACTION_DEAL;        // type of trade operation
+        request.position = position_ticket;          // ticket of the position
+        request.symbol   = sname;          // symbol
+        request.volume   = volume;                   // volume of the position
+        request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
+        request.magic    = EXPERT_MAGIC;             // MagicNumber of the position
+        //--- set the price and order type depending on the position type
+        if(type==POSITION_TYPE_BUY)
+        {
+            request.price=SymbolInfoDouble(sname, SYMBOL_BID);
+            request.type =ORDER_TYPE_SELL;
         }
+        else // contigency
+        {
+            request.price=SymbolInfoDouble(sname, SYMBOL_ASK);
+            request.type =ORDER_TYPE_BUY;
+        }
+        if(!OrderSend(request,result))
+            Print("OrderSend error ", GetLastError());
+        //--- information about the operation
+        Print("retcode ",result.retcode, "deal ", result.deal);
     }
 }
 
@@ -141,8 +182,10 @@ void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datet
   // execute or not a prediction
   if(pred.direction < 0){ // no matter the time allways send sells
     PlaceOrderNow(pred.direction);
-    executed_predictions[nexec] = pred;
-    nexec++;
+      if(!TESTINGW_FILE){ // real operation
+          executed_predictions[nexec] = pred;
+          nexec++;
+       }
   }
   // no orders older than 2 minutes
   if(pred.time < timenow - 2*60)
@@ -158,8 +201,10 @@ void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datet
       return;    // number of open positions dont open more than that per day
 
   PlaceOrderNow(pred.direction);
-  executed_predictions[nexec] = pred;
-  nexec++;
+  if(!TESTINGW_FILE){ // real operation
+      executed_predictions[nexec] = pred;
+      nexec++;
+   }
 }
 
 //| Timer function -- Every 1 minutes

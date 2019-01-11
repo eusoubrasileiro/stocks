@@ -1,13 +1,17 @@
-MT5EXPATH = /home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader 5/MQL5/Experts/Advisors/
-MT5CMPATH = /home/andre/.wine/drive_c/users/andre/Application\ Data/MetaQuotes/Terminal/Common/Files/
+MT5EXPATH := /home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors/
+MT5CMPATH := /home/andre/.wine/drive_c/users/andre/Application\ Data/MetaQuotes/Terminal/Common/Files/
 
+#####  USE THOSE BELLOW ON BASH. ON MAKEFILE DOESNT WORK!!!!
 meta5:
-	for f in /home/andre/Projects/stocks/mt5/*.mq*; do ln -s $f "/home/andre/.wine/drive_c/Program Files/Rico MetaTrader 5/MQL5/Experts/Advisors/"`basename $f`; done
+	cd home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors/
+	ln -s ~/Projects/stocks/mt5/*.mq* .
 	# make symlinks from stocks folder to Metatrader folderW
-clean:
-	for f in `echo ${MT5EXPATH}*.mq*`; do unlink $f; done
 
-testdaemon:
+clean:
+	cd home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors/
+	find . -type l -exec unlink {} \;
+
+daemon:
 	python -m algos.mt5daemons.buybandsd.py
 
 all: clean meta5

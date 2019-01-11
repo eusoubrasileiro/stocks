@@ -243,6 +243,99 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
 
     return signal, Xforecast, X, y
 
+def barsFeatured(obars, window=21, nbands=3, verbose=False):
+    """create feature columns and return a new dataframe"""
+    bars = obars.copy() # avoid warnings
+    bars['OHLC'] = np.nan # typical price
+    bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
+    # needed to reset orders by day
+    bars['date'] = bars.index.date
+    bars.date = bars.apply(lambda x: x.date.toordinal(), axis=1) # integer day from year 1 day 1 gregorian day
+    # 7*60 is one day I cannot rely on overalapping days without adding more info
+    #window = 90 # 2 hours trying not rely on previous days
+    inc = 0.5
+    # if verbose plotting
+    lastn=-500
+    price = bars.OHLC.values
+    for i in range(nbands):
+        upband, sma, lwband =  ta.BBANDS(price, window*inc)
+        bars['bandlw'+str(i)] = lwband
+        bars['bandup'+str(i)] = upband
+        bars['bandsg'+str(i)] = 0 # signal for this band
+        signals = bollingerSignal(price[1:], price[:-1],
+                                  upband[1:], upband[:-1], lwband[1:], lwband[:-1])
+        bars.loc[1:, 'bandsg'+str(i)] = signals.astype(int) # signal for this band
+        inc += 0.5
+    bars.dropna(inplace=True)
+
+    if verbose:
+        plt.figure(figsize=(15,7))
+        plt.subplot(2, 1, 1)
+        plt.plot(price[lastn:], 'k-')
+        for i in range(nbands):
+            # plot bands
+            plt.plot(dow['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
+            plt.plot(dow['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
+        plt.subplot(2, 1, 2)
+        for i in range(nbands):
+            plt.plot(dow['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
+            plt.ylabel('signal-code')
+        plt.legend()
+        plt.savefig('bbands.png')
+        plt.close()
+
+    ### Latest Signal - not standardized - used for predicting future
+    signal = bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
+
+    if np.all(signal == 0): # no signal no training
+      return signal, None, None, None
+
+    #### Traverse bands
+    for j in range(nbands): # for each band you might need to save training-feature-target vectors
+        # save batch from here to behind (batch-size)
+        bars['y'+str(j)] = np.nan
+    for j in range(nbands): # for each band traverse it
+        ibandsg = bars.columns.get_loc('bandsg'+str(j))
+        iyband = bars.columns.get_loc('y'+str(j))
+        # being pessimistic ... is this right?
+        # should i buy at what price? I dont know maybe the typical one is more realistic.
+        # but setting the worst case garantees profit in the worst scenario!!
+        # better.
+        # So i Buy at the highest price and sell at the lowest one.
+        yband = traverseBand(bars.iloc[:, ibandsg].values.astype(int),
+                                        bars.iloc[:, iyband].values,
+                                        bars.H.values, bars.L.values, bars.date.values)
+        bars.iloc[:, iyband] = yband
+    ## Now assembly X and Y TRAINING vectors
+    # **window*nsignal features = X second dimension**
+    # ## Signal Features
+    bars.RV = np.log(bars.RV+5)
+    bars.TV = np.log(bars.TV+5) # to avoid division by zero/inf etc
+    # tecnical indicators features
+    inc = 0.5
+    for column in bars.columns[:7]: # ignore date/dated
+        for i in range(nbands):      # 1e-8 to avoid creating nans
+            ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)
+            sfx = str(column)+str(i)  # name suffix
+            # remove nbands emas
+            bars['dema'+sfx] = bars[column] - ema
+            bars.loc[:, 'demav'+sfx] = np.nan
+            # return of the differences to the ema (know to have good response for prediction)
+            bars.loc[1:, 'demav'+sfx] = bars['dema'+sfx].values[:-1]/(1e-8+bars['dema'+sfx].values[1:])
+            macd, sg, ht = ta.MACD(bars[column].values.astype(np.float64),
+                                   int(window*inc*0.5), int(window*0.75*inc), int(0.25*inc*window))
+            #dow.loc[:, 'macd'+sfx] = macd
+            bars.loc[:, 'dmacdv'+sfx] = np.nan
+            bars.loc[1:, 'dmacdv'+sfx] = macd[:-1]/(1e-8+macd[1:])
+            inc += 0.5
+    # day information signal [0, 1]
+    bars['dated'] = 0
+    for i, vars in enumerate(bars.groupby(bars.date)):
+        day, group = vars
+        bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
+        
+    return bars
+
 def fitPredict(X, y, Xp):
     trees = ExtraTreesClassifier(n_estimators=70, verbose=0, max_features=300)
     ypred = None

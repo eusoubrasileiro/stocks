@@ -5,55 +5,36 @@
 
 //| Expert initialization function
 int OnInit()
-{
-    datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
+{   
+    EventSetTimer(60);
     //--- create timer
-    if(!TESTINGW_FILE){ // real operation
-        EventSetTimer(60);
-        SaveDataNow(timenow);
-    }
-    else{ // when testing doesnt need to wait 1 minute
-        EventSetTimer(60);
+    #ifdef BACKTESTING
+        // when testing doesnt need to wait 1 minute
         // when testing doesn't need to save data
         // read all predictions at once
-        TestReadPredictions();
-    }
+        TestReadPredictions();        
+    #else 
+        // real time operations
+        SavePriceData();
+    #endif 
+    
+    datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
     Print("Begining Bbands Expert now: ", timenow);
-
     return(INIT_SUCCEEDED);
 }
 
-// // wait the execution of an order until it turns in a deal
-// void waitDeal(MqlTradeResult &result){
-//   if(result.retcode == TRADE_RETCODE_DONE)
-//     return;
-//   if(result.retcode == TRADE_RETCODE_PLACED || result.retcode == TRADE_RETCODE_DONE_PARTIAL){ // only working with TRADE_ACTION_DEAL
-//     // result deal is not filled properly due the trading server
-//     // not having executed it yet so we will keep looking
-//     ulong order_ticket = result.order;
-//     long code = 0;
-//     while(true){ // wait until order is fully executed in a deal
-//         OrderSelect(order_ticket);
-//         code = OrderGetInteger(ORDER_STATE);
-//         if(code == ORDER_STATE_FILLED) // fully executed
-//           break;
-//     }
-//   }
-// }
-
-bool PlaceOrderNow(int direction){
+void PlaceOrderNow(int direction){
     MqlTradeRequest request = {0};
     MqlTradeResult result = {0};
-    int buy;
     int ncontracts;
     ulong  position_ticket = 0;
 
     ncontracts = MathAbs(direction);  // number to buy or sell
     direction = direction/MathAbs(direction); // just sign  -1 or 1
     //--- parameters of request
-    request.action    = TRADE_ACTION_DEAL;                     // type of trade operation
+    request.action     = TRADE_ACTION_DEAL;      // type of trade operation
     request.symbol    = sname;                               // symbol
-    if(direction > 0){ //+ postivie buy order
+    if(direction > 0){ //+ postive buy order
         request.price     = SymbolInfoDouble(request.symbol, SYMBOL_ASK); // price for opening
         request.type      = ORDER_TYPE_BUY;                        // order type
         // stop loss and take profit 3:1 rount to 5
@@ -61,93 +42,53 @@ bool PlaceOrderNow(int direction){
         request.tp = MathFloor(request.tp/ticksize)*ticksize;
         request.sl = request.price*(1-direction*expect_var);
         request.sl = MathCeil(request.sl/ticksize)*ticksize;
-        request.volume    = nv*ncontracts; // volume executed in contracts
+        request.volume    = quantity*ncontracts; // volume executed in contracts
         request.deviation = deviation*ticksize;    //  allowed deviation from the price
     }
-    else{ //  -negative sell order
-        buy = PositionsTotal(); // number of open positions can only be ONE (NETTING MODE)
-        if(buy < 1 ) // cannot sell what was not bought
-            return false;
-        // sell only the same quantity bought to not enter in a short position
-        position_ticket = PositionGetTicket(0);
-        double volume = PositionGetDouble(POSITION_VOLUME);
-        double decrease = nv*ncontracts;
-        if(decrease > volume) // cannot sell more thant what is open
-            decrease = volume;
-        request.price     = SymbolInfoDouble(request.symbol, SYMBOL_BID); // price for opening
-        request.type      = ORDER_TYPE_SELL;                        // order type
-        request.volume = decrease;
+    else { //  -negative sell order       
+        if(PositionsTotal() > 0){  // cannot sell what was not bought
+            // sell only the same quantity bought to not enter in a short position
+            position_ticket = PositionGetTicket(0);  // number of open positions can only be ONE (NETTING MODE)
+            double volume = PositionGetDouble(POSITION_VOLUME);
+            double decrease = quantity*ncontracts; // how many to sell            
+            decrease = (decrease > volume)? volume: decrease; // cannot sell more than what was bought
+            request.price = SymbolInfoDouble(request.symbol, SYMBOL_BID); // price for opening
+            request.type = ORDER_TYPE_SELL;  // order type
+            request.volume = decrease;
+        }
+        else
+            return;
     }
-    request.magic     = EXPERT_MAGIC;           // MagicNumber of the order
+    request.magic  = EXPERT_MAGIC;   // MagicNumber for this Expert
     if(!OrderSend(request,result))
         Print("OrderSend error ", GetLastError());
     //--- information about the operation
-    Print("retcode ",result.retcode, "  deal ", result.deal);
+    Print("retcode ", result.retcode, "  deal ", result.deal);
     //--- output information about the closure by opposite position
     if(direction < 0)
         Print("Decreased position ",  position_ticket, " by ", request.volume);
-    return true;
 }
 
-// double decreasePosition(ulong position_ticket, double dvolume){
-//     MqlTradeRequest request;
-//     MqlTradeResult  result;
-//     // Can only be called after a PositionGetTicket
-//     ulong  magic = PositionGetInteger(POSITION_MAGIC);
-//     //--- if the MagicNumber matches MagicNumber of the position
-//     if(magic!=EXPERT_MAGIC)
-//         continue;
-//     double volume = PositionGetDouble(POSITION_VOLUME);
-//     ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);  // type of the position
-//
-//     //--- zeroing the request and result values
-//     ZeroMemory(request);
-//     ZeroMemory(result);
-//     //--- setting the operation parameters
-//     request.action   = TRADE_ACTION_DEAL;        // type of trade operation
-//     request.position = position_ticket;          // ticket of the position
-//     request.symbol   = sname;                   // symbol
-//     if(dvolume > volume) // cannot sell more thant what is open
-//         dvolume = volume
-//     request.volume   = dvolume;                   // volume of the position
-//     request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
-//     request.magic    = EXPERT_MAGIC;             // MagicNumber of the position
-//     //--- set the price and order type depending on the position type
-//     if(type==POSITION_TYPE_BUY)
-//     {
-//         request.price=SymbolInfoDouble(sname, SYMBOL_BID);
-//         request.type =ORDER_TYPE_SELL;
-//     }
-//     //--- output information about the closure by opposite position
-//     Print("Decreased position ",  position_ticket, " by ", request.volume);
-//     //--- send the request
-//     // if unable to send the request, output the error code
-//     if(!OrderSend(request,result))
-//         Print("OrderSend error ", GetLastError());
-//     //--- information about the operation
-//     Print("retcode ",result.retcode, "deal ", result.deal);
-// }
-
-
-void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
+void ClosePositionbyTime(){
     MqlTradeRequest request;
     MqlTradeResult  result;
-    int total=PositionsTotal(); // number of open positions
-    //--- iterate over all open positions, avoid the top
-    for(int i=total-1; i>=0; i--){
-        //--- parameters of the order
-        ulong  position_ticket = PositionGetTicket(i);                                    // ticket of the position
+    datetime dayend = dayEnd(TimeCurrent()); // 15 minutes before closing the stock market
+    datetime timenow = TimeCurrent();
+    // NET MODE only ONE buy or ONE sell at once
+    int total = PositionsTotal(); // number of open positions
+        if(total < 1) // nothing to do
+            return;
+        for(int i=0; i<total; i++){
+        ulong  position_ticket = PositionGetTicket(0);  // ticket of the position
         ulong  magic = PositionGetInteger(POSITION_MAGIC);
         //--- if the MagicNumber matches MagicNumber of the position
         if(magic!=EXPERT_MAGIC)
-            continue;
-        double volume=PositionGetDouble(POSITION_VOLUME);
-        datetime opentime = PositionGetInteger(POSITION_TIME);                            // time when the position was open
+            return;
+        datetime opentime = PositionGetInteger(POSITION_TIME);   // time when the position was open
+        if(timenow < opentime+expiretime && timenow < dayend)
+            return; // continue open
         ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);  // type of the position
-
-        if(timenow < opentime+expiretime && timenow < endday)
-            continue; // continue open
-
+        double volume=PositionGetDouble(POSITION_VOLUME);
         //--- zeroing the request and result values
         ZeroMemory(request);
         ZeroMemory(result);
@@ -164,7 +105,7 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
             request.price=SymbolInfoDouble(sname, SYMBOL_BID);
             request.type =ORDER_TYPE_SELL;
         }
-        else // contigency
+        else // contigency should not be here but let it be
         {
             request.price=SymbolInfoDouble(sname, SYMBOL_ASK);
             request.type =ORDER_TYPE_BUY;
@@ -172,74 +113,67 @@ void ClosePositionsbyTime(datetime timenow, datetime endday, int expiretime){
         if(!OrderSend(request,result))
             Print("OrderSend error ", GetLastError());
         //--- information about the operation
-        Print("retcode ",result.retcode, "deal ", result.deal);
+        Print("closed by time - retcode ",result.retcode, " deal ", result.deal);
     }
 }
 
 
-void sendPrediction(prediction &pred, datetime timenow, datetime daybegin, datetime dayend){
-  // nexec;
-  // execute or not a prediction
-  if(pred.direction < 0){ // no matter the time allways send sells
-    PlaceOrderNow(pred.direction);
-      if(!TESTINGW_FILE){ // real operation
-          executed_predictions[nexec] = pred;
-          nexec++;
-       }
-  }
-  // no orders older than 2 minutes
-  if(pred.time < timenow - 2*60)
-      return;
-  // moved to here so we can check if something is wrong
-  // do not place orders in the end of the day
-  // do not place orders in the begin of the day
-  if(timenow > dayend || timenow < daybegin)
-    return;
-  // cannot place more than xxx orders per dt
-  // dont open more than yyy positions per day
-  if(nlastOrders() >= dtnorders || nordersDay() >= maxorders)
-      return;    // number of open positions dont open more than that per day
-
-  PlaceOrderNow(pred.direction);
-  if(!TESTINGW_FILE){ // real operation
-      executed_predictions[nexec] = pred;
-      nexec++;
-   }
+void sendPrediction(prediction &pred){  // execute or not a prediction
+    datetime dayend = dayEnd(TimeCurrent()); // 15 minutes before closing the stock market
+    datetime daybegin = dayBegin(TimeCurrent()); // 2 hours after openning
+    datetime timenow = TimeCurrent();   
+    
+    if(pred.direction < 0){ // no matter the time allways send sells
+        PlaceOrderNow(pred.direction);
+    }
+    else{
+        // only orders younger than x  minutes after the prediction
+        if(pred.time <= timenow + exectolerance && 
+            timenow < dayend && timenow > daybegin &&
+            nlastDeals() <= dtndeals &&  ndealsDay() <= maxdealsday){
+            // deals are only ENTRY_IN deals that means entering a position
+            // do not place orders in the end of the day
+            // do not place orders in the begin of the day
+            // cannot make more than`dtndeals` deals per dt
+            // dont open more than `maxdealsday` positions per day
+            PlaceOrderNow(pred.direction);
+        }
+    }
+    #ifndef BACKTESTING
+        // real operation record operations processed
+        sent_predictions[nsent] = pred;
+        nsent++;
+    #endif 
 }
 
 //| Timer function -- Every 1 minutes
 void OnTimer(){
-  prediction toexecute[]; // new predictions to be executed
-  datetime dayend, daybegin;
-  datetime timenow = TimeCurrent(); // time in seconds from 1970 current time
-  dayend = dayEnd(timenow); // 15 minutes before closing the stock market
-  daybegin = dayBegin(timenow); // 2 hours after openning
   // check to see if we should close any order
-  ClosePositionsbyTime(timenow, dayend, expire_time);
+  ClosePositionbyTime();
   // we can work
-  if(!TESTINGW_FILE){ // not testing
-      SaveDataNow(timenow);
-      // read predictions file even if with zeroed... with date and time
-      int nread = readPredictions();
-      if(nread==0){
-        return;
-      }
-      // check for new predictions
-      int nnew = newPredictions(toexecute); // get new predictions
-      if(nnew == 0) // nothing new
-        return;
-      for(int i=0; i< nnew; i++)
-        sendPrediction(toexecute[i], timenow, daybegin, dayend);
-
-  }
-  else{ // when testing
-      // when testing doesn't need to save data
-      //Sleep(10); //sleep few 10 ms
-      prediction pnow;
-      if(!TestGetPrediction(pnow, timenow)) // not time to place an order
-          return;
-      sendPrediction(pnow, timenow, daybegin, dayend);
-  }
+  #ifndef BACKTESTING
+        // not backtesting
+        SavePriceData();
+        // read predictions file even if with zeroed... with date and time
+        int nread = readPredictions();
+        if(nread==0){
+            return;
+        }
+        prediction toexecute[]; // new predictions to be executed
+        // check for new predictions
+        int nnew = newPredictions(toexecute); // get new predictions
+        if(nnew == 0) // nothing new
+            return;
+        for(int i=0; i<nnew; i++)
+            sendPrediction(toexecute[i]);
+  #else 
+        // when testing
+        // when testing doesn't need to save data
+        prediction pnow;
+        if(!TestGetPrediction(pnow, TimeCurrent())) // not time to place an order
+            return;
+        sendPrediction(pnow);
+   #endif   
 }
 
 //+------------------------------------------------------------------+

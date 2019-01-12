@@ -1,6 +1,6 @@
 #include "BbandsDefinitions.mqh"
 
-void WriteSymbol(string symbol, MqlRates &arr[]){
+void WriteSymbolFile(string symbol, MqlRates &arr[]){
     ResetLastError();
     StringAdd(symbol,"RTM1.mt5bin");
     int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON);
@@ -12,43 +12,30 @@ void WriteSymbol(string symbol, MqlRates &arr[]){
     Print("Failed to open the file, error ",GetLastError());
 }
 
-void SaveDataNow(datetime timenow){
+void SavePriceData(){
     //---- download the minimal data for training and prediction based on current time
-    // nforecast=120
-    // nvalidation=nforecast # to validate the model prior prediction
-    // ntraining = 5*8*60 # 5*8 hours before for training - 1 week or 8 hours
-    // nwindow = nvalidation+nforecast+ntraining = 5*8*60 (2400) + 120 + 120 = 2640
-    // additionally it is needed +3*60 = 180 samples due EMA of crossed features
-    // rounding up 3200
     // asks much more than needed to workaround unsolvable minute data lost
-    int nwindow=5000; // minimal needed data for training validating and predicting now
-    MqlRates mqlrates[];
+    MqlRates mqlrates[]; 
+    datetime timenow = TimeCurrent();
     int nsymbols = ArraySize(symbols);
     int copied=-1;
-    int error;
     int totalcopied=0;
 
-    for(int i=0; i<nsymbols; i++)
-    {
-        for(int try=0; try<3; try++) // number of 3 trials of download before giving up
-        {
+    for(int i=0; i<nsymbols; i++){
+        for(int try=0; try<3; try++){ // number of 3 trials before giving up
             // -1 if it has not complet it yet
-            copied = CopyRates(symbols[i], PERIOD_M1, 0,  nwindow, mqlrates);
-            if(copied < nwindow){ //  sleep time(1 seconds) for downloading the data
-                Sleep(5000);
-                // 4401 Request history not found, no data yet
-                error =  GetLastError();
-            }
+            copied = CopyRates(symbols[i], PERIOD_M1, 0,  ntrainingbars, mqlrates);
+            if(MathAbs(copied) < ntrainingbars)  //  sleep time (2 seconds) for downloading the data
+                Sleep(2000);
         }
-        if(copied == -1)
-        {
+        if(copied == -1){
             Print("Failed to get history data for the symbol ", symbols[i]);
             continue;
         }
-        WriteSymbol(symbols[i], mqlrates);
+        WriteSymbolFile(symbols[i], mqlrates);
         totalcopied += copied;
     }
-    Print("percent data downloaded: ",  string((float) totalcopied/(nwindow*nsymbols)));
+    Print("percent price data saved: ",  string((float) totalcopied/(ntrainingbars*nsymbols)));
 }
 
 
@@ -67,9 +54,8 @@ long readPredictions(void){
       }
       else {
         Print("read ", nread, " predictions");
-        if(nread > 0){
-          Print("last: prediction datetime: ", read_predictions[nread-1].time, " direction: ", read_predictions[nread-1].direction);
-        }
+        if(nread > 0)
+          Print("last: prediction datetime: ", read_predictions[nread-1].time, " direction: ", read_predictions[nread-1].direction);        
         break;
       }
     }
@@ -94,7 +80,7 @@ int newPredictions(prediction &newpredictions[]){
   int nnew = 0;
   for(uint i=0; i<nread; i++){
     // check if it has already been executed
-    if(!isInPredictions(read_predictions[i], executed_predictions)){
+    if(!isInPredictions(read_predictions[i], sent_predictions)){
       newpredictions[nnew] = read_predictions[i];
       nnew++; // new prediction
     }
@@ -102,48 +88,28 @@ int newPredictions(prediction &newpredictions[]){
   return int(nnew);
 }
 
-unsigned int nstocks(double enterprice){
-    // """Needed number of stocks based on:
-    // * Minimal acceptable profit $MinP$ (in R$)
-    // * Cost per order $CostOrder$   (in R$)
-    // * Taxes: $IR$ imposto de renda  (in 0-1 fraction)
-    // * Enter Price $EnterPrice$
-    // * Expected gain on the operation $ExGain$ (reasonable)  (in 0-1 fraction)
-    // $$ N_{stocks} \ge \frac{MinP+2 \ CostOrder}{(1-IR)\ EnterPrice \ ExGain} $$
-    // Be reminded that Number of Stocks MUST BE in 100s.
-    // This guarantees a `MinP` per order"""
-    // # round stocks to 100's
-    double exgain=0.01;
-    // double minp=; minprofit
-    double costorder=5;
-    double ir=0.2;
-    int ceil;
-    ceil = int(int((minprofit+costorder*2)/((1-ir)*enterprice*exgain))/100);
-    return ceil*100;
-}
-
 datetime dayEnd(datetime timenow){
     // set end of THIS day for operations, 15 minutes before closing the stock market
     // http://www.b3.com.br/en_us/solutions/platforms/puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
-    datetime endofday;
+    datetime day0hour;
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
     // calculate begin of the day
-    endofday = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return endofday+17*3600+45*60;// 17:45 min
+    day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
+    return day0hour+endhour*3600+endminute*60;
 }
 
 datetime dayBegin(datetime timenow){
-    datetime daybegin;
+    datetime day0hour;
     MqlDateTime mqltime;
     TimeToStruct(timenow, mqltime);
     // no orders on the first 30 minutes
-    daybegin = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return daybegin+int(9.5*3600);
+    day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
+    return day0hour+starthour*3600+startminute*60;
 }
 
 //  number of orders oppend on the last n minutes defined on Definitons.mqh
-int nlastOrders(){
+int nlastDeals(){
     int lastnopen=0; // number of orders openned on the last n minutes
     //--- request trade history
     datetime now = TimeCurrent();
@@ -157,7 +123,7 @@ int nlastOrders(){
       //--- try to get deals ticket
       ticket=HistoryDealGetTicket(i);
       if(ticket>0){ // get the deal entry property
-         entry =HistoryDealGetInteger(ticket,DEAL_ENTRY);
+         entry =HistoryDealGetInteger(ticket, DEAL_ENTRY);
          if(entry==DEAL_ENTRY_IN) // a buy or a sell (entry not closing/exiting)
             lastnopen++;
       }
@@ -165,7 +131,7 @@ int nlastOrders(){
     return lastnopen;
 }
 
-int nordersDay(){
+int ndealsDay(){
     int open=0; // number of orders openned
     //--- request trade history
     datetime now = TimeCurrent();

@@ -13,7 +13,7 @@ bool TestReadPredictions(){
         return false;
     }
     Print("file read:", fname);
-    ArrayResize(test_predictions, 62); // Resize the array.
+    ArrayResize(test_predictions, npredictionfile); // Resize the array.
     //--- read all data from the file to the array
     FileReadArray(handle, test_predictions);
     FileClose(handle);
@@ -51,7 +51,7 @@ bool TestGetPrediction(prediction &pnow, datetime timenow){
     pnow.direction = test_predictions[ipred].direction;
     // the prediction time will not be exactly coincident with time now
     //  but we may have some tolerance
-    if(timenow >= pnow.time && timenow <= pnow.time + 60)
+    if(timenow >= pnow.time && timenow <= pnow.time + 90)
         return true;
     else     // is not the time for this prediction make an order yet
         return false;

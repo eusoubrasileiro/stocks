@@ -23,7 +23,7 @@ struct prediction {
 // number of minute bars needed by the python code
 const int ntrainingbars = 5000; 
 // time to expire a position (close it)
-const int expiretime=50*60;
+const int expiretime=45*60;
 //expected variation of price 3:1 for sl, tp
 const double expect_var=0.006;
 // number of contracts to buy for each direction/quantity
@@ -36,11 +36,11 @@ const double ticksize=5; // minicontratos ibovespa 5 points price variation
 const double deviation=3;
 // control of number of deals per ndt (minutes)
 // maximum allowed on the last 15 minutes (perdt)
-const int dtndeals=10;
+const int dtndeals=8;
 // per dt in minutes
 const int perdt=15;
 // maximum deals per day
-const int maxdealsday=10;
+const int maxdealsday=8;
 // number of deals counter
 int ndeals=0;
 // expert operations begin 

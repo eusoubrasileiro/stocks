@@ -30,7 +30,7 @@ void PlaceOrderNow(int direction){
     ulong  position_ticket = 0;
 
     ncontracts = MathAbs(direction);  // number to buy or sell
-    direction = direction/MathAbs(direction); // just sign  -1 or 1
+    // direction // just sign  -1 or 1
     //--- parameters of request
     request.action     = TRADE_ACTION_DEAL;      // type of trade operation
     request.symbol    = sname;                               // symbol
@@ -78,7 +78,7 @@ void ClosePositionbyTime(){
     int total = PositionsTotal(); // number of open positions
         if(total < 1) // nothing to do
             return;
-        for(int i=0; i<total; i++){
+    for(int i=0; i<total; i++){
         ulong  position_ticket = PositionGetTicket(0);  // ticket of the position
         ulong  magic = PositionGetInteger(POSITION_MAGIC);
         //--- if the MagicNumber matches MagicNumber of the position

@@ -71,27 +71,18 @@ void PlaceOrderNow(int direction){
 
 double volumeToClose(datetime opentime){
     ulong ticket;
-    double volumeout=0; // number of sells realized on the last expiretime period
+    double volumeout=0; // volume of sells realized on the last expiretime period
     double volumein=0; // first buy realized on the period
     datetime now = TimeCurrent();
     //--- request trade history
-    // give 5 minutes buffer after the expiretime
     HistorySelect(opentime, now);
     uint  total=HistoryDealsTotal(); // total deals
-    //--- for all deals
-    for(uint i=0;i<total;i++){ // get the buy volume of the first deal
-      ticket=HistoryDealGetTicket(i); //--- e to get deals ticket
-      if(ticket>0) // get the deal entry property
-         if(HistoryDealGetInteger(ticket, DEAL_ENTRY)==DEAL_ENTRY_IN &&
-         HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_BUY &&
-         HistoryDealGetInteger(ticket, DEAL_MAGIC) == EXPERT_MAGIC){ // only a buy (entry not closing/exiting)
-            volumein = HistoryDealGetDouble(ticket, DEAL_VOLUME);
-            break; // just of the first
-        }
-    }
-     // It is possible due last position time change keep activating this without a 
-     if(volumein==0) // it was a sell deal
-         return 0;
+    // get the buy volume of the first deal
+    ticket = HistoryDealGetTicket(0);
+    volumein = HistoryDealGetDouble(ticket, DEAL_VOLUME);
+     // It is not possible
+     // if(volumein==0) // it was a sell deal
+     //     return 0;
      // get how much was sold on the expired time period
     for(uint i=0;i<total;i++){ // get the sell volume on the period
       ticket=HistoryDealGetTicket(i); //--- try to get deals ticket
@@ -104,7 +95,6 @@ double volumeToClose(datetime opentime){
     double todecrease = volumein - volumeout; // remove what was sold
     // volume needed to sell to expire by time the openned position
     todecrease =(todecrease < 0)? 0: todecrease;
-
     return todecrease;
 }
 
@@ -113,6 +103,7 @@ void ClosePositionbyTime(){
     MqlTradeResult  result;
     datetime timenow = TimeCurrent();
     datetime dayend = dayEnd(timenow);
+    datetime daybegin = dayBegin(timenow);
     // NET MODE only ONE buy or ONE sell at once
     int total = PositionsTotal(); // number of open positions
         if(total < 1) // nothing to do
@@ -122,12 +113,17 @@ void ClosePositionbyTime(){
     //--- if the MagicNumber matches MagicNumber of the position
     if(magic!=EXPERT_MAGIC)
         return;
-    datetime opentime = PositionGetInteger(POSITION_TIME);   // time when the position was open
-    datetime chgetime = PositionGetInteger(POSITION_TIME_UPDATE);  // any opdate on the order
-    if(timenow < chgetime+expiretime && chgetime < dayend )
-        return; // continue open
-    ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE) PositionGetInteger(POSITION_TYPE);  // type of the position
-    double volume=volumeToClose(chgetime);
+    // Look on history of deals FIRST DEAL OLDER than expire time
+    HistorySelect(daybegin, now-expiretime);
+    ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
+    // get the time if it was a buy
+    if(HistoryDealGetInteger(ticket, DEAL_ENTRY)!=DEAL_ENTRY_IN ||
+    HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
+    HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
+      return;
+    datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME)
+    // calculate how much volume still needs to be closed
+    double volume = volumeToClose(opentime);
     if(volume <= 0)
         return;
     //--- zeroing the request and result values

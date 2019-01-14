@@ -114,14 +114,14 @@ void ClosePositionbyTime(){
     if(magic!=EXPERT_MAGIC)
         return;
     // Look on history of deals FIRST DEAL OLDER than expire time
-    HistorySelect(daybegin, now-expiretime);
-    ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
+    HistorySelect(daybegin, timenow-expiretime);
+    ulong ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
     // get the time if it was a buy
     if(HistoryDealGetInteger(ticket, DEAL_ENTRY)!=DEAL_ENTRY_IN ||
     HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
     HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
       return;
-    datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME)
+    datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
     // calculate how much volume still needs to be closed
     double volume = volumeToClose(opentime);
     if(volume <= 0)
@@ -136,17 +136,8 @@ void ClosePositionbyTime(){
     request.volume   = volume;                   // volume of the position
     request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
     request.magic    = EXPERT_MAGIC;             // MagicNumber of the position
-    //--- set the price and order type depending on the position type
-    if(type==POSITION_TYPE_BUY)
-    {
-        request.price=SymbolInfoDouble(sname, SYMBOL_BID);
-        request.type =ORDER_TYPE_SELL;
-    }
-    else // contigency should not be here but let it be
-    {
-        request.price=SymbolInfoDouble(sname, SYMBOL_ASK);
-        request.type =ORDER_TYPE_BUY;
-    }
+    request.price=SymbolInfoDouble(sname, SYMBOL_BID);
+    request.type =ORDER_TYPE_SELL;
     if(!OrderSend(request,result))
         Print("OrderSend error ", GetLastError());
     //--- information about the operation

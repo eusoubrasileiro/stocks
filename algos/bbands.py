@@ -337,7 +337,7 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
         day, group = vars
         bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
 
-    isgfeatures = standardizeFeatures(bars, nbands); # signal features standardized
+    isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
     # y target class column index
     iybands = [ bars.columns.get_loc('y'+str(j)) for j in range(nbands)]
     # assembly training pairs

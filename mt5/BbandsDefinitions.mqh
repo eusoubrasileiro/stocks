@@ -1,5 +1,5 @@
 #define EXPERT_MAGIC 777707777  // MagicNumber of the expert
-#define BACKTESTING // testing with predictions files
+//#define BACKTESTING // testing with predictions files
 
 // symbols neeeded for training and prediction
 #ifdef BACKTESTING
@@ -47,7 +47,7 @@ int ndeals=0;
 const int starthour=10;
 const int startminute=30;
 // expert operations end (no further sells or buys)
-const int endhour=16;
+const int endhour=17;
 const int endminute=45;
 // tolerance in minutes for an order readed and its execution (seconds)
 const int exectolerance = 3*60;

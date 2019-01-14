@@ -101,6 +101,7 @@ double volumeToClose(datetime opentime){
 void ClosePositionbyTime(){
     MqlTradeRequest request;
     MqlTradeResult  result;
+    double volume = 0;
     datetime timenow = TimeCurrent();
     datetime dayend = dayEnd(timenow);
     datetime daybegin = dayBegin(timenow);
@@ -113,21 +114,20 @@ void ClosePositionbyTime(){
     //--- if the MagicNumber matches MagicNumber of the position
     if(magic!=EXPERT_MAGIC)
         return;
-    if(timenow >= dayEnd){ // close whatever volume is open
-      double volume  = PositionGetDouble(POSITION_VOLUME)
+    if(timenow >= dayend){ // close whatever volume is open
+      volume  = PositionGetDouble(POSITION_VOLUME);
     }
     else { // check expire time to see how much and if should close volume
       // Look on history of deals FIRST DEAL OLDER than expire time
       HistorySelect(daybegin, timenow-expiretime);
       ulong ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
       // get the time if it was a buy
-      if(HistoryDealGetInteger(ticket, DEAL_ENTRY)!=DEAL_ENTRY_IN ||
-      HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
+      if(HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
       HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
         return;
       datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
       // calculate how much volume still needs to be closed
-      double volume = volumeToClose(opentime);
+      volume = volumeToClose(opentime);
       if(volume <= 0)
           return;
     }

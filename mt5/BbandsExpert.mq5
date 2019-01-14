@@ -106,26 +106,31 @@ void ClosePositionbyTime(){
     datetime daybegin = dayBegin(timenow);
     // NET MODE only ONE buy or ONE sell at once
     int total = PositionsTotal(); // number of open positions
-        if(total < 1) // nothing to do
-            return;
+    if(total < 1) // nothing to do
+      return;
     ulong  position_ticket = PositionGetTicket(0);  // ticket of the position
     ulong  magic = PositionGetInteger(POSITION_MAGIC);
     //--- if the MagicNumber matches MagicNumber of the position
     if(magic!=EXPERT_MAGIC)
         return;
-    // Look on history of deals FIRST DEAL OLDER than expire time
-    HistorySelect(daybegin, timenow-expiretime);
-    ulong ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
-    // get the time if it was a buy
-    if(HistoryDealGetInteger(ticket, DEAL_ENTRY)!=DEAL_ENTRY_IN ||
-    HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
-    HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
-      return;
-    datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
-    // calculate how much volume still needs to be closed
-    double volume = volumeToClose(opentime);
-    if(volume <= 0)
+    if(timenow >= dayEnd){ // close whatever volume is open
+      double volume  = PositionGetDouble(POSITION_VOLUME)
+    }
+    else { // check expire time to see how much and if should close volume
+      // Look on history of deals FIRST DEAL OLDER than expire time
+      HistorySelect(daybegin, timenow-expiretime);
+      ulong ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
+      // get the time if it was a buy
+      if(HistoryDealGetInteger(ticket, DEAL_ENTRY)!=DEAL_ENTRY_IN ||
+      HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
+      HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
         return;
+      datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
+      // calculate how much volume still needs to be closed
+      double volume = volumeToClose(opentime);
+      if(volume <= 0)
+          return;
+    }
     //--- zeroing the request and result values
     ZeroMemory(request);
     ZeroMemory(result);
@@ -136,8 +141,8 @@ void ClosePositionbyTime(){
     request.volume   = volume;                   // volume of the position
     request.deviation = deviation*ticksize;                        // 7*0.01 tick size : 7 cents
     request.magic    = EXPERT_MAGIC;             // MagicNumber of the position
-    request.price=SymbolInfoDouble(sname, SYMBOL_BID);
-    request.type =ORDER_TYPE_SELL;
+    request.price   = SymbolInfoDouble(sname, SYMBOL_BID);
+    request.type    =  ORDER_TYPE_SELL;
     if(!OrderSend(request,result))
         Print("OrderSend error ", GetLastError());
     //--- information about the operation

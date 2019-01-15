@@ -78,7 +78,7 @@ def traverseBand(bandsg, yband, ask, bid, day):
         yband[buyindex] = np.nan # set it to be ignored
     return yband
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
@@ -90,9 +90,10 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     y = np.zeros(len(df))*np.nan
     time = np.zeros(len(df))*np.nan # let it be float after we convert back to int
     # prange break this here, cannot use this way
-    for i in prange(window, df.shape[0]):
+    # still breaking somehow parallel doesnt like np.isnan 
+    for i in range(window, df.shape[0]):
         for j in range(nbands): # each band look at the ys' target class
-            if not np.isnan(df[i , j]): # if y' is not nan than we have a training pair X, y
+            if df[i , j] == df[i , j]: # if y' is not nan than we have a training pair X, y
                 # X feature vector is the last window (signals + askv and bidv 8 dimension)
                 X[i, :] = df[i-window:i, -nsignal_features:].flatten()
                 y[i] = df[i, j]

@@ -15,6 +15,7 @@ from ..util import progressbar
 # Use same path that can be read by the expert advisor
 meta5filepath = '/home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files'
 debug=True
+nbands=3
 # testingpath = '/home/andre/Projects/stocks/algos/tests'
 # meta5filepath = testingpath
 cname= "WIN@" #"WIN@"# "WING19"
@@ -29,7 +30,7 @@ def zeroTime():
     return datetime.datetime(year=1970, month=1, day=1)
 
 def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
-        percmiss=-1, daimontime=0, direction=0):
+        percmiss=-1, daimontime=0, signal=nbands*[0], direction=0):
     """ record on file/print on stderr minute processed"""
     if entrytime==0:
         entrytime = zeroTime()
@@ -38,13 +39,14 @@ def recordMinute(entrytime=0, meta5time=0, sizeread=-1,
     if daimontime==0:
         daimontime = zeroTime()
     entrytime = entrytime.strftime("%d/%m/%y %H:%M:%S")
-    meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")
-    daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")
+    meta5time = meta5time.strftime("%d/%m/%y %H:%M:%S")[9:] # dont need day anymore
+    daimontime = daimontime.strftime("%d/%m/%y %H:%M:%S")[9:]
     with open('processedminutes.txt', 'a') as f:
-        msg="{:>8s}   {:>8s}   {:>8s}   {:>5d}  {:>5.2f}  {:>3d}".format(
+        msg="{:>8s}  {:>8s}   {:>8s}   {:>5d}  {:>5.2f}  {:>3d}".format(
         entrytime, daimontime, meta5time, sizeread, percmiss,
         direction)
         f.write(msg+'\n')
+        msg="read.in {:>8s}  pred.ready {:>8s}  mt5 {:>8s}  d.size {:>5d} p.miss {:>5.2f} sgn ({:>2d},{:>2d},{:>2d} ) == {:>1d}".format(entrytime, daimontime, meta5time, sizeread, percmiss, *signal, direction)
         print(msg, file=sys.stderr)
 
 os.chdir(meta5filepath)
@@ -91,13 +93,15 @@ while(True): # daemon allways running
         recordMinute(entrytime, meta5time, sizeread, missing)
         continue # too few data
 
+    del bars['S'] # needed due  7 columns for creating  features
     # Prepare data for training classification : creating features etc.
     window=21
     signal, Xp, X, y  = bbands.getTrainingForecastVectors(bars, window, 3)
+    signal = signal[0]
 
     if Xp is None: # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, 0)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, signal)
         continue
 
     # training window latest data
@@ -107,7 +111,7 @@ while(True): # daemon allways running
     if ypred is None:
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, 0)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, signal)
         continue
 
     # decide base on prediction and probability clip
@@ -117,7 +121,7 @@ while(True): # daemon allways running
     if yprob < 0.8: # must be 80% sure this is the class
         # no entry point
         daimontime = datetime.datetime.now()
-        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, ypred)
+        recordMinute(entrytime, meta5time, sizeread, missing, daimontime, signal, ypred)
         continue
 
     # turn in -1/1 class + quantity
@@ -150,4 +154,4 @@ while(True): # daemon allways running
             continue
     # end
     daimontime = datetime.datetime.now()
-    recordMinute(entrytime, meta5time, sizeread, missing, daimontime, ypred)
+    recordMinute(entrytime, meta5time, sizeread, missing, daimontime, signal, ypred)

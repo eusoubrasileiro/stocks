@@ -146,3 +146,19 @@ Quotting article Random-testtrain-split-is-not-always-enough.
  - [ ] Create predictions vector on 2H time-frame.
 
 - [ ] Rewrite backtest engine to support callback function on event `OnChange` making it support whatever time-frame of historical data. Also need to uncouple the predictions vector leting it be in whatever time-frame.
+
+#### Milestone: moved from everything above to minute time-frame Saulo's algorithm (November/2018)
+##### Reason: it has given impressive results
+
+- The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold. The set-up of the algorithm is only for long positions but I made tests changing to short positions with same success rate.
+- Translate code for Saulo's free course is given in `Saulo_ml4t_traininig_clean.py`
+- Prototypes are `Sklearn Saulo Daimon WIN` and `Sklearn Saulo WIN`.
+- Code was entirely reorganized and `buybands.py` daemon was created.
+
+### Things to do
+
+- [ ] create a adequate metric to evaluate predictions quality specially focusing on  
+- [ ] classify somehow with cross-validation the quality of the model
+- [ ] make a adequate grid-search of params using a suitable metric
+- [ ] verify if that metric for model-quality can be used to classify good from bad predictions.
+- [ ] certify the implementation of close by time in metatrader 5

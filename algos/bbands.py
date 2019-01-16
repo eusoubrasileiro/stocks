@@ -90,7 +90,7 @@ def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
     y = np.zeros(len(df))*np.nan
     time = np.zeros(len(df))*np.nan # let it be float after we convert back to int
     # prange break this here, cannot use this way
-    # still breaking somehow parallel doesnt like np.isnan 
+    # still breaking somehow parallel doesnt like np.isnan
     for i in range(window, df.shape[0]):
         for j in range(nbands): # each band look at the ys' target class
             if df[i , j] == df[i , j]: # if y' is not nan than we have a training pair X, y
@@ -175,11 +175,8 @@ def barsFeatured(obars, window=21, nbands=3, verbose=False):
         plt.savefig('bbands.png')
         plt.close()
 
-    #### Traverse bands
-    for j in range(nbands): # for each band you might need to save training-feature-target vectors
-        # save batch from here to behind (batch-size)
-        bars['y'+str(j)] = np.nan
     for j in range(nbands): # for each band traverse it
+        bars['y'+str(j)] = np.nan
         ibandsg = bars.columns.get_loc('bandsg'+str(j))
         iyband = bars.columns.get_loc('y'+str(j))
         # being pessimistic ... is this right?
@@ -246,7 +243,6 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
 
     if Xpredict has signal all zero return None
     """
-    #del bars.S
     bars = obars.copy() # avoid warnings
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
@@ -297,7 +293,6 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
     for j in range(nbands): # for each band you might need to save training-feature-target vectors
         # save batch from here to behind (batch-size)
         bars['y'+str(j)] = np.nan
-    for j in range(nbands): # for each band traverse it
         ibandsg = bars.columns.get_loc('bandsg'+str(j))
         iyband = bars.columns.get_loc('y'+str(j))
         # being pessimistic ... is this right?

@@ -69,33 +69,44 @@ void PlaceOrderNow(int direction){
         Print("Decreased position ",  position_ticket, " by ", request.volume);
 }
 
-double volumeToClose(datetime opentime){
+double volumeToClose(long positionid){
     ulong ticket;
     double volumeout=0; // volume of sells realized on the last expiretime period
     double volumein=0; // first buy realized on the period
+    double volumeoutbefore=0;
+    double volume=0; // total volume to sell
     datetime now = TimeCurrent();
-    //--- request trade history
-    HistorySelect(opentime, now);
+    datetime dayBegin = dayBegin(now);
+    //--- request trade history for day
+    HistorySelect(dayBegin, now);
     uint  total=HistoryDealsTotal(); // total deals
-    // get the buy volume of the first deal
-    ticket = HistoryDealGetTicket(0);
-    volumein = HistoryDealGetDouble(ticket, DEAL_VOLUME);
-     // It is not possible
-     // if(volumein==0) // it was a sell deal
-     //     return 0;
-     // get how much was sold on the expired time period
-    for(uint i=0;i<total;i++){ // get the sell volume on the period
-      ticket=HistoryDealGetTicket(i); //--- try to get deals ticket
-      if(ticket>0) // may not be  a deal_entry_out get the deal entry property
-         if(HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_SELL &&
-         HistoryDealGetInteger(ticket, DEAL_MAGIC) == EXPERT_MAGIC){ // only a sell (sell out not)
-            volumeout += HistoryDealGetDouble(ticket, DEAL_VOLUME);
-        }
+    for(uint i=0;i<total;i++){ // get the first deal buy of this position
+      ticket=HistoryDealGetTicket(i);
+      if(HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_BUY &&
+      HistoryDealGetInteger(ticket, DEAL_MAGIC) == EXPERT_MAGIC &&
+      HistoryDealGetInteger(ticket, DEAL_POSITION_ID) == positionid){
+          volumein = HistoryDealGetDouble(ticket, DEAL_VOLUME);
+          datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
+          if(now > opentime + expiretime ){ // need to expire this order
+            // get how much was sold on the expired time period
+            volumeout=0;
+            for(uint j=i;j<total;j++){ // get the sell volume on the period
+                ticket=HistoryDealGetTicket(j); //--- try to get deals ticket
+                if(HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_SELL &&
+                    HistoryDealGetInteger(ticket, DEAL_MAGIC) == EXPERT_MAGIC &&
+                    HistoryDealGetInteger(ticket, DEAL_POSITION_ID) == positionid){ // only a sell (sell out not)
+                    volumeout += HistoryDealGetDouble(ticket, DEAL_VOLUME);
+                }
+            }
+            volumeout -= volumeoutbefore;
+            if(volumein-volumeout > 0){
+                volume += (volumein-volumeout);
+                volumeoutbefore += volumeout; // the volume deduced
+            }
+          }
+      }
     }
-    double todecrease = volumein - volumeout; // remove what was sold
-    // volume needed to sell to expire by time the openned position
-    todecrease =(todecrease < 0)? 0: todecrease;
-    return todecrease;
+    return volume;
 }
 
 void ClosePositionbyTime(){
@@ -118,16 +129,8 @@ void ClosePositionbyTime(){
       volume  = PositionGetDouble(POSITION_VOLUME);
     }
     else { // check expire time to see how much and if should close volume
-      // Look on history of deals FIRST DEAL OLDER than expire time
-      HistorySelect(daybegin, timenow-expiretime);
-      ulong ticket=HistoryDealGetTicket(HistoryDealsTotal()-1);
-      // get the time if it was a buy
-      if(HistoryDealGetInteger(ticket, DEAL_TYPE) != DEAL_TYPE_BUY ||
-      HistoryDealGetInteger(ticket, DEAL_MAGIC) != EXPERT_MAGIC)
-        return;
-      datetime opentime = HistoryDealGetInteger(ticket, DEAL_TIME);
-      // calculate how much volume still needs to be closed
-      volume = volumeToClose(opentime);
+      long positionid = PositionGetInteger(POSITION_IDENTIFIER);
+      volume = volumeToClose(positionid);
       if(volume <= 0)
           return;
     }

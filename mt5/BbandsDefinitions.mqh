@@ -4,11 +4,11 @@
 // symbols neeeded for training and prediction
 #ifdef BACKTESTING
 string symbols[2] = {"PETR4", "WIN@"};
-string sname = "WIN@"; 
+string sname = "WIN@";
 #else // real operation
 string symbols[2] = {"WING19", "WIN@"};
 string sname = "WING19";
-#endif 
+#endif
 
 // stores a prediction time and direction
 struct prediction {
@@ -21,13 +21,13 @@ struct prediction {
 ///////// Real-Time Operation
 //////////////////////////////////
 // number of minute bars needed by the python code
-const int ntrainingbars = 5000; 
+const int ntrainingbars = 5000;
 // time to expire a position (close it)
 const int expiretime=45*60;
 //expected variation of price 3:1 for sl, tp
-const double expect_var=0.006;
+const double expect_var=300;
 // number of contracts to buy for each direction/quantity
-int quantity = 2; 
+int quantity = 2;
 // desired minprofit
 const double minprofit=160;
 // tick-size
@@ -43,7 +43,7 @@ const int perdt=15;
 const int maxdealsday=8;
 // number of deals counter
 int ndeals=0;
-// expert operations begin 
+// expert operations begin
 const int starthour=10;
 const int startminute=30;
 // expert operations end (no further sells or buys)

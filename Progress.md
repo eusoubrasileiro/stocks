@@ -162,3 +162,5 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [ ] make a adequate grid-search of params using a suitable metric
 - [ ] verify if that metric for model-quality can be used to classify good from bad predictions.
 - [ ] certify the implementation of close by time in metatrader 5
+- [ ] fix mql5 code not executing predictions
+- [ ] set stop and gain in WIN points.

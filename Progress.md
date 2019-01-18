@@ -163,4 +163,8 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [ ] verify if that metric for model-quality can be used to classify good from bad predictions.
 - [ ] certify the implementation of close by time in metatrader 5
 - [ ] fix mql5 code not executing predictions
-- [ ] set stop and gain in WIN points.
+- [ ] make metatrader backtest on data from real daemon jupyter notebook predictions.
+- [x] Set stop and gain in WIN points. Using Standard Deviation (sigma) of last 60 minutes to set stop as 3*sigma (percentil 89%) and stop gain as 3*sigma*1.25.
+- [x] Implemented trailing stop based on EMA variation on last 5 minutes. If ema5 now is bigger than in the last minute. Use that difference to increment the stop-loss and stop-profit.   
+
+Learning to remember: Lost 7k trying to help robot. Due no stop loss and not sure that prediction was good.

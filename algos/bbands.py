@@ -11,6 +11,23 @@ debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
+def viewBands(bars, window=21, nbands=3, lastn=-500):
+    if verbose:
+        plt.figure(figsize=(15,7))
+        plt.subplot(2, 1, 1)
+        plt.plot(price[lastn:], 'k-')
+        for i in range(nbands):
+            # plot bands
+            plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
+            plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
+        plt.subplot(2, 1, 2)
+        for i in range(nbands):
+            plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
+            plt.ylabel('signal-code')
+        plt.legend()
+        plt.savefig('bbands.png')
+        plt.close()
+
 @jit(nopython=True,  parallel=True)
 def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
     """
@@ -79,23 +96,23 @@ def traverseBand(bandsg, yband, ask, bid, day):
     return yband
 
 @jit(nopython=True)
-def xyTrainingPairs(df, window, nsignal_features=8, nbands=6):
+def xyTrainingPairs(df, batchn, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
 
     default signal features number is 8:
         based on 6 y columns plus the 6+2 of the original data-frame  (above)
     """
-    X = np.zeros((len(df), nsignal_features*window))*np.nan # signal training vector 8xwindow
+    X = np.zeros((len(df), nsignal_features*batchn))*np.nan # signal training vector 8xwindow
     y = np.zeros(len(df))*np.nan
     time = np.zeros(len(df))*np.nan # let it be float after we convert back to int
     # prange break this here, cannot use this way
     # still breaking somehow parallel doesnt like np.isnan
-    for i in range(window, df.shape[0]):
+    for i in range(batchn, df.shape[0]):
         for j in range(nbands): # each band look at the ys' target class
             if df[i , j] == df[i , j]: # if y' is not nan than we have a training pair X, y
                 # X feature vector is the last window (signals + askv and bidv 8 dimension)
-                X[i, :] = df[i-window:i, -nsignal_features:].flatten()
+                X[i, :] = df[i-batchn:i, -nsignal_features:].flatten()
                 y[i] = df[i, j]
                 time[i] = i # index that represent date-time from the original data-frame
     notnan = ~np.isnan(y)
@@ -108,13 +125,9 @@ def standardizeFeatures(obars, nbands):
     """
     bars = obars.copy()
     nindfeatures = 3*nbands*7 # number of indicator features
-    #nbands=nbands
-    nfeatures = nindfeatures+1+nbands #175
-    # print('number of feature signals', nfeatures)
     # columns corresponding to the indicator features
-    fi = len(bars.columns)-(nbands*7*3+1)# first column corresponding to a indicator feature
+    fi = bars.columns.get_loc('demaO0') # first column corresponding to a indicator feature
     nind = fi+nindfeatures # last column of the indicator features
-    # print(fi, nind)
     # standardize
     bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
     bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
@@ -129,23 +142,21 @@ def standardizeFeatures(obars, nbands):
         bars.iloc[:, list(range(fi,nind))].values)
     bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
                              bars.iloc[:, id].std()) # normalize variance=1 mean=0
+    # dimension of training signal features len first returned list
+    #features = nindfeatures+1+nbands
     # return index of feature columns
     return [*ibandsgs, *list(range(fi,nind)), id], bars
 
-def barsFeatured(obars, window=21, nbands=3, verbose=False):
-    """create feature columns and return a new dataframe"""
+def barsRawSignals(obars, window=21, nbands=3):
+    """
+    Detect crossing of bollinger bands those created
+    buy or sell raw signals.
+    """
     bars = obars.copy() # avoid warnings
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
-    # needed to reset orders by day
-    bars['date'] = bars.index.date
-    bars.date = bars.apply(lambda x: x.date.toordinal(), axis=1) # integer day from year 1 day 1 gregorian day
-    # 7*60 is one day I cannot rely on overalapping days without adding more info
-    #window = 90 # 2 hours trying not rely on previous days
-    inc = 0.5
-    # if verbose plotting
-    lastn=-500
     price = bars.OHLC.values
+    inc = 0.5
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
         bars['bandlw'+str(i)] = lwband
@@ -156,25 +167,27 @@ def barsFeatured(obars, window=21, nbands=3, verbose=False):
         bars.loc[1:, 'bandsg'+str(i)] = signals.astype(int) # signal for this band
         inc += 0.5
     bars.dropna(inplace=True)
+    return bars
 
-    # if verbose plotting
-    lastn=-500
-    if verbose:
-        plt.figure(figsize=(15,7))
-        plt.subplot(2, 1, 1)
-        plt.plot(price[lastn:], 'k-')
-        for i in range(nbands):
-            # plot bands
-            plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-            plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-        plt.subplot(2, 1, 2)
-        for i in range(nbands):
-            plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
-            plt.ylabel('signal-code')
-        plt.legend()
-        plt.savefig('bbands.png')
-        plt.close()
+def lastSignal(bars, nbands=3):
+    """
+    Latest signal - not standardized - used for predicting future.
+    That is for each band.
+    """
+    return bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
 
+def barsTargetFromSignals(obars, window=21, nbands=3):
+    """
+    Create target class by analysing raw bollinger band signals
+    those that went true receive 1 buy or 2 sell
+    those that wen bad receive 0 hold
+    A target class exist for each band.
+    An essemble of bands together and summed are a better classifier.
+    Note:.
+    A day integer identifier column name 'date' must exist prior call.
+    That is used to hold positions from passing to another day.
+    """
+    bars = obars.copy()
     for j in range(nbands): # for each band traverse it
         bars['y'+str(j)] = np.nan
         ibandsg = bars.columns.get_loc('bandsg'+str(j))
@@ -188,6 +201,19 @@ def barsFeatured(obars, window=21, nbands=3, verbose=False):
                                         bars.iloc[:, iyband].values,
                                         bars.H.values, bars.L.values, bars.date.values)
         bars.iloc[:, iyband] = yband
+
+    return bars
+
+def barsFeatured(obars, window=21, nbands=3):
+    """
+    Create feature columns and return a new dataframe
+    """
+
+    bars = obars.copy() # avoid warning
+    # needed to reset orders by day
+    days = bars.index.to_period('D').asi8
+    bars['date'] = days # # integer day from year 1 day 1 gregorian day
+    # 7*60 is one day I cannot rely on overalapping days without adding more info
     ## Now assembly X and Y TRAINING vectors
     # **window*nsignal features = X second dimension**
     # ## Signal Features
@@ -195,7 +221,7 @@ def barsFeatured(obars, window=21, nbands=3, verbose=False):
     bars.TV = np.log(bars.TV+5) # to avoid division by zero/inf etc
     # tecnical indicators features
     inc = 0.5
-    for column in bars.columns[:7]: # ignore date/dated
+    for column in ['O', 'H', 'L', 'C', 'RV', 'TV', 'OHLC']: # ignore date/dated
         for i in range(nbands):      # 1e-8 to avoid creating nans
             ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)
             sfx = str(column)+str(i)  # name suffix
@@ -211,146 +237,53 @@ def barsFeatured(obars, window=21, nbands=3, verbose=False):
             bars.loc[1:, 'dmacdv'+sfx] = macd[:-1]/(1e-8+macd[1:])
             inc += 0.5
     # day information signal [0, 1]
+    # i think can be faster
     bars['dated'] = 0
     for i, vars in enumerate(bars.groupby(bars.date)):
         day, group = vars
         bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
-
+    bars.dropna(inplace=True)
     return bars
 
 
-def getTrainingForecastVectorsn(bars, isgfeatures, window=21, nbands=3):
+def getTrainingForecastVectorsn(bars, isgfeatures, window=21, nbands=3, batchn=180):
     """
     receives a standardized dataframe with all feature columns
     """
     # y target class column index
     iybands = [ bars.columns.get_loc('y'+str(j)) for j in range(nbands)]
     # assembly training pairs
-    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, window, len(isgfeatures), nbands)
+    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, batchn, len(isgfeatures), nbands)
     time = time.astype(int)
     y = y.astype(int)
-
     # create prediction vector X
-    Xforecast = bars.iloc[-window:, isgfeatures]
+    Xforecast = bars.iloc[-batchn:, isgfeatures]
     Xforecast = Xforecast.values.flatten()
-        # assert len(y[y == 1]) == len(y[y == 2])
     return Xforecast, X, y
 
 # window=21; nbands=3 # number of bbands
-def getTrainingForecastVectors(obars, window=21, nbands=3, verbose=False):
+def getTrainingForecastVectors(obars, window=21, nbands=3, batchn=180):
     """
     return Xpredict, Xtrain, ytrain
 
     if Xpredict has signal all zero return None
     """
-    bars = obars.copy() # avoid warnings
-    bars['OHLC'] = np.nan # typical price
-    bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
-    # needed to reset orders by day
-    bars['date'] = bars.index.date
-    bars.date = bars.apply(lambda x: x.date.toordinal(), axis=1) # integer day from year 1 day 1 gregorian day
-    # 7*60 is one day I cannot rely on overalapping days without adding more info
-    #window = 90 # 2 hours trying not rely on previous days
-    inc = 0.5
-
-    price = bars.OHLC.values
-    for i in range(nbands):
-        upband, sma, lwband =  ta.BBANDS(price, window*inc)
-        bars['bandlw'+str(i)] = lwband
-        bars['bandup'+str(i)] = upband
-        bars['bandsg'+str(i)] = 0 # signal for this band
-        signals = bollingerSignal(price[1:], price[:-1],
-                                  upband[1:], upband[:-1], lwband[1:], lwband[:-1])
-        bars.loc[1:, 'bandsg'+str(i)] = signals.astype(int) # signal for this band
-        inc += 0.5
-    bars.dropna(inplace=True)
-
-    # if verbose plotting
-    lastn=-500
-    if verbose:
-        plt.figure(figsize=(15,7))
-        plt.subplot(2, 1, 1)
-        plt.plot(price[lastn:], 'k-')
-        for i in range(nbands):
-            # plot bands
-            plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-            plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-        plt.subplot(2, 1, 2)
-        for i in range(nbands):
-            plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
-            plt.ylabel('signal-code')
-        plt.legend()
-        plt.savefig('bbands.png')
-        plt.close()
-
-    ### Latest Signal - not standardized - used for predicting future
-    signal = bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
-
+    bars, signal = barsRawSignals(obars, window, nbands)
     if np.all(signal == 0): # no signal no training
       return signal, None, None, None
-
-    #### Traverse bands
-    for j in range(nbands): # for each band you might need to save training-feature-target vectors
-        # save batch from here to behind (batch-size)
-        bars['y'+str(j)] = np.nan
-        ibandsg = bars.columns.get_loc('bandsg'+str(j))
-        iyband = bars.columns.get_loc('y'+str(j))
-        # being pessimistic ... is this right?
-        # should i buy at what price? I dont know maybe the typical one is more realistic.
-        # but setting the worst case garantees profit in the worst scenario!!
-        # better.
-        # So i Buy at the highest price and sell at the lowest one.
-        yband = traverseBand(bars.iloc[:, ibandsg].values.astype(int),
-                                        bars.iloc[:, iyband].values,
-                                        bars.H.values, bars.L.values, bars.date.values)
-        bars.iloc[:, iyband] = yband
-    ## Now assembly X and Y TRAINING vectors
-    # **window*nsignal features = X second dimension**
-    # ## Signal Features
-    bars.RV = np.log(bars.RV+5)
-    bars.TV = np.log(bars.TV+5) # to avoid division by zero/inf etc
-    # tecnical indicators features
-    inc = 0.5
-    for column in bars.columns[:7]: # ignore date/dated
-        for i in range(nbands):      # 1e-8 to avoid creating nans
-            ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)
-            sfx = str(column)+str(i)  # name suffix
-            # remove nbands emas
-            bars['dema'+sfx] = bars[column] - ema
-            bars.loc[:, 'demav'+sfx] = np.nan
-            # return of the differences to the ema (know to have good response for prediction)
-            bars.loc[1:, 'demav'+sfx] = bars['dema'+sfx].values[:-1]/(1e-8+bars['dema'+sfx].values[1:])
-            macd, sg, ht = ta.MACD(bars[column].values.astype(np.float64),
-                                   int(window*inc*0.5), int(window*0.75*inc), int(0.25*inc*window))
-            #dow.loc[:, 'macd'+sfx] = macd
-            bars.loc[:, 'dmacdv'+sfx] = np.nan
-            bars.loc[1:, 'dmacdv'+sfx] = macd[:-1]/(1e-8+macd[1:])
-            inc += 0.5
-    # day information signal [0, 1]
-    bars['dated'] = 0
-    for i, vars in enumerate(bars.groupby(bars.date)):
-        day, group = vars
-        bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
-
+    bars = barsFeatured(obars)
+    bars = barsTargetFromSignals(bars, window, nbands) # needs day identifier integer
     isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
-    # y target class column index
-    iybands = [ bars.columns.get_loc('y'+str(j)) for j in range(nbands)]
-    # assembly training pairs
-    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, window, len(isgfeatures), nbands)
-    time = time.astype(int)
-    y = y.astype(int)
-
-    # create prediction vector X
-    Xforecast = bars.iloc[-window:, isgfeatures]
-    Xforecast = Xforecast.values.flatten()
-    # assert len(y[y == 1]) == len(y[y == 2])
+    Xforecast, X, y = getTrainingForecastVectorsn(bars, isgfeatures, nbands, batchn)
 
     return signal, Xforecast, X, y
 
 
-
-def fitPredict(X, y, Xp):
-    trees = ExtraTreesClassifier(n_estimators=70, verbose=0, max_features=300)
+def fitPredict(X, y, Xp, njobs=None):
+    if njobs is None:
+        trees = ExtraTreesClassifier(n_estimators=120, verbose=0)#, max_features=300)
+    else:
+        trees = ExtraTreesClassifier(n_estimators=120, verbose=0, n_jobs=njobs)
     ypred = None
     try:
         # if don't have 3-classes for training cannot train model

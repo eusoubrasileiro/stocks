@@ -8,6 +8,7 @@ import calendar
 import time
 import argparse
 import sys
+import subprocess
 from .. import bbands, meta5Ibov
 from ..util import progressbar
 
@@ -24,6 +25,8 @@ predictions = []
 parser = argparse.ArgumentParser()
 parser.add_argument("--delay", type=int, default=10, nargs='?',
             help="delay time between reading data file in seconds (default 10s)")
+parser.add_argument("--sound", type=bool, default=False, nargs='?',
+            help="make some sound when predicts (default no)")
 args = parser.parse_args()
 
 def zeroTime():
@@ -152,6 +155,14 @@ while(True): # daemon allways running
             if debug:
                 raise(e)
             continue
-    # end
+
+    if args.sound:
+        # make some noise on speakers
+        subprocess.call(['speech-dispatcher'])        #start speech dispatcher
+        if ypred > 0:
+            subprocess.call(['spd-say', '"buy buy buy"'])
+        else:
+            subprocess.call(['spd-say', '"sell sell sell"'])
+
     daimontime = datetime.datetime.now()
     recordMinute(entrytime, meta5time, sizeread, missing, daimontime, signal, ypred)

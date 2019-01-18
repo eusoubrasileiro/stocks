@@ -1,0 +1,25 @@
+From here:.
+
+https://mrjbq7.github.io/ta-lib/install.html
+
+Download de source code and:.
+
+$ untar and cd
+$ ./configure --prefix=/usr/local/lib/talib
+$ make
+$ sudo make install
+
+Install somewhere, for example:. /usr/local/lib/talib
+
+Install pip on anaconda and then make pip find the library when installing and compiling the python module.
+
+pip install --global-option=build_ext --global-option="-L/usr/local/lib/talib/lib" --global-option="-I/usr/local/lib/talib/include/" TA-Lib
+
+after copy the libraries to the anaconda libraries folder
+
+cd /usr/local/lib/talib/lib
+cp * /home/alferreira/anaconda3/lib
+
+Everything is ready.
+
+

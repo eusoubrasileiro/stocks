@@ -148,21 +148,72 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [ ] Rewrite backtest engine to support callback function on event `OnChange` making it support whatever time-frame of historical data. Also need to uncouple the predictions vector leting it be in whatever time-frame.
 
 #### Milestone: moved from everything above to minute time-frame Saulo's algorithm (November/2018)
-##### Reason: it has given impressive results
+#### Reason: it was giving impressive results
 
 - The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold. The set-up of the algorithm is only for long positions but I made tests changing to short positions with same success rate.
 - Translate code for Saulo's free course is given in `Saulo_ml4t_traininig_clean.py`
 - Prototypes are `Sklearn Saulo Daimon WIN` and `Sklearn Saulo WIN`.
 - Code was entirely reorganized and `buybands.py` daemon was created.
 
-### Things to do
+###### Milestone : predictions were contaminated by future, had to start again. Precision for class 1 of 90% were far too much.
 
-- [ ] create a adequate metric to evaluate predictions quality specially focusing on  
+- Restarted testing real precision of classifier without future contamination. Bello a summary of parameters test with a data window of 2500 for training and making 3000 random predictions on the entire data available 5 years.
+
+- [x] **Random Search of params**
+    What best gives precision on class 1  
+     - `tsignals` are crossing signals **ajdusted** for correct class (hold or buy or sell)
+     - `bbwindow` size of second bb window. Others are multiples e. g.
+         [ 21, 21x0.5=10, 21x1.5=31, 21x2=42 etc ]
+     - `batchn` number of previous samples of a signal that are used to assembly the feature X vector for training.
+     - `precision` is the multiclass precision of class 1
+
+
+ | batchn | nbands | bbwindow | tsignals |  precision | clip-pb.  |
+ | ------ | ------ | -------- | -------  | ---------- | --------- |
+ |   21   |    6   |    21    |    90    |     29%    |           |
+ |   21   |    6   |    21    |    80    |     41%    |           |
+ |   21   |    6   |    21    |    84    |     45%    |           |
+ |   21   |    3   |    21    |    36    |     48%    |           |
+ |   32   |    6   |    16    |    84    |     42%    |    50%    |
+ |   48   |    6   |    16    |    90    |     35%    |           |
+ |   21   |    6   |    21    |    42    |     43%    |           |
+ |   21   |    6   |    21    |    84    |     39%    |           |
+ |   30   |    6   |    30    |    40    |     39%    |           |
+ |   64   |    6   |    21    |    42    |     38%    |           |
+ |   42   |    6   |    21    |    84    |     38%    |           |
+ |   21   |    6   |    21    |    84    |     38%    |           |
+ |   21   |    6   |    21    |    21    |     39%    |           |
+ |   30   |    6   |    30    |    30    |     33%    |           |
+ |   21   |    6   |    21    |    33    |     32%    |           |
+ |   30   |    6   |    30    |    50    |     32%    |           |
+ |   21   |    6   |    21    |    63    |     29%    |           |
+ |   21   |    6   |    21    |    76    |     29%    |           |
+ |   42   |    3   |    21    |    84    |     28%    |           |
+ |   16   |    6   |    16    |    32    |     24%    |           |
+ |   64   |    6   |    18    |    38    |     24%    |           |
+ |   32   |    6   |    21    |    33    |     21%    |           |
+ |   21   |    3   |    21    |    21    |     21%    |           |
+
+- Unfortunantly nothing above 50% has more than 1 entry per day. `clip-pb` used a threadshould of 0.56 otherwise there would not be predictions.
+
+- [x] Made a little effort for cross-validate the model before predicting. Not very encouraging.
+
+- Next step try to binarize for class 1 and 0.
+
+- [ ] **Binarizing creating One vs All problem. Putting class 2 and 0 as class 0.**
+    - After
+
+- [ ] **Implement bollinger bands class with only 2 classes**
+
+
+**Things to do**
+
+- [ ] create a adequate metric to evaluate predictions quality specially focusing on class 1. Maybe use precision of class 1 is easier.
 - [ ] classify somehow with cross-validation the quality of the model
 - [ ] make a adequate grid-search of params using a suitable metric
 - [ ] verify if that metric for model-quality can be used to classify good from bad predictions.
-- [ ] certify the implementation of close by time in metatrader 5
-- [ ] fix mql5 code not executing predictions
+- [ ] certify the implementation of close by time in metatrader 5. Its not a big problem due stop-loss based on stdev working.
+- [x] fix mql5 code not executing predictions. Be carefull in what symbol you use for testing, that was the problem.
 - [ ] make metatrader backtest on data from real daemon jupyter notebook predictions.
 - [x] Set stop and gain in WIN points. Using Standard Deviation (sigma) of last 60 minutes to set stop as 3*sigma (percentil 89%) and stop gain as 3*sigma*1.25.
 - [x] Implemented trailing stop based on EMA variation on last 5 minutes. If ema5 now is bigger than in the last minute. Use that difference to increment the stop-loss and stop-profit.   

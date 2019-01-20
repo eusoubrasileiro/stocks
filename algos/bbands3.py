@@ -109,7 +109,7 @@ def xyTrainingPairs(df, batchn, nsignal_features=8, nbands=6):
     # prange break this here, cannot use this way
     # still breaking somehow parallel doesnt like np.isnan
     for i in range(batchn, df.shape[0]):
-        for j in range(nbands): # each band look at the ys' target class
+        for j in range(nbands): # firs columns are y's each band look at the ys' target class
             if df[i , j] == df[i , j]: # if y' is not nan than we have a training pair X, y
                 # X feature vector is the last window (signals + askv and bidv 8 dimension)
                 X[i, :] = df[i-batchn:i, -nsignal_features:].flatten()
@@ -117,6 +117,15 @@ def xyTrainingPairs(df, batchn, nsignal_features=8, nbands=6):
                 time[i] = i # index that represent date-time from the original data-frame
     notnan = ~np.isnan(y)
     return X[notnan], y[notnan], time[notnan]
+
+
+def xyTrainingIndex(bars):
+    # %%time
+    # ys = bars.iloc[:, iyband].values
+    # iXy = np.argwhere(~np.isnan(ys))
+    # y = np.zeros(iXy.shape[0])
+    # y = ys[iXy[:, 0], iXy[:, 1]]
+    pass
 
 def standardizeFeatures(obars, nbands):
     """"
@@ -131,13 +140,12 @@ def standardizeFeatures(obars, nbands):
     # standardize
     bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
     bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
-    # signal vector needed columns
+    # # signal vector needed columns lets not normalize than
     ibandsgs = [ bars.columns.get_loc('bandsg'+str(j)) for j in range(nbands) ]
-    # y target class
+    # # can only have values 0, 1, 2 turn it in normalized floats
+    # bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
+    #                          bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
     id = bars.columns.get_loc('dated')
-    # can only have values 0, 1, 2 turn it in normalized floats
-    bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
-                             bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
     bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
         bars.iloc[:, list(range(fi,nind))].values)
     bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
@@ -191,16 +199,15 @@ def barsTargetFromSignals(obars, window=21, nbands=3):
     for j in range(nbands): # for each band traverse it
         bars['y'+str(j)] = np.nan
         ibandsg = bars.columns.get_loc('bandsg'+str(j))
-        iyband = bars.columns.get_loc('y'+str(j))
         # being pessimistic ... is this right?
         # should i buy at what price? I dont know maybe the typical one is more realistic.
         # but setting the worst case garantees profit in the worst scenario!!
         # better.
         # So i Buy at the highest price and sell at the lowest one.
         yband = traverseBand(bars.iloc[:, ibandsg].values.astype(int),
-                                        bars.iloc[:, iyband].values,
+                                        bars['y'+str(j)].values,
                                         bars.H.values, bars.L.values, bars.date.values)
-        bars.iloc[:, iyband] = yband
+        bars['y'+str(j)]  = yband
 
     return bars
 
@@ -246,7 +253,7 @@ def barsFeatured(obars, window=21, nbands=3):
     return bars
 
 
-def getTrainingForecastVectorsn(bars, isgfeatures, window=21, nbands=3, batchn=180):
+def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
     """
     receives a standardized dataframe with all feature columns
     """
@@ -256,10 +263,16 @@ def getTrainingForecastVectorsn(bars, isgfeatures, window=21, nbands=3, batchn=1
     X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, batchn, len(isgfeatures), nbands)
     time = time.astype(int)
     y = y.astype(int)
+    return X, y
+
+def getForecastVectorsn(bars, isgfeatures, window=21, nbands=3, batchn=180):
+    """
+    receives a standardized dataframe with all feature columns
+    """
     # create prediction vector X
     Xforecast = bars.iloc[-batchn:, isgfeatures]
     Xforecast = Xforecast.values.flatten()
-    return Xforecast, X, y
+    return Xforecast
 
 # window=21; nbands=3 # number of bbands
 def getTrainingForecastVectors(obars, window=21, nbands=3, batchn=180):
@@ -295,3 +308,32 @@ def fitPredict(X, y, Xp, njobs=None):
         if debug:
             raise(e)
     return ypred
+
+def sumdTarget(y):
+    """
+    from the minute bars data-frame
+    summarize y-target class for all bands
+    turning classes 0, 1, 2 in
+    -1, 0, 1 (sell, hold, buy)
+    works for data-frame
+    don't drop nan's when summed by row they become 0
+    """
+    y = y.copy()
+    y[y == 2] = -1
+    y = y.sum(axis=1) # summarized prediction
+    y[ y < 0] = -1
+    y[ y > 0] = +1
+    return y
+
+def sumPred(y):
+    """
+    summarize predictions probabilities
+    turn classes 0, 1, 2 in
+    -1, 0, 1 (sell, hold, buy)
+    works for 3 column array
+    """
+    y = y.copy()
+    y = np.argmax(y, axis=-1) # summarized prediction
+    #yprob = np.max(y, axis=-1)
+    y[ y == 2] = -1
+    return y

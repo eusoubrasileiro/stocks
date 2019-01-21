@@ -265,7 +265,7 @@ def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
     y = y.astype(int)
     return X, y
 
-def getForecastVectorsn(bars, isgfeatures, window=21, nbands=3, batchn=180):
+def getForecastVector(bars, isgfeatures, window=21, nbands=3, batchn=180):
     """
     receives a standardized dataframe with all feature columns
     """

@@ -263,7 +263,7 @@ def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
     X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, batchn, len(isgfeatures), nbands)
     time = time.astype(int)
     y = y.astype(int)
-    return X, y
+    return X, y, time
 
 def getForecastVector(bars, isgfeatures, window=21, nbands=3, batchn=180):
     """

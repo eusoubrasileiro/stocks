@@ -148,16 +148,19 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [ ] Rewrite backtest engine to support callback function on event `OnChange` making it support whatever time-frame of historical data. Also need to uncouple the predictions vector leting it be in whatever time-frame.
 
 #### Milestone: moved from everything above to minute time-frame Saulo's algorithm (November/2018)
-#### Reason: it was giving impressive results
+#### Reason: it was giving fake impressive results
 
-- The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold. The set-up of the algorithm is only for long positions but I made tests changing to short positions with same success rate.
+- The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold. The set-up of the algorithm is only for long positions but I made tests changing to short positions.
 - Translate code for Saulo's free course is given in `Saulo_ml4t_traininig_clean.py`
 - Prototypes are `Sklearn Saulo Daimon WIN` and `Sklearn Saulo WIN`.
 - Code was entirely reorganized and `buybands.py` daemon was created.
 
 ###### Milestone : predictions were contaminated by future, had to start again. Precision for class 1 of 90% were far too much.
 
-- Restarted testing real precision of classifier without future contamination. Bello a summary of parameters test with a data window of 2500 for training and making 3000 random predictions on the entire data available 5 years.
+- Restarted testing real precision of classifier without future contamination. Bellow a summary of parameters test with a data window of 300 for training and making 30k random predictions on the entire data available for different symbols. 30k upon analysis seams to be the required amount of samples to not have a biased estimate of the precision probability distribution, even with a 2% percent `stdev`.
+
+- [x] Random Forest don't need standardization. Decisions trees are like that. So removed that. Side effect `joblib` started to work o jupyter notebook cell on Windows. Another side effect it's running much faster and allows now a very small window of data.
+- [ ] need to calculate number of possible scenarios based on data window. 
 
 - [x] **Random Search of params**
     What best gives precision on class 1  
@@ -167,6 +170,7 @@ Quotting article Random-testtrain-split-is-not-always-enough.
      - `batchn` number of previous samples of a signal that are used to assembly the feature X vector for training.
      - `precision` is the multiclass precision of class 1
 
+- need to update this table here precision is not right due low number of samples 
 
  | batchn | nbands | bbwindow | tsignals |  precision | clip-pb.  |
  | ------ | ------ | -------- | -------  | ---------- | --------- |
@@ -175,24 +179,6 @@ Quotting article Random-testtrain-split-is-not-always-enough.
  |   21   |    6   |    21    |    84    |     45%    |           |
  |   21   |    3   |    21    |    36    |     48%    |           |
  |   32   |    6   |    16    |    84    |     42%    |    50%    |
- |   48   |    6   |    16    |    90    |     35%    |           |
- |   21   |    6   |    21    |    42    |     43%    |           |
- |   21   |    6   |    21    |    84    |     39%    |           |
- |   30   |    6   |    30    |    40    |     39%    |           |
- |   64   |    6   |    21    |    42    |     38%    |           |
- |   42   |    6   |    21    |    84    |     38%    |           |
- |   21   |    6   |    21    |    84    |     38%    |           |
- |   21   |    6   |    21    |    21    |     39%    |           |
- |   30   |    6   |    30    |    30    |     33%    |           |
- |   21   |    6   |    21    |    33    |     32%    |           |
- |   30   |    6   |    30    |    50    |     32%    |           |
- |   21   |    6   |    21    |    63    |     29%    |           |
- |   21   |    6   |    21    |    76    |     29%    |           |
- |   42   |    3   |    21    |    84    |     28%    |           |
- |   16   |    6   |    16    |    32    |     24%    |           |
- |   64   |    6   |    18    |    38    |     24%    |           |
- |   32   |    6   |    21    |    33    |     21%    |           |
- |   21   |    3   |    21    |    21    |     21%    |           |
 
 - Unfortunantly nothing above 50% has more than 1 entry per day. `clip-pb` used a threadshould of 0.56 otherwise there would not be predictions.
 

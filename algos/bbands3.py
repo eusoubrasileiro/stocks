@@ -139,17 +139,17 @@ def standardizeFeatures(obars, nbands):
     nind = fi+nindfeatures # last column of the indicator features
     # standardize
     bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
-    bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
+    # bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
     # # signal vector needed columns lets not normalize than
     ibandsgs = [ bars.columns.get_loc('bandsg'+str(j)) for j in range(nbands) ]
     # # can only have values 0, 1, 2 turn it in normalized floats
     # bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
     #                          bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
     id = bars.columns.get_loc('dated')
-    bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
-        bars.iloc[:, list(range(fi,nind))].values)
-    bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
-                             bars.iloc[:, id].std()) # normalize variance=1 mean=0
+    # bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
+    #     bars.iloc[:, list(range(fi,nind))].values)
+    # bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
+    #                          bars.iloc[:, id].std()) # normalize variance=1 mean=0
     # dimension of training signal features len first returned list
     #features = nindfeatures+1+nbands
     # return index of feature columns

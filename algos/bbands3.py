@@ -12,21 +12,20 @@ quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
 def viewBands(bars, window=21, nbands=3, lastn=-500):
-    if verbose:
-        plt.figure(figsize=(15,7))
-        plt.subplot(2, 1, 1)
-        plt.plot(price[lastn:], 'k-')
-        for i in range(nbands):
-            # plot bands
-            plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-            plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-        plt.subplot(2, 1, 2)
-        for i in range(nbands):
-            plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
-            plt.ylabel('signal-code')
-        plt.legend()
-        plt.savefig('bbands.png')
-        plt.close()
+    price = bars.OHLC.values
+    plt.figure(figsize=(15,7))
+    plt.subplot(2, 1, 1)
+    plt.plot(price[lastn:], 'k-')
+    for i in range(nbands):
+        # plot bands
+        plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
+        plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
+    plt.subplot(2, 1, 2)
+    for i in range(nbands):
+        plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
+        plt.ylabel('signal-code')
+    plt.legend()
+
 
 @jit(nopython=True,  parallel=True)
 def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
@@ -309,31 +308,29 @@ def fitPredict(X, y, Xp, njobs=None):
             raise(e)
     return ypred
 
-def sumdTarget(y):
+def sumdPred(y):
     """
-    from the minute bars data-frame
-    summarize y-target class for all bands
-    turning classes 0, 1, 2 in
+    summarize predictions target class for all bands
+    turn classes 0, 1, 2 in
     -1, 0, 1 (sell, hold, buy)
-    works for data-frame
-    don't drop nan's when summed by row they become 0
+    works for data-frame/array
     """
     y = y.copy()
     y[y == 2] = -1
-    y = y.sum(axis=1) # summarized prediction
+    # since cannot go up and down at same time
+    y = y.sum(axis=1) # sum prediction of each band
     y[ y < 0] = -1
     y[ y > 0] = +1
     return y
 
-def sumPred(y):
+def sumyProb(y):
     """
-    summarize predictions probabilities
+    get class by max probability then
     turn classes 0, 1, 2 in
     -1, 0, 1 (sell, hold, buy)
     works for 3 column array
     """
     y = y.copy()
-    y = np.argmax(y, axis=-1) # summarized prediction
-    #yprob = np.max(y, axis=-1)
+    y = np.argmax(y, axis=-1) # get class by max probability
     y[ y == 2] = -1
     return y

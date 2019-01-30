@@ -6,6 +6,7 @@ from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
 import talib as ta
 from matplotlib import pyplot as plt
+from . import bbands3
 
 debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
@@ -120,3 +121,31 @@ def crossFeatures(obars, window=21, nbands=3, log=[], nofeatures=[]):
             bars.loc[1:, 'dmacdv'+sfx] = macd[:-1]/(1e-8+macd[1:])
             inc += 0.5
     return bars
+
+def getTrainingVectors(bars, window=21, nbands=3, batchn=180):
+    """
+    every column on bars will be considered a signal feature
+    except for the class column y0, y1 etc.
+    """
+    # y target class column index
+    iybands = np.array([ bars.columns.get_loc('y'+str(j)) for j in range(nbands)], dtype=int)
+    isgfeatures = np.arange(len(bars.columns), dtype=int)
+    isgfeatures = np.delete(isgfeatures, iybands) # everything less y's
+    # assembly training pairs
+    X, y, time = bbands3.xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, batchn, len(isgfeatures), nbands)
+    time = time.astype(int)
+    y = y.astype(int)
+    return X, y, time
+
+def getForecastVector(bars, window=21, nbands=3, batchn=180):
+    """
+    receives a standardized dataframe with all feature columns
+    """
+    # y target class column index
+    iybands = np.array([ bars.columns.get_loc('y'+str(j)) for j in range(nbands)], dtype=int)
+    isgfeatures = np.arange(len(bars.columns), dtype=int)
+    isgfeatures = np.delete(isgfeatures, iybands) # everything less y's
+    # create prediction vector X
+    Xforecast = bars.iloc[-batchn:, isgfeatures]
+    Xforecast = Xforecast.values.flatten()
+    return Xforecast

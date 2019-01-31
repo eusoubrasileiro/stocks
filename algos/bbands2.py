@@ -32,10 +32,12 @@ def bollingerSignal(price, pricem1, mean, meanm1, lband, lbandm1):
             signal[i] = 0
     return signal
 
-def rawSignals(obars, window=21, nbands=3):
+def rawSignals(obars, window=21, nbands=3, save=True):
     """
     Detect crossing of bollinger bands those created
     buy or sell raw signals.
+    save=True saves bands, sma on bars data frame
+    otherwise only bandsg is saved
     """
     bars = obars.copy() # avoid warnings
     bars['OHLC'] = np.nan # typical price
@@ -44,8 +46,9 @@ def rawSignals(obars, window=21, nbands=3):
     inc = 0.5
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
-        bars['bandlw'+str(i)] = lwband
-        bars['bandsma'+str(i)] = sma
+        if save:
+            bars['bandlw'+str(i)] = lwband
+            bars['bandsma'+str(i)] = sma
         bars['bandsg'+str(i)] = 0 # signal for this band
         signals = bollingerSignal(price[1:], price[:-1], sma[1:], sma[:-1],
                                   lwband[1:], lwband[:-1])

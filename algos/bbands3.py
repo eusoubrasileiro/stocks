@@ -154,7 +154,7 @@ def standardizeFeatures(obars, nbands):
     # return index of feature columns
     return [*ibandsgs, *list(range(fi,nind)), id], bars
 
-def barsRawSignals(obars, window=21, nbands=3):
+def RawSignals(obars, window=21, nbands=3, save=True):
     """
     Detect crossing of bollinger bands those created
     buy or sell raw signals.
@@ -166,8 +166,9 @@ def barsRawSignals(obars, window=21, nbands=3):
     inc = 0.5
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
-        bars['bandlw'+str(i)] = lwband
-        bars['bandup'+str(i)] = upband
+        if save:
+            bars['bandlw'+str(i)] = lwband
+            bars['bandup'+str(i)] = upband
         bars['bandsg'+str(i)] = 0 # signal for this band
         signals = bollingerSignal(price[1:], price[:-1],
                                   upband[1:], upband[:-1], lwband[1:], lwband[:-1])
@@ -183,7 +184,7 @@ def lastSignal(bars, nbands=3):
     """
     return bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
 
-def barsTargetFromSignals(obars, window=21, nbands=3):
+def TargetFromSignals(obars, window=21, nbands=3):
     """
     Create target class by analysing raw bollinger band signals
     those that went true receive 1 buy or 2 sell

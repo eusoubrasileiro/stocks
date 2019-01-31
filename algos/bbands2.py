@@ -32,7 +32,7 @@ def bollingerSignal(price, pricem1, mean, meanm1, lband, lbandm1):
             signal[i] = 0
     return signal
 
-def rawSignals(obars, window=21, nbands=3, save=True):
+def rawSignals(obars, window=21, nbands=3, inc=0.5, save=True):
     """
     Detect crossing of bollinger bands those created
     buy or sell raw signals.
@@ -43,7 +43,6 @@ def rawSignals(obars, window=21, nbands=3, save=True):
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
     price = bars.OHLC.values
-    inc = 0.5
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
         if save:
@@ -91,7 +90,7 @@ def dayFeatures(obars):
     bars.dropna(inplace=True)
     return bars
 
-def crossFeatures(obars, window=21, nbands=3, log=[], nofeatures=[]):
+def crossFeatures(obars, window=21, nbands=3, log=[], nofeatures=[], inc=0.5):
     """
     Create cross-feature columns and return a new dataframe
     """
@@ -106,8 +105,6 @@ def crossFeatures(obars, window=21, nbands=3, log=[], nofeatures=[]):
     for feature in nofeatures:
         if feature in features:
             features.remove(feature) # remove what should not cross-featured
-    # tecnical indicators features
-    inc = 0.5
     for column in features: # ignore date/dated
         for i in range(nbands):      # 1e-8 to avoid creating nans
             ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)

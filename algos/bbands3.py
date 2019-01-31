@@ -154,7 +154,7 @@ def standardizeFeatures(obars, nbands):
     # return index of feature columns
     return [*ibandsgs, *list(range(fi,nind)), id], bars
 
-def RawSignals(obars, window=21, nbands=3, save=True):
+def rawSignals(obars, window=21, nbands=3, inc=0.5, save=True):
     """
     Detect crossing of bollinger bands those created
     buy or sell raw signals.
@@ -163,7 +163,6 @@ def RawSignals(obars, window=21, nbands=3, save=True):
     bars['OHLC'] = np.nan # typical price
     bars.OHLC.values[:] = np.mean(bars.values[:,0:4], axis=1) # 1000x faster
     price = bars.OHLC.values
-    inc = 0.5
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
         if save:
@@ -184,7 +183,7 @@ def lastSignal(bars, nbands=3):
     """
     return bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
 
-def TargetFromSignals(obars, window=21, nbands=3):
+def targetFromSignals(obars, window=21, nbands=3):
     """
     Create target class by analysing raw bollinger band signals
     those that went true receive 1 buy or 2 sell
@@ -211,7 +210,7 @@ def TargetFromSignals(obars, window=21, nbands=3):
 
     return bars
 
-def barsFeatured(obars, window=21, nbands=3):
+def barsFeatured(obars, window=21, nbands=3, inc=0.5):
     """
     Create feature columns and return a new dataframe
     """
@@ -227,7 +226,6 @@ def barsFeatured(obars, window=21, nbands=3):
     bars.RV = np.log(bars.RV+5)
     bars.TV = np.log(bars.TV+5) # to avoid division by zero/inf etc
     # tecnical indicators features
-    inc = 0.5
     for column in ['O', 'H', 'L', 'C', 'RV', 'TV', 'OHLC']: # ignore date/dated
         for i in range(nbands):      # 1e-8 to avoid creating nans
             ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)

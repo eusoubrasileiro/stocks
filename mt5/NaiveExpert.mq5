@@ -1,216 +1,119 @@
-//+------------------------------------------------------------------+
-//|                                                      ProjectName |
-//|                                      Copyright 2012, CompanyName |
-//|                                       http://www.companyname.net |
-//+------------------------------------------------------------------+
-#property copyright "Andre L. F"
+#property copyright "Andre L. Ferreira"
 #property version   "1.01"
-#include "BbandsUtil.mqh"
-#include "BbandsTest.mqh"
-#include "BbandsControl.mqh"
+#include "NaiveDefinitions.mqh"
+#include "Util.mqh"
+
+//TrailingStopEma tsop;
+const int  window=3; // 3 minutes
 
 //| Expert initialization function
 int OnInit(){
-   EventSetTimer(60);
-//--- create timer
-#ifdef BACKTESTING
-// when testing doesnt need to wait 1 minute
-// when testing doesn't need to save data
-// read all predictions at once
-   TestReadPredictions();
-#else
-// real time operations
-   SavePriceData();
-#endif
-// to set stop loss based on previous Stdev indicator
-   hstdev=iStdDev(sname, PERIOD_M1, windowstdev, 0, MODE_SMA, PRICE_TYPICAL);
-   hemah=iMA(sname, PERIOD_M1, windowema, 0, MODE_EMA, PRICE_TYPICAL);
-   hemal=iMA(sname, PERIOD_M1, windowema, 0, MODE_EMA, PRICE_TYPICAL);
 
-   if(hstdev==INVALID_HANDLE|| hema == INVALID_HANDLE){
-      printf("Error creating Stdev or EMAindicator");
+   EventSetTimer(10);
+   hstdevh = iStdDev(sname, PERIOD_M1, window, 0, MODE_SMA, PRICE_HIGH);
+   hstdevl = iStdDev(sname, PERIOD_M1, window, 0, MODE_SMA, PRICE_LOW);
+   hemah = iMA(sname, PERIOD_M1, window, 0, MODE_EMA, PRICE_HIGH);
+   hemal = iMA(sname, PERIOD_M1, window, 0, MODE_EMA, PRICE_LOW);
+
+   if(hstdevh == INVALID_HANDLE ||
+      hstdevl == INVALID_HANDLE ||
+      hemah == INVALID_HANDLE ||
+      hemal == INVALID_HANDLE){
+      Print("Naive Expert : Error creating indicator");
       return(INIT_FAILED);
    }
 
-   datetime timenow=TimeCurrent(); // time in seconds from 1970 current time
-   Print("Begining Bbands Expert now: ",timenow);
+   //tsop = TrailingStopEma();
+
+   // time in seconds from 1970 current time
+   Print("Begining Naive Expert now: ", TimeCurrent());
    return(INIT_SUCCEEDED);
 }
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-double stopsStdev(){
-// get the stop loss based on the moving average ratio is 1:1
-   double   stdev[1];
-   if (CopyBuffer(hstdev, 0, 0, 1, stdev) != 1){
-      Print("CopyBuffer from Stdev failed");
-   }
-   else {
-      laststdev =  stdev[0];
-   }
-   return laststdev*3; // 3*stdev is 89% data
+
+
+//// will not be needed
+//double percentile(double &data[], double perc)
+//    double sorted[];
+//    ArrayCopy(sorted, data, 0, 0, WHOLE_ARRAY)
+//    as = ArraySize(sorted)
+//    ArraySort(sorted)
+//    int n = MathMax(MathRound(perc * as + 0.5), 2)
+//    return sorted[n-2]
+
+bool isBuyPattern(){ // is up trend
+    double stdh[5];
+    double stdl[5];
+    double emah[6];
+    double emal[6];
+    bool isbuypattern = true;
+
+    if (CopyBuffer(hstdevh, 0, 0, 5, stdh) != 5 ||
+        CopyBuffer(hstdevl, 0, 0, 5, stdl) != 5 ||
+        CopyBuffer(hemah, 0, 0, 6, emah) != 6 || // 5+1 due diff
+        CopyBuffer(hemal, 0, 0, 6, emal) != 6 
+        ){
+       Print("CopyBuffer from isPattern failed");
+       return false;
+    }
+    for(int i=1; i<6; i++)
+        if(emah[i]-emah[i-1] <= 0 || emal[i]-emal[i-1] <=0 ||
+           stdh[i-1] <= 15 || stdh[i-1] >= 90 ||
+           stdl[i-1] <= 15 || stdl[i-1] >= 90 ){
+               isbuypattern = false;
+               break;
+           }
+    return isbuypattern;
 }
 
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void PlaceOrderNow(int direction){
-   MqlTradeRequest request={0};
-   MqlTradeResult result={0};
-   int ncontracts;
-   ulong  position_ticket=0;
+void BuyNow(){
+    MqlTradeRequest request={0};
+    MqlTradeResult result={0};
+    int ncontracts = 1;
+    double stop = 90;
 
-   ncontracts=MathAbs(direction);  // number to buy or sell
-                                   // get stops loss and gain
-   double stop=stopsStdev();
-
-// direction // just sign  -1 or 1
-//--- parameters of request
-   request.action=TRADE_ACTION_DEAL;      // type of trade operation
-   request.symbol=sname;                               // symbol
-   if(direction>0)
-     { //+ postive buy order
-      request.price=SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
-      request.type=ORDER_TYPE_BUY;                        // order type
-      // stop loss and take profit 1.25:1 rount to 5
-      request.tp =request.price+direction*stop*1.25;
-      request.tp = MathFloor(request.tp/ticksize)*ticksize;
-      request.sl = request.price-direction*stop;
-      request.sl = MathCeil(request.sl/ticksize)*ticksize;
-      request.volume=quantity*ncontracts; // volume executed in contracts
-      request.deviation=deviation*ticksize;    //  allowed deviation from the price
-     }
-   else
-     { //  -negative sell order
-      if(PositionsTotal()>0)
-        {  // cannot sell what was not bought
-         // sell only the same quantity bought to not enter in a short position
-         position_ticket=PositionGetTicket(0);  // number of open positions can only be ONE (NETTING MODE)
-         if(PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)  // can only close position open by the expert
-            return;
-         double volume=PositionGetDouble(POSITION_VOLUME);
-         double decrease=quantity*ncontracts; // how many to sell
-         decrease=(decrease>volume)? volume: decrease; // cannot sell more than what was bought
-         request.price=SymbolInfoDouble(request.symbol,SYMBOL_BID); // price for opening
-         request.type=ORDER_TYPE_SELL;  // order type
-         request.volume=decrease;
-        }
-      else
-         return;
-     }
-   request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
-   if(!OrderSend(request,result))
-      Print("OrderSend error ",GetLastError());
-//--- information about the operation
-   Print("retcode ",result.retcode,"  deal ",result.deal);
-//--- output information about the closure by opposite position
-   if(direction<0)
-      Print("Decreased position ",position_ticket," by ",request.volume);
-}
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void sendPrediction(prediction &pred){  // execute or not a prediction
-   datetime dayend=dayEnd(TimeCurrent()); // 15 minutes before closing the stock market
-   datetime daybegin=dayBegin(TimeCurrent()); // 2 hours after openning
-   datetime timenow = TimeCurrent();
-
-   if(pred.direction<0)
-     { // no matter the time allways send sells
-      PlaceOrderNow(pred.direction);
-     }
-   else
-     {
-      // only orders younger than x  minutes after the prediction
-      if(pred.time<=timenow+exectolerance &&
-         timenow<dayend && timenow>daybegin &&
-         nlastDeals()<=dtndeals && ndealsDay()<=maxdealsday)
-        {
-         // deals are only ENTRY_IN deals that means entering a position
-         // do not place orders in the end of the day
-         // do not place orders in the begin of the day
-         // cannot make more than`dtndeals` deals per dt
-         // dont open more than `maxdealsday` positions per day
-         PlaceOrderNow(pred.direction);
-        }
-     }
-#ifndef BACKTESTING
-// real operation record operations processed
-   sent_predictions[nsent]=pred;
-   nsent++;
-#endif
-}
-
-void changeStop(double change) {
-   // modify stop loss
-   MqlTradeRequest request;
-   MqlTradeResult  result;
-   //   double stops=0;
-   request.action = TRADE_ACTION_SLTP;
-   request.symbol = Symbol();
-   request.sl = PositionGetDouble(POSITION_SL)  +  change;
-   request.sl = MathFloor(request.sl/ticksize)*ticksize;
-   request.tp = PositionGetDouble(POSITION_TP) + change;
-   request.tp = MathFloor(request.tp/ticksize)*ticksize;
-    if(!OrderSend(request, result))
-        Print("OrderSend error ",GetLastError());
-}
-
-bool trailingStopLossEma(){
-   double ema[1]; // actual ema value
-   bool trailled = false;
-
-   if (CopyBuffer(hema, 0,  0,  1, ema) != 1){
-      Print("CopyBuffer from Stdev failed");
-   }
-   if( PositionsTotal() > 0){        // net mode
-         if( PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY &&
-            PositionGetInteger(POSITION_MAGIC) == EXPERT_MAGIC){
-            if(ema[0] > lastema && ema[0] > lastemachange) {
-             // it is going up steady  compared with last ema value  and with last changed stop
-               changeStop(ema[0]-lastema);
-               trailled = true;
-               lastemachange = ema[0];
-            }
-         }
-   }
-   lastema = ema[0];
-   return trailled;
+    //--- parameters of request
+    request.action=TRADE_ACTION_DEAL;      // type of trade operation
+    request.symbol=sname;                               // symbol
+    //+ postive buy order
+    request.price=SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
+    request.type=ORDER_TYPE_BUY;                        // order type
+    // stop loss and take profit 1.5:1 rount to 5
+    request.tp =request.price+stop*3;
+    request.tp = MathFloor(request.tp/ticksize)*ticksize;
+    request.sl = request.price-stop*3;
+    request.sl = MathCeil(request.sl/ticksize)*ticksize;
+    request.volume=quantity*ncontracts; // volume executed in contracts
+    request.deviation=deviation*ticksize;    //  allowed deviation from the price
+    request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
+    if(!OrderSend(request,result))
+        Print("BuyNow OrderSend error ",GetLastError());
+    //--- information about the operation
+    Print("retcode ",result.retcode,"  deal ",result.deal);
+    //--- output information about the closure by opposite position
 }
 
 
 //| Timer function -- Every 1 minutes
 void OnTimer() {
-    trailingStopLossEma();
+    datetime timenow = TimeCurrent();
+    datetime dayend=dayEnd(timenow); // 15 minutes before closing the stock market
+    datetime daybegin=dayBegin(timenow); // 2 hours after openning
+
+    //trailingStopLossEma();
     // check to see if we should close any order
     ClosePositionbyTime();
     // we can work
-#ifndef BACKTESTING
-    // not backtesting
-    SavePriceData();
-    // read predictions file even if with zeroed... with date and time
-   int nread=readPredictions();
-   if(nread==0)
-     {
+    if(timenow > dayend || timenow < daybegin ||
+       nlastDeals() > dtndeals || ndealsDay() > maxdealsday)
       return;
-     }
-   prediction toexecute[]; // new predictions to be executed
-                           // check for new predictions
-   int nnew=newPredictions(toexecute); // get new predictions
-   if(nnew==0) // nothing new
-      return;
-   for(int i=0; i<nnew; i++)
-      sendPrediction(toexecute[i]);
-#else
-// when testing
-// when testing doesn't need to save data
-   prediction pnow;
-   if(!TestGetPrediction(pnow,TimeCurrent())) // not time to place an order
-      return;
-   sendPrediction(pnow);
-#endif
-}
+       // deals are only ENTRY_IN deals that means entering a position
+       // do not place orders in the end of the day
+       // do not place orders in the begin of the day
+       // cannot make more than`dtndeals` deals per dt
+       // dont open more than `maxdealsday` positions per day
+    if(isBuyPattern() && PositionsTotal() ==0)
+        BuyNow();
+ }
 
 // Useless stuff
 //| Expert deinitialization function                                 |
@@ -226,8 +129,8 @@ void OnTick(){
 //| Trade function                                                   |
 void OnTrade(){
      // when position is closed zeroed the lastemachange
-    if(PositionsTotal()==0 || PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)
-        lastemachange = 0;
+    //if(PositionsTotal()==0 || PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)
+    //    tsop.clean();
 }
 
 //| TradeTransaction function                                        |

@@ -5,13 +5,15 @@
 
 //TrailingStopEma tsop;
 const int  window=3; // 3 minutes
-
+int hstdev;
 //| Expert initialization function
 int OnInit(){
 
-   EventSetTimer(10);
+   EventSetTimer(11);
+   hstdev = iStdDev(sname, PERIOD_M1, window, 0, MODE_SMA, PRICE_CLOSE);
    hstdevh = iStdDev(sname, PERIOD_M1, window, 0, MODE_SMA, PRICE_HIGH);
    hstdevl = iStdDev(sname, PERIOD_M1, window, 0, MODE_SMA, PRICE_LOW);
+   
    hemah = iMA(sname, PERIOD_M1, window, 0, MODE_EMA, PRICE_HIGH);
    hemal = iMA(sname, PERIOD_M1, window, 0, MODE_EMA, PRICE_LOW);
 
@@ -58,30 +60,41 @@ bool isBuyPattern(){ // is up trend
     for(int i=1; i<6; i++)
         if(emah[i]-emah[i-1] <= 0 || emal[i]-emal[i-1] <=0 ||
            stdh[i-1] <= 15 || stdh[i-1] >= 90 ||
-           stdl[i-1] <= 15 || stdl[i-1] >= 90 ){
+           stdl[i-1] <= 15 || stdl[i-1] >= 90 || stdl[i-1]  > stdh[i-1] + 40 || stdh[i-1]  > stdl[i-1] + 40 ){
                isbuypattern = false;
                break;
            }
     return isbuypattern;
 }
 
+double stopEmaL(){
+    double stdev[1];
+    if (CopyBuffer(hstdev, 0, 0, 1, stdev) != 1){
+       Print("CopyBuffer from stopEmaL failed");
+       return 0;
+       }       
+    return stdev[0]*2;
+}
+
 void BuyNow(){
     MqlTradeRequest request={0};
     MqlTradeResult result={0};
     int ncontracts = 1;
-    double stop = 90;
+    double stop = 20;
 
     //--- parameters of request
     request.action=TRADE_ACTION_DEAL;      // type of trade operation
     request.symbol=sname;                               // symbol
     //+ postive buy order
-    request.price=SymbolInfoDouble(request.symbol,SYMBOL_ASK); // price for opening
+    request.price= SymbolInfoDouble(request.symbol, SYMBOL_ASK); // ask price
+    if(stop == 0)
+        return;
     request.type=ORDER_TYPE_BUY;                        // order type
     // stop loss and take profit 1.5:1 rount to 5
-    request.tp =request.price+stop*3;
+    request.tp = request.price+stop*3;
     request.tp = MathFloor(request.tp/ticksize)*ticksize;
-    request.sl = request.price-stop*3;
-    request.sl = MathCeil(request.sl/ticksize)*ticksize;
+    request.sl = request.price-stop;
+    request.sl = MathFloor(request.sl/ticksize)*ticksize;
     request.volume=quantity*ncontracts; // volume executed in contracts
     request.deviation=deviation*ticksize;    //  allowed deviation from the price
     request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
@@ -104,7 +117,7 @@ void OnTimer() {
     ClosePositionbyTime();
     // we can work
     if(timenow > dayend || timenow < daybegin ||
-       nlastDeals() > dtndeals || ndealsDay() > maxdealsday)
+       nlastDeals() >= dtndeals || ndealsDay() > maxdealsday)
       return;
        // deals are only ENTRY_IN deals that means entering a position
        // do not place orders in the end of the day

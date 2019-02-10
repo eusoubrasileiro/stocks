@@ -213,7 +213,7 @@ def accuracy(model, X, y, cutoff=None, verbose=False):
 # global (real) cross-validation is made on prediction-set samples created
 # by sequential folds class `sKFold`
 # """
-def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', report_simple=False, fit_params = dict(), scores=[], predict=False, device='cpu'):
+def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', report_simple=False, fit_params = dict(), scores=[], predict=False, fine=0, device='cpu'):
     """
      * scores : list of metric functions to call over classifer after every `fit` default `torchCV.accuracy`
      * fit_params : dict of params to pass to `classifer.fit` method
@@ -231,8 +231,10 @@ def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', re
     * predict:
         True to save as the three last column the prediction probabilities
         for each class and the correct prediction
+    * fine: fineTune call
+        call n times fine Tune same params of fit over X,y score vectors
     """
-    kfold = sKFold(X, foldsize, ratio=ratio, device=device)
+    kfold = sKFold(X, foldsize, ratio=ratio)
     if kind == 'all':
         iterable = kfold.Splits()
     else:
@@ -253,13 +255,16 @@ def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', re
         # use :end on slicing to avoid using unsqueze
         Xp, yp = X[spred:end], Y[spred:end] # only ONE sample
         trainscore, valscore = classifier.fit(Xt, yt, Xs, ys, **fit_params)
+        for i in range(fine):
+            classifier.fineTune(Xs, ys, batch=fit_params['batch'])
+
         metricvalues.clear() # clean the list for new values
         for score in scorefuncs: # calculate every metric
             metricvalues.append(score(classifier, Xp, yp))
         if predict: # wether save the prediction probabilities
             yprobs, ypred = classifier.predict(Xp)
             metricvalues.extend(yprobs.tolist()[0])
-            metricvalues.append(yp) # the expected class
+            metricvalues.append(yp.item()) # the expected class
         # spred: index position of the prediction
         accuracies.append([spred, trainscore, valscore, *metricvalues])
         # faster than isinstanciate a new class??

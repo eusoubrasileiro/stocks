@@ -4,8 +4,8 @@ import pandas as pd
 import copy
 import random # for reproducible results
 from sklearn.model_selection import train_test_split
-from Tools.util import progressbar
-from Tools.torchUtil import *
+from ..util import progressbar
+from .torchUtil import *
 
 nwasted = 120 + 120 + 7  # number of lost samples due (shift + EMA's + unknown)
 ntraining = 5*8*60 # previous 1 week of 8 hours for training
@@ -150,7 +150,7 @@ class BinaryNN(th.nn.Module):
     def fineTune(self, X, y, epochs=1, batch=32):
         """
         Training without cross-validation, for "fine-tunning"
-        note:. can only run after a `fit` has been called before
+        note:. can only run after a `fit` call
         """
         nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector

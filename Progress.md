@@ -150,17 +150,17 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 #### Milestone: moved from everything above to minute time-frame Saulo's algorithm (November/2018)
 #### Reason: it was giving fake impressive results
 
-- The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold. The set-up of the algorithm is only for long positions but I made tests changing to short positions.
+- The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold 0. The set-up of the algorithm is only for long positions but I made tests changing to short positions.
 - Translate code for Saulo's free course is given in `Saulo_ml4t_traininig_clean.py`
 - Prototypes are `Sklearn Saulo Daimon WIN` and `Sklearn Saulo WIN`.
-- Code was entirely reorganized and `buybands.py` daemon was created.
+- Code was entirely reorganized and `buybandsd.py` daemon was created.
 
 ###### Milestone : predictions were contaminated by future, had to start again. Precision for class 1 of 90% were far too much.
 
 - Restarted testing real precision of classifier without future contamination. Bellow a summary of parameters test with a data window of 300 for training and making 30k random predictions on the entire data available for different symbols. 30k upon analysis seams to be the required amount of samples to not have a biased estimate of the precision probability distribution, even with a 2% percent `stdev`.
 
 - [x] Random Forest don't need standardization. Decisions trees are like that. So removed that. Side effect `joblib` started to work o jupyter notebook cell on Windows. Another side effect it's running much faster and allows now a very small window of data.
-- [ ] need to calculate number of possible scenarios based on data window. 
+- [ ] need to calculate number of possible scenarios based on data window.
 
 - [x] **Random Search of params**
     What best gives precision on class 1  
@@ -170,7 +170,7 @@ Quotting article Random-testtrain-split-is-not-always-enough.
      - `batchn` number of previous samples of a signal that are used to assembly the feature X vector for training.
      - `precision` is the multiclass precision of class 1
 
-- need to update this table here precision is not right due low number of samples 
+- need to update this table here precision is not right due low number of samples
 
  | batchn | nbands | bbwindow | tsignals |  precision | clip-pb.  |
  | ------ | ------ | -------- | -------  | ---------- | --------- |
@@ -184,13 +184,7 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 
 - [x] Made a little effort for cross-validate the model before predicting. Not very encouraging.
 
-- Next step try to binarize for class 1 and 0.
-
-- [ ] **Binarizing creating One vs All problem. Putting class 2 and 0 as class 0.**
-    - After
-
-- [ ] **Implement bollinger bands class with only 2 classes**
-
+- [x] Implement bollinger bands class with only 2 classes
 
 **Things to do**
 
@@ -204,4 +198,6 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [x] Set stop and gain in WIN points. Using Standard Deviation (sigma) of last 60 minutes to set stop as 3*sigma (percentil 89%) and stop gain as 3*sigma*1.25.
 - [x] Implemented trailing stop based on EMA variation on last 5 minutes. If ema5 now is bigger than in the last minute. Use that difference to increment the stop-loss and stop-profit.   
 
-Learning to remember: Lost 7k trying to help robot. Due no stop loss and not sure that prediction was good.
+Learning to remember: Lost 20k due no stop loss and not sure that prediction was good.
+
+- [x] Implemented `NaiveExpert` based on `prototypes\Numpy Naive Buy - WIN` using pattern of 5 minutes up trend before to buy and surf on the uptrend.  Made backtest on metatrader 5 and it's clear that you cannot garantee that will buy on the `Open` and sell on the `Open` using the close by time is clearly otherwise. The metatrader 5 backtesting engine is really robust using 1 minute data OHLC to create aproximated Tick's using bar patterns. The accuracy went from 90% to 45% on real backtesting on metatrader 5. So better really use worst case buy scenario : `buy on high and sell on low`; to make backtesting on the engine code.

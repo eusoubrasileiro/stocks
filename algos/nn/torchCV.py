@@ -1,4 +1,4 @@
-    """Fitting a NN model tools for cross-validate the model"""
+"""Fitting a NN model tools for cross-validate the model"""
 import numpy as np
 import torch as th
 from .torchUtil import *

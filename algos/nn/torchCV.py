@@ -1,4 +1,4 @@
-"""Fitting a NN model tools for cross-validate the model"""
+    """Fitting a NN model tools for cross-validate the model"""
 import numpy as np
 import torch as th
 from .torchUtil import *
@@ -255,9 +255,8 @@ def sCrossValidate(X, Y, classifier, foldsize, ratio=0.9, cv=5, kind='lastn', re
         # use :end on slicing to avoid using unsqueze
         Xp, yp = X[spred:end], Y[spred:end] # only ONE sample
         trainscore, valscore = classifier.fit(Xt, yt, Xs, ys, **fit_params)
-        for i in range(fine):
+        for i in range(fine): # fine tune n epochs
             classifier.fineTune(Xs, ys, batch=fit_params['batch'])
-
         metricvalues.clear() # clean the list for new values
         for score in scorefuncs: # calculate every metric
             metricvalues.append(score(classifier, Xp, yp))

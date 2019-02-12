@@ -152,6 +152,9 @@ class BinaryNN(th.nn.Module):
         Training without cross-validation, for "fine-tunning"
         note:. can only run after a `fit` call
         """
+        if X.shape[0] < batch:
+            #print("warn: batch bigger than vector")
+            batch = X.shape[0]-1
         nepoch = int(np.ceil(len(X)/batch)) # one epoch in iterations/batches
         iterations = int(np.ceil(epochs*nepoch)) # one epoch is the entire training vector
         # random training slices indexes

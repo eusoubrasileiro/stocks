@@ -253,14 +253,37 @@ def norderslastHour(time, io, obook,
             norders += 1
     return norders
 
-@njit(nopython=True, parallel=True)
-def createTicks(bars):
+def createTicks(obars):
     """
-    Create ticks from Bars (any time-frame): Open, High, Low -
-    Close is not used unless last bar. 
-    volume and tick volume are equally spread across ticks.
-    Total ticks is len(rates*3)+1
+    Create ticks from Bars (1 minute time-frame): time, Open, High, Low, TickVol, RealVol
+    - Real volume and tick volume are equally spread across ticks.
+    - Total ticks is len(bars*3) last minute Close is ignored
+
+    * obars:
+        bars data-frame 1 minute-time-frame downloaded by `meta5Ibov`
+
+    Todo:
+      - random choice between H or L first
+      - random time for H and L
+      - any time-frame
     """
+    bars = obars.copy()
+    bars.drop(columns=['S'], inplace=True)
+    bars['time'] = bars.index.astype(np.int64)//10**9 # (to unix timestamp seconds precision)
+    bars.TV = bars.TV//3
+    bars.RV = bars.RV//3
+    bars['time'] = bars.index.astype(np.int64)//10**9 # (to unix timestamp seconds precision)
+    # [ time open tv rv ] [ time low tv rv ] [ time high tv rv ]
+    ticks = bars.iloc[:, [6, 0, 4, 5,
+              6, 2, 4, 5,
+              6, 1, 4, 5] ].values.flatten()
+    ticks = ticks.reshape(-1, 4)
+    timeinc = np.tile([0, 29, 59], len(ticks)//3) # inc for 1 minute time-frame
+    assert len(timeinc) == len(ticks)
+    ticks[:, 0] += timeinc
+    return ticks
+
+    
 
 
 @njit(nogil=True)

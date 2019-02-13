@@ -25,26 +25,22 @@ class BinaryNN(th.nn.Module):
                  patience=5, nneurons=None, nonlin=th.nn.ReLU()):
         super(BinaryNN, self).__init__()
         if nneurons is None: # sequence of number of neurons for each layer
-            self.layers =  th.nn.Sequential(
-                    th.nn.Linear(input_dim, 400), nonlin,  th.nn.Dropout(dropout),
-                    th.nn.Linear(400, 200), nonlin, th.nn.Dropout(dropout),
-                    th.nn.Linear(200, 50), nonlin, th.nn.Dropout(dropout),
-                    th.nn.Linear(50, 2), th.nn.Softmax(dim=1)) # dim == 1 columns add up to 1 probability
-        else: # set number of hidden layers and neurons by nneurons list
-            assert type(nneurons) is list, "A list of layers with number \
-                of neurons is expected"
-            nlayers = len(nneurons)
-            # input layer
-            layers = [th.nn.Linear(input_dim, nneurons[0]), nonlin, th.nn.Dropout(dropout)]
-            prevn = nneurons[0] # previous layer out size
-            if nlayers > 1: # add hidden layers
-                for i in range(1, nlayers): # number of layers by array size
-                    layers.extend([th.nn.Linear(prevn, nneurons[i]),
-                                    nonlin, th.nn.Dropout(dropout)])
-                    prevn = nneurons[i]
-            # last layers (binary)
-            layers.extend([th.nn.Linear(prevn, 2), th.nn.Softmax(dim=1)])
-            self.layers = th.nn.Sequential(*layers) # create from list of modules
+            nneurons = [400, 200, 50] # default layers
+        # set number of hidden layers and neurons by nneurons list
+        assert type(nneurons) is list, "A list of layers with number \
+            of neurons is expected"
+        nlayers = len(nneurons)
+        # input layer
+        layers = [th.nn.Linear(input_dim, nneurons[0]), nonlin, th.nn.Dropout(dropout)]
+        prevn = nneurons[0] # previous layer out size
+        if nlayers > 1: # add hidden layers
+            for i in range(1, nlayers): # number of layers by array size
+                layers.extend([th.nn.Linear(prevn, nneurons[i]),
+                                nonlin, th.nn.Dropout(dropout)])
+                prevn = nneurons[i]
+        # last layers (binary) # dim == 1 columns add up to 1 probability
+        layers.extend([th.nn.Linear(prevn, 2), th.nn.Softmax(dim=1)])
+        self.layers = th.nn.Sequential(*layers) # create from list of modules
 
         self.device = device
         self.layers.to(self.device)
@@ -53,6 +49,8 @@ class BinaryNN(th.nn.Module):
         self.prog = None # saves training loss, validation and accuracy
         self.patience = patience # number of successive increases in validation loss that demands stop of training
         self.lr = learn # learn rate
+        # number of parameters from stack overflow
+        self.ncells =  np.sum(p.numel() for p in self.layers.parameters() if p.requires_grad)
 
     def _saveState(self):
         """save a copy of actual weights"""

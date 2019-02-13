@@ -122,7 +122,8 @@ Quotting article Random-testtrain-split-is-not-always-enough.
     4. Made another experiment. Using 2 months for training and ~4 days for validation for local classifiers. I run CV on the entire data-set using local classifiers with same parameters as in 1 and 2.
     6. Dicussion: That must be studied better. Separate good from bad predictions for define entry points are not that easy. I believe there  must be used more inputs! Besides that param GridSearchCV would be helpfull.
 
-- [ ] Open Question - For the above two points cannot understand why random data gives better results 60% or 85% of training and validation of simple NN than correct data set. Something is wrong with data preparation I believe but could not close this question for certain.
+- [x] Open Question - For the above two points cannot understand why random data gives better results 60% or 85% of training and validation of simple NN than correct data set. Something is wrong with data preparation I believe but could not close this question for certain. The answer maybe should deserve a topic.
+   - The explanation is over-fitting. The number of parameters on the model is much greater than the number of training samples. Neural Networks are yet very powerful with the use of regularization such as drop-out, early-stop etc but in this specific case the regularization were not being effective that's why accuracies so high on training and validation due over fitting. Increasing drop-out probability in between layers or decreasing the number of neurons by lays both make accuracy decrease. Awesome post about the topic on stats stackexchange `relationship-between-model-over-fitting-and-number-of-parameters/320387#320387`.
 
 **Highlighted Thoughts for Binary NN forecast of day, minutes or hours**  
 • Generalization of the general parameters for the Model can be done by cross-validation on sequential folds.  

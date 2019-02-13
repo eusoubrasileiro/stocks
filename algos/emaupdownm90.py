@@ -1,3 +1,10 @@
+"""
+Time-frame 1 minute Algorithm
+Forecasting based on shifting n minutes of data.
+Using a EMA to classify up or down above or bellow it in the next n minutes.
+And averaging prediction of next n minutes to decide to buy or sell
+Status - reviewing 
+"""
 import os
 import numpy as np
 import pandas as pd

@@ -1,396 +1,226 @@
 import numpy as np
 from numba import jit, njit, prange
 
+# hedge mode buy default
 
+# orders
+OK=0 # order Kind 0-sell, 1-buy, 2-change stops pendings : 3-buy stop, 4-sell stop, 5-buy limit, 6-sell limit
+OP=1 # order price
+VV=2 # order or position volume or deal volume
+SL=3 # stop loss maybe -1 not set
+TP=4 # take profit maybe -1 not set
+DV=5 # devitation accepted maybe -1 not set
+TK=6 # ticket position to operate on (decrese-increase volume etc) maybe -1 not set
+OS=7 # source of order client or some event
+# positions
+PP=8 # position weighted price
+PT=9 # position time openned - needed by algos closing by time
+PC=10 # last time changed
+# deals
+DT=11 # deal time
+DV=12 # deal volume
+DP=13 # deal result + money back , - money taken or 0 nothing
+DK=14 # deal kind - same from order Order_Kind_Buy and Order_Kind_Sell
+DE=15 # deal entry - in (1) or out(0) or inout reverse (2)
 
-# backtest
-# is not fully object oriented / for loop based on
-# a tick event. not seeing reason (performance)
-# to do that way yet
+Order_Kind_Buy = 0
+Order_Kind_Sell = 1
+Order_Kind_Change = 2 # change stop loss
+Order_Kind_BuyStop = 4
+Order_Kind_SellStop = 5
+Order_Kind_BuyLimit = 6
+Order_Kind_SellLimit = 7
+Order_Source_Client = 0 # default
+Order_Source_Stop_Loss = 1
+Order_Source_Take_Profit = 2
+Deal_Entry_In = 0
+Deal_Entry_Out = 1
+Deal_Entry_InOut = 2
 
-### open collumns
-EP=0 # enter price
-QT=1 # quantity
-DR=2 # direction 1/-1 buy/sell
-TP=3 # take profit
-SL=4 # stop loss
-OT=5 # order time
-### close collumns
-CP=6 # close price
-SS=7 # sucess status
-CT=8 # close time
-MB=9 # money back
-DY=10 # day identifier
-
-
-ordersbookdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
+booksdict = {"EP" : 0, "QT" : 1, "DR" : 2, "TP": 3, "SL" : 4,
                       "OT" : 5, "CP" : 6, "SS" : 7, "CT" : 8, "MB" : 9, "DY": 10}
 
-@njit(nogil=True)
-def MaxStocks(enterprice, dstop, capital, riskap=0.015):
+_iorder = 0 # number of pending orders
+_orders = np.ones((1000, 8))*np.nan  # pending waiting for entry
+_ipos = 0 # number of open positions
+_positions = np.ones((1000, 8))*np.nan
+_ideals = 0 # number of executed deals
+_deals_history = np.ones((1000, 1))*np.nan
+_money = 1000 # money on pouch
+_tick_value = 0.02 # ibov mini-contratc
+
+#######################################################################
+########################## level 4 ####################################
+
+@jit(nopython=True)
+def sendOrder(kind, price=-1,  volume=-1,
+              sloss=-1, tprofit=-1, deviation=-1,
+              ticket=-1, source=Order_Source_Client):
+    _orders[iorder, :] = kind, price, volume, \
+        sloss, tprofit, deviation, ticket, source
+    _iorder+=1
+
+def newPosition(time, order):
+    _positions[_ipos, :] =  order
+    _positions[_ipos, PT] =  time # time position opened
+    updatePositionStops(_ipos, order)
+
+def updatePositionTime(ipos, time):
+    _positions[ipos, PC] = time
+
+def updatePositionStops(ipos, order):
+    position = _positions[ipos]
+    _positions[ipos, SL] = position[SL] if order[SL] == -1 else order[SL]
+    _positions[ipos, TP] = position[TP] if order[TP] == -1 else order[TP]
+
+def updatePositionPrice(ipos, order, price):
+    position = _positions[ipos]
+    # calculate and update average price of position (v0*p0+v1*p1)/(v0+v1)
+    wprice = position[VV]*position[PP]+order[VV]*price
+    wprice /= position[VV]+order[VV]
+    _positions[ipos, PP] = wprice
+
+# def decreasePosition(ipos, order, price):
+#     """calculate result in money for this deal"""
+#     # buy closed with sell
+#     #if
+#     signal = 1 if _positions[ipos, OK] == Order_Kind_Buy else -1
+#     # sell closed with buy
+
+#     # sell increase or buy increase
+
+# assume infinite money is easier since we are targeting derivatives
+# adjust of money is done only when closing positions
+def executeOrder(time, price, order, code, pos=-1):
+
+    result = 0
+    if code==1: # new position
+        newPosition(time, order)
+        _deals_history[_ideals, :] = _positions[_ipos]
+        _deals_history[_ideals, -6:] = time, order[VV], result, kind, \
+        entry, source
+        _ipos += 1
+        _ideals += 1
+    else: # modifying existing position
+        position = _positions[pos]
+        if ((kind == Deal_Kind_Buy and entry == Deal_Entry_In) or
+            (kind == Deal_Kind_Sell and entry == Deal_Entry_In)): # increasing position
+            _deals_history[_ideals, :] = _positions[pos]
+            updatePositionTime(pos, time)
+            updatePositionStops(pos, order)
+            updatePositionPrice(pos, order, price)
+            _positions[pos, VV] += order[VV]
+            _deals_history[_ideals, -6:] = time, order[VV], result, kind, \
+                entry, source
+            _ideals += 1
+        elif((kind == Deal_Kind_Buy or kind == Deal_Kind_Sell) and
+            (entry == Deal_Entry_Out)): # decreasing or closing position
+                volume_balance  = _positions[pos, VV] - order[OV]
+                if(order[OV] < _positions[pos, VV]): # decreasing position
+                    result = price*order[OV]
+                    _positions[ipos, VV] -= order[VV] # increase volume
+                    result = -price*order[OV]
+
+"""
+Possible outcomes (execution) of an order in codes:
+
+0. new position buy
+1. new position sell
+2. increase a buy
+3. increase a sell
+4. decrease a buy
+5. decrease a sell
+6. close a buy
+7. close a sell
+--------------------------
+8. reverse a buy = 5. + 2.
+9. reverse a sell = 6. + 1.
+
+"""
+@jit(nopython=True)
+def processOrder(tick, order, pos):
     """
-    Maximum number number of stocks to buy/sell based on:
-     - Enter Price
-     - Stop variation in percent decimal
-     - Capital available to support this operation
-     - Risk-Apettite in percent decimal.
-          How much you accept to loose of you capital.
-          Default 1.5%
-    Be reminded that Number of Stocks MUST BE in 100s.
+    does:
+    1. create a new position
+    2. modify/close an existing position
+    3. future:
+        modify an existing order
     """
-    loss = dstop*enterprice # loss per share
-    riskap *= capital # available to loose
-    return int((riskap/loss)/100)*100 # round stocks to 100's
+    time, price = tick[:2]
+    # replace buystop and sellstop by buy and sell for a execution kind
+    exec_kind = Order_Kind_Buy if order[OK] == Order_Kind_BuyStop else order[OK]
+    exec_kind = Order_Kind_Sell if exec_kind == Order_Kind_SellStop else exec_kind
 
-@njit(nogil=True, parallel=True)
-def MoneyBack(enter_price, close_price,
-            quantity, direction, ir=0.2, cost_order=12):
-    """
-    Money back after an order is closed day trade
-    direction=1/-1 buy/sell == long/short
+    if pos == -1: # new position
+        exec_code = 0 + exec_kind
+        executeOrder(time, price, order, exec_code)
+    else: # modify/close existing position
+        position = _positions[pos]
+        if position[OK] == exec_kind: # same direction
+            #exec_code = 2 if exec_kind == Order_Kind_Buy else 3
+            exec_code = 2 + exec_kind
+            executeOrder(time, price, order, exec_code, pos)
+        elif((position[OK] == Order_Kind_Buy and exec_kind == Order_Kind_Sell) or # was bought and now is selling
+             (position[OK] == Order_Kind_Sell and exec_kind == Order_Kind_Buy)): # was selling and now is buying
+            difvolume = position[VV] - order[VV]
+            if difvolume == 0: # closing
+                exec_code = 6 + position[OK]
+                executeOrder(time, price, order, exec_code, pos)
+            elif difvolume > 0: #  decreasing position
+                exec_code = 4 + position[OK]
+                executeOrder(time, price, order, exec_code, pos)
+            elif difvolume < 0: # reversing position
+                exec_code = 8 + position[OK]
+                executeOrder(time, price, order, exec_code, pos)
+        elif order[OK] == Order_Kind_Change: # change stops
+            pass
 
-    Costs:
-    20% taxes day trade
-    12 R$ cost per order (may be improved!!)
+"""
+Flux of an order:
 
-    Just for stocks yet!
-    """
-    # delta money (profit or loss) (positive or negative)
-    # already deduce cost of order
-    dm = ((close_price-enter_price)*
-    quantity*direction-cost_order)
-    if dm > 0: # deduce taxes day trade 20%
-        dm *= (1-ir)
-    return enter_price*quantity + dm
+Evaluate -> Process -> Execute
+"""
+@jit(nopython=True)
+def evaluateOrders(tick, ptick):
+    time, price = tick[:2]
+    for i in range(_iorder):
+        if ((_orders[i, OT] == Order_Type_Buy) or # buy or sell
+            (_orders[iorder, OT] == Order_Type_Sell)):
+            deviation = _orders[i, DV] # acceptable tolerance
+            if (_orders[i, OP] < (price + deviation) or
+                _orders[i, OP] > (price - deviation)):
+                processOrder(tick, _orders[i], _orders[i, TK])
+            removeOrder(i)
+        elif _orders[iorder, OT] == Order_Type_Change: # change stops
+            processOrder(tick, _orders[i], _orders[i, TK])
+            removeOrder(i)
+        else: # pending orders
+            pprice = ptick[1] # previous tick price
+            if order[OK] == Order_Kind_BuyStop:
+                if(_orders[i, OP] > pprice and
+                   _orders[i, OP] <= price): # buy stop order triggered
+                    deviation = _orders[i, DV]
+                    if (_orders[i, OP] < (price + deviation) or
+                        _orders[i, OP] > (price - deviation)):
+                        processOrder(tick, _orders[i], _orders[i, TK])
+                        removeOrder(i)
+            elif order[OK] == Order_Kind_SellStop:
+                if(_orders[i, OP] < pprice and
+                   _orders[i, OP] >= price): # sell stop order triggered
+                    deviation = _orders[i, DV]
+                    if (_orders[i, OP] < (price + deviation) or
+                        _orders[i, OP] > (price - deviation)):
+                        processOrder(tick, _orders[i], _orders[i, TK])
+                        removeOrder(i)
 
-@njit(nogil=True, parallel=True)
-def ExecuteOrder(k, book, price, quantity, direction,
-            dgain, dstop, time, day, cost_order=12):
-    """
-    place order on book:book at position k
-    return money spent
-    """
-    book[k, EP] = price # enter price
-    book[k, QT] = quantity # number of contracts
-    book[k, DR] = direction # 1 for buy, -1 for sell
-    # dgain/dstop are in percent decimal
-    book[k, TP] = price*(1+direction*dgain) # take profit
-    book[k, SL] =  price*(1-direction*dstop) # stop loss
-    # time order was placed, (should be datetime?)
-    # no it can be just the index of the price on the rates array the "i"
-    book[k, OT] = time
-    book[k, DY] = day # day identifier
-
-    return quantity*price + cost_order
-
-@njit(nogil=True, parallel=True)
-def CloseOrder(io, obook, irow, cbook,
-                 time, close_price, bytime=0):
-    """
-    close order at row irow in the open book of orders with io valid entries
-    copy this order to the cbook array passed
-    finally rearrange the open book of orders excluding this row
-
-    bytime : order was closed due time stop
-    """
-    moneyback = 0
-    # copy to closed book + fill 3 collumns more
-    cbook[:] = obook[irow, :]
-    cbook[CP] = close_price # close price
-    cbook[CT] = time # close time
-    # money back (will be incremented)
-    moneyback = MoneyBack(cbook[EP], cbook[CP],
-                                cbook[QT], cbook[DR])
-    cbook[MB] = moneyback
-    # more money in the end than in the start
-    # Status codes -2 stop, -1 stop time, 1 gain time, 2 gain
-    if moneyback > cbook[EP]*cbook[QT]:
-        cbook[SS] = 2-bytime # sucess
-    else:
-        cbook[SS] = -2+bytime # failed
-    # now rearrange book of open orders
-    # if the book has only one order nothing needs to be done
-    if io > 1: # if there are more orders copy the last to this row
-        obook[irow, :] = obook[io-1, :] # io will be also decremented
-
-@njit(nogil=True, parallel=True)
-def tryCloseOrder(io, obook, irow, cbook,
-                 time, high, low):
-    """
-    Try to close row specifying one order from the open book.
-    If closed it is placed on the closed book row passed.
-
-    Consider worst case cenario where we sell on low
-    and buy on high. tentative to compensate for M1, OHLC in backtesting
-    return 1 if closed or -1 contrary
-    high, low is from the current minute M1
-    """
-    close_price = 0 # different from zero only when
-    # it will be closed
-    #if direction: # is a buy order
-    if obook[irow, DR] == 1: # buy order
-        ## close with sucess or close with failure
-        if low >= obook[irow, TP] or low <= obook[irow, SL]:
-            close_price = low
-    else: # is a sell order
-        ## close with sucess or close with failure:
-        if  high <= obook[irow, TP] or high > obook[irow, SL]:
-            close_price = high
-    if close_price > 0:
-        # open book, closed book, time, close_price
-        CloseOrder(io, obook, irow, cbook, time, close_price)
-        return 1 # it was closed
-
-    # nothing to close, nothing happened!
-    return 0
-
-@njit(nogil=True, parallel=True)
-def tryCloseOrders(io, obook, ic, cbook,
-             time, high, low):
-    """
-    evalue if order should be closed (on obook)
-    io, ic are indexes of the last entry on each book
-    """
-    money=0 # money increment due to all orders
-    status=0
-    # closed in this loop
-    for i in range(io):
-        status = tryCloseOrder(io, obook, i, cbook[ic, :], time, high, low)
-        if status > 0: # the order was closed
-            # money back (will be incremented)
-            money += cbook[ic, MB] # money back
-            ic += 1 # one more on closed book
-            io -= 1 # one less on open book
-
-    return money, io, ic
-
-@njit(nogil=True, parallel=True)
-def tryClosebyTime(io, obook, ic, cbook,
-             time, end_day, high, low, exptime):
-    """
-    evalue if order should be closed (on obook)
-    io, ic are indexes of the last entry on each book
-
-    expire (close)  orders if it has passed already (expire_time) (default'90') minutes or
-    if it is less than 1 hour for the end of the day (end_day)
-
-    consider worst case cenario where we sell on low
-    and buy on high. tentative to compensate for M1, OHLC in backtesting
-    return True if closed:
-    high, low is from the current minute M1
-    """
-    money=0 # money increment due to all orders closed
-
-    # closed in this loop
-    for i in range(io):
-        # time is to end operations (end of session is near)
-        if time >= int(end_day-15):
-            # worst case scenario
-            close_price = low if obook[i, DR] == 1 else high
-            # open book, closed book, time, close_price
-            CloseOrder(io, obook, i, cbook[ic, :], time, close_price, 1)
-            # money back (will be incremented)
-            money += cbook[ic, MB] # money back
-            ic += 1 # one more on closed book
-            io -= 1 # one less on open book
-        # this order expired by time : more than (60'++) minutes passed
-        elif time - int(obook[i, OT]) >  exptime:
-                # worst case scenario
-                close_price = low if obook[i, DR] == 1 else high
-                # open book, closed book, time, close_price
-                CloseOrder(io, obook, i, cbook[ic, :], time, close_price, 1)
-                # money back (will be incremented)
-                money += cbook[ic, MB] # money back
-                ic += 1 # one more on closed book
-                io -= 1 # one less on open book
-
-    return money, io, ic
-
-@njit(nogil=True, parallel=True)
-def isEqual(x, value):
-    n = x.size
-    for i in range(n):
-        if x[i] != value:
-            return -1
-    return 1
-
-@njit(nogil=True, parallel=True)
-def nextGuess(guess_time, iguess, time):
-    """"find the first time_index bigger or
-    equal than `time` in the guess book"""
-    n = guess_time.shape[0]
-    # find the next time index after index time
-    for t in range(iguess, n):
-        if guess_time[t, 1] >= time:
-            return t
-    # couldn\'t find any. time to stop simulation
-    return -1
-
-@njit(nogil=True, parallel=True)
-def actualMoney(io, open_book, money, H, L):
-    """"calculate actual money on open orders + pouch / pocket"""
-    for i in range(io): # for all open orders calculate money now
-        if open_book[i, DR] == 1: # buy (allways worst case scenario)
-            money += MoneyBack(open_book[i,EP], L,
-                                open_book[i,QT], open_book[i,DR])
-        else:
-            money += MoneyBack(open_book[i,EP], H,
-                                open_book[i,QT], open_book[i,DR])
-    return money
-
-
-# orders open on the last hour
-@njit(nogil=True, parallel=True)
-def norderslastHour(time, io, obook,
-        ic,  cbook, perdt):
-    """ number of orders openned on the last perdt time delta-hour-minute """
-    norders=0
-    for i in range(io): # for all open orders sum those open on the nminutes last hour
-        if obook[i, OT] > time - perdt: # open on the last nminutes hour
-            norders += 1
-    for i in range(ic): # for all closed orders sum those open on the nminutes last hour
-        if cbook[i, OT] > time - perdt: # open on the last nminutes hour
-            norders += 1
-    return norders
-
-def createTicks(obars):
-    """
-    Create ticks from Bars (1 minute time-frame): time, Open, High, Low, TickVol, RealVol
-    - Real volume and tick volume are equally spread across ticks.
-    - Total ticks is len(bars*3) last minute Close is ignored
-
-    * obars:
-        bars data-frame 1 minute-time-frame downloaded by `meta5Ibov`
-
-    Todo:
-      - random choice between H or L first
-      - random time for H and L
-      - any time-frame
-    """
-    bars = obars.copy()
-    bars.drop(columns=['S'], inplace=True)
-    bars['time'] = bars.index.astype(np.int64)//10**9 # (to unix timestamp seconds precision)
-    bars.TV = bars.TV//3
-    bars.RV = bars.RV//3
-    bars['time'] = bars.index.astype(np.int64)//10**9 # (to unix timestamp seconds precision)
-    # [ time open tv rv ] [ time low tv rv ] [ time high tv rv ]
-    ticks = bars.iloc[:, [6, 0, 4, 5,
-              6, 2, 4, 5,
-              6, 1, 4, 5] ].values.flatten()
-    ticks = ticks.reshape(-1, 4)
-    timeinc = np.tile([0, 29, 59], len(ticks)//3) # inc for 1 minute time-frame
-    assert len(timeinc) == len(ticks)
-    ticks[:, 0] += timeinc
-    return ticks
-
-    
-
-
-@njit(nogil=True)
-def Simulator(rates, positions_open, deals_history, onTick):
-    """
-    guess_book contains : {time index, direction, index endday, index startday}
-    array of orders to be placed at {time index},
-
-    the first and last {time index} must be
-    syncronized and included in the array  of rates
-
-    rwr:
-        reward-risk-ratio default 3 (3:1) gain/stop ratio
-        stop is expected_var/rwr and gain is expected_var
-    expected_var :
-        expected variation in decimal percent is the expected average volatility
-
-    riskap:
-        risk-appetite percentage of money you risk to loose per order
-    """
-    n = rates.shape[0] # minute-by-minute prices
-    dgain = expected_var # gain variation
-    dstop = dgain/rwr # stop variation using reward-to-risk ratio
-    money = capital # initial money
-    norder_day=0 # number of orders already executed on this day
-    # system variables
-    # keeep track of money evolution
-    moneyprogress = np.zeros(n)
-    iro = 0 # real book of orders open index "i"
-    irc = 0 # real book of orders close index "i"
-    # commanding orders index, none yet executed
-    iguess = 0 # indexes of guess orders executed done
-    i = 0
-    for i in range(n):
-        # get the next guess based on this "i" time_index (might be the same)
-        iguess = nextGuess(guess_book, iguess, i)
-        # get the current price (allways worst case scenario), and the end of the day
-        H, L, iday_end, iday_start = (rates[i, 0], rates[i, 1],
-                                            int(rates[i, 2]), int(rates[i, 3]))
-        if i < iday_start+exp_time: # no orders in the first xx hours/minutes
-            # track money evolution
-            moneyprogress[i] = actualMoney(iro, positions_open, money, H, L)
-            continue
-        if iro > 0: # Try to Close previosly open order
-            moneyback, iro, irc = tryCloseOrders(iro, positions_open, irc,
-                                deals_history, i, H, L) # close by hit stop/gain
-            money += moneyback # money back to the pouch
-            moneyback, iro, irc = tryClosebyTime(iro, positions_open, irc,
-                                deals_history, i, iday_end, H, L, exp_time) # close by expiring time or day
-            money += moneyback # money back to the pouch
-
-        # it is not time to place orders anymore (end of session is near)
-        if i == (iday_end-exp_time):
-            # go to the next guess after this day
-            iguess = nextGuess(guess_book, iguess, iday_end+1)
-            norder_day = 0
-        # is there any order to be done at this time_index
-        elif i == guess_book[iguess, 1] and norder_day <= maxorders:
-            # no more than n orders open per hour perdt
-            if norderslastHour(i, iro, positions_open,
-                irc, deals_history, perdt) >= norderperdt:
-                moneyprogress[i] = actualMoney(iro, positions_open, money, H, L)
-                continue;
-            # get the direction (buy or sell)
-            buy = guess_book[iguess, 0]
-            # enter price or H or L (allways worst case scenario)
-            enter_price = H if buy==1 else L
-            # calculate how much to buy spreaded over max orders per day
-            acmoney = actualMoney(iro, positions_open, money, H, L)
-            quantity = int((acmoney/(maxorders*enter_price)/100))*100 # 100's
-            if quantity > 0: # has money to spend
-                #  max number of stocks based on risk appetite
-                maxstocks = MaxStocks(enter_price, dstop, acmoney, riskap)
-                quantity = maxstocks  if quantity > maxstocks else  quantity
-                moneyspent = ExecuteOrder(iro, positions_open,
-                            enter_price, quantity, buy,
-                            dgain, dstop, i, iday_start)
-                iro +=1 # new entry on book
-                money -= moneyspent
-                norder_day += 1
-        # Close orders that suffer hit stop in the same minute
-        if iro > 0:
-            moneyback, iro, irc = tryCloseOrders(iro, positions_open, irc,
-                                deals_history, i, H, L) # close by hit stop/gain
-            money += moneyback # money back to the pouch
-        # track money evolution
-        moneyprogress[i] = actualMoney(iro, positions_open, money, H, L)
-    return moneyprogress, irc, iro
-
-@njit(nogil=True, parallel=True)
-def argnextGT(array, i, value):
-    """
-    find the next number in array starting from index i
-    that's Greater or Equal `value` return it's index
-    """
-    for j in range(i, array.size):
-        if array[j] > value:
-            return j
-    return array.size # not found return size
-
-@njit(nogil=True, parallel=True)
-def argnextLE(array, i, value):
-    """
-    find the next number in array starting from index i
-    that's Less or Equal `value` return it's index
-    """
-    for j in range(i, array.size):
-        if array[j] <= value:
-            return j + i
-    return 0 # not found return 0
+@jit(nopython=True, parallel=False)
+def Simulator(ticks, onTick):
+    # copy first as previous tick for buy/sell stop orders
+    ticks = np.concatenate(ticks[0], ticks)
+    nticks = ticks.shape[0]
+    for i in range(1, nticks):
+        # second arg previous tick for buy/sell stop orders
+        evaluateOrders(ticks[i], ticks[i-1])
+        checkStops(ticks[i])
+        updateMoney(ticks[i]) # hedge first - net mode future
+        onTick(ticks[i])

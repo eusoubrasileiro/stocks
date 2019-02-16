@@ -1,8 +1,8 @@
 import numpy as np
 from numba import jit, njit, prange
+import random
 
 # hedge mode buy default
-
 # orders
 OK=0 # order Kind 0-sell, 1-buy, 2-change stops pendings : 3-buy stop, 4-sell stop, 5-buy limit, 6-sell limit
 OP=1 # order price

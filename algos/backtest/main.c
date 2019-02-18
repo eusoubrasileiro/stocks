@@ -7,7 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "../metaEngine.c"
+#include "metaEngine.h"
+#define DEBUG
 
 void ontick(double *tick){
     int time = (int) tick[0];

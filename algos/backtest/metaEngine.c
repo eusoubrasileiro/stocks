@@ -1,49 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
-// orders
-const int OK=0; // order Kind 0-sell, 1-buy, 2-change stops pendings : 3-buy stop, 4-sell stop, 5-buy limit, 6-sell limit
-const int OP=1; // order price
-const int VV=2; // order or position volume or deal volume
-const int SL=3; // stop loss maybe -1 not set
-const int TP=4; // take profit maybe -1 not set
-const int DI=5; // devitation accepted maybe -1 not set
-const int TK=6; // ticket position to operate on (decrese-increase volume etc) maybe -1 not set
-const int OS=7; // source of order client or some event
-// positions
-const int PP=8; // position weighted price
-const int PT=9; // position time openned - needed by algos closing by time
-const int PC=10; // last time changed
-// deals
-const int DT=11; // deal time
-const int DV=12; // deal volume
-const int DR=13; // deal result + money back , - money taken or 0 nothing
-const int DE=14; // deal entry - in (1) or out(0) or inout reverse (2)
-
-const int Order_Kind_Buy = 0;
-const int Order_Kind_Sell = 1;
-const int Order_Kind_Change = 2; // change stop loss
-const int Order_Kind_BuyStop = 4;
-const int Order_Kind_SellStop = 5;
-const int Order_Kind_BuyLimit = 6;
-const int Order_Kind_SellLimit = 7;
-const int Order_Source_Client = 0; // default
-const int Order_Source_Stop_Loss = 1;
-const int Order_Source_Take_Profit = 2;
-const int Deal_Entry_In = 0;
-const int Deal_Entry_Out = 1;
-
-#define N 15
-//const int N=15; // number of collumns
-int _iorder = 0; // number of pending orders
-double _orders[N*100]; // pending waiting for entry
-int _ipos = 0; // number of open positions
-double _positions[N*100];
-int _ideals = 0; // number of executed deals
-double _deals_history[N*10000];
-double _money = 0; // money on pouch
-double _tick_value = 0.02; // ibov mini-contratc
-double _order_cost = 0.0; // order cost in $money
+#include "metaEngine.h"
 
 void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,
@@ -64,9 +21,10 @@ void updatePositionStops(int ipos, double *order){
     _positions[ipos*N+TP] = ((int) order[TP] == -1)? _positions[ipos*N+TP] : order[TP];
 }
 
-void newPosition(double time, double *order){
+void newPosition(double time, double price, double *order){
     memcpy(&_positions[_ipos*N], order, sizeof(double)*7);
     _positions[_ipos*N+PT] = time; // time position opened
+    _positions[_ipos*N+PP] = price; 
     updatePositionStops(_ipos, order);
 }
 
@@ -139,7 +97,7 @@ void executeOrder(double time, double price, double *order,
     double order_volume=0;
     switch(code){
         case 0: case 1: // new position
-            newPosition(time, order);
+            newPosition(time, price, order);
             memcpy(&_deals_history[_ideals*N], &_positions[_ipos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
             _deals_history[_ideals*N+DV] = order[VV];
@@ -214,11 +172,14 @@ void processOrder(double *tick, double *order, int pos){
     int exec_kind = ((int) order[OK] == Order_Kind_BuyStop)? Order_Kind_Buy  : order[OK];
     exec_kind = ((int) exec_kind == Order_Kind_SellStop)? Order_Kind_Sell : exec_kind;
 
-    if(pos == -1){ // new position
+	if(pos < 0){ // new position
         exec_code = 0 + exec_kind;
         executeOrder(time, price, order, exec_code, -1);
     }
-    else{ // modify/close existing position
+    else{ //modify/close an existing position
+    	if(pos >= _ipos ) // not a valid position
+    		return;
+		 // modify/close existing position
         if(_positions[pos*N+OK] == exec_kind){ // same direction
             //exec_code = 2 if exec_kind == Order_Kind_Buy else 3
             exec_code = 2 + exec_kind;
@@ -331,9 +292,9 @@ double positionsValue(double *tick){
         volume = _positions[i*N+VV];
         start_price = _positions[i*N+PP];
         if( (int) _positions[i*N+OK] == Order_Kind_Buy)
-            value += volume*(start_price-price)*_tick_value-_order_cost*2;
-        else
             value += volume*(price-start_price)*_tick_value-_order_cost*2;
+        else
+            value += volume*(start_price-price)*_tick_value-_order_cost*2;
     }
     return value;
 }
@@ -343,6 +304,9 @@ void Simulator(double init_money, double tick_value, double order_cost,
     // first tick will be ignore, used for buy/sell stop orders
     // ticks 4 columns - datetime, price, volume, real-volume
     // pmoney is just same size as nticks for recording money progress
+    _ideals = 0;
+    _iorder = 0;
+    _ipos = 0;
     _money = init_money;
     _tick_value = tick_value;
     _order_cost = order_cost;
@@ -351,7 +315,7 @@ void Simulator(double init_money, double tick_value, double order_cost,
         // second arg previous tick for buy/sell stop orders
         evaluateOrders(&ticks[i*4], &ticks[(i-1)*4]);
         evaluateStops(&ticks[i*4]);
-        pmoney[i] = _money + positionsValue(&ticks[i*4]); // hedge first - net mode future
+        pmoney[i-1] = _money + positionsValue(&ticks[i*4]); // hedge first - net mode future
         onTick(&ticks[i*4]);
     }
 }

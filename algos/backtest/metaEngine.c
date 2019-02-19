@@ -11,14 +11,17 @@ int nOrders(){
 int nPositions(){
     return _ipos;
 }
-double* Deals(){
-    return &_deals_history[0];
+void Deals(double *arr){
+    memcpy(arr, _deals_history, sizeof(_deals_history));
+    //arr = (double*) &_deals_history;
 }
-double* Orders(){
-    return &_orders[0];
+void Orders(double *arr){
+    memcpy(arr, _orders, sizeof(_orders));
+    //arr = (double*) &_orders;
 }
-double* Positions(){
-    return &_positions[0];
+void Positions(double *arr){
+    memcpy(arr, _positions, sizeof(_positions));
+    //arr = (double*) &_positions;
 }
 
 void sendOrder(double kind, double price, double volume,
@@ -127,7 +130,7 @@ void executeOrder(double time, double price, double *order,
             break;
         case 2: case 3: // increasing hand
             // modifying existing position
-            memcpy(&_deals_history[_ideals*N], &_positions[_ipos*N], sizeof(double)*N);
+            memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             updatePositionTime(pos, time);
             updatePositionStops(pos, order);
             updatePositionPrice(pos, order, price);

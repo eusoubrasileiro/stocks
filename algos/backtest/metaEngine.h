@@ -1,7 +1,9 @@
-#ifdef _WIN32 
+#ifdef _WIN32
 #ifndef DEBUG
 #define DLL_EXPORT __declspec(dllexport)
 #endif
+#else
+#define DLL_EXPORT
 #endif
 
 // orders
@@ -23,18 +25,18 @@
 #define DR 13  // deal result + money back , - money taken or 0 nothing
 #define DE 14  // deal entry - in (1) or out(0) or inout reverse (2)
 
-#define Order_Kind_Buy   0 
-#define Order_Kind_Sell   1 
+#define Order_Kind_Buy   0
+#define Order_Kind_Sell   1
 #define Order_Kind_Change   2  // change stop loss
-#define Order_Kind_BuyStop   4 
-#define Order_Kind_SellStop   5 
-#define Order_Kind_BuyLimit   6 
-#define Order_Kind_SellLimit   7 
+#define Order_Kind_BuyStop   4
+#define Order_Kind_SellStop   5
+#define Order_Kind_BuyLimit   6
+#define Order_Kind_SellLimit   7
 #define Order_Source_Client   0  // default
-#define Order_Source_Stop_Loss   1 
-#define Order_Source_Take_Profit   2 
-#define Deal_Entry_In   0 
-#define Deal_Entry_Out   1 
+#define Order_Source_Stop_Loss   1
+#define Order_Source_Take_Profit   2
+#define Deal_Entry_In   0
+#define Deal_Entry_Out   1
 
 #define N 15 // number of collumns
 
@@ -47,6 +49,13 @@ DLL_EXPORT double _deals_history[N*10000];
 DLL_EXPORT double _money = 0; // money on pouch
 DLL_EXPORT double _tick_value = 0.02; // ibov mini-contratc
 DLL_EXPORT double _order_cost = 0.0; // order cost in $money
+
+DLL_EXPORT int nDeals();
+DLL_EXPORT int nPositions();
+DLL_EXPORT int nOrders();
+DLL_EXPORT double* Deals();
+// DLL_EXPORT double* Positions();
+// DLL_EXPORT double* Orders();
 
 DLL_EXPORT void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,

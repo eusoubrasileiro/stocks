@@ -2,6 +2,25 @@
 #include <string.h>
 #include "metaEngine.h"
 
+int nDeals(){
+    return _ideals;
+}
+int nOrders(){
+    return _iorder;
+}
+int nPositions(){
+    return _ipos;
+}
+double* Deals(){
+    return &_deals_history[0];
+}
+double* Orders(){
+    return &_orders[0];
+}
+double* Positions(){
+    return &_positions[0];
+}
+
 void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,
               double ticket, double source){
@@ -24,7 +43,7 @@ void updatePositionStops(int ipos, double *order){
 void newPosition(double time, double price, double *order){
     memcpy(&_positions[_ipos*N], order, sizeof(double)*7);
     _positions[_ipos*N+PT] = time; // time position opened
-    _positions[_ipos*N+PP] = price; 
+    _positions[_ipos*N+PP] = price;
     updatePositionStops(_ipos, order);
 }
 

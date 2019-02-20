@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import os, sys
 import ctypes as c
 from numba import jit, cfunc, types, carray
 
@@ -8,6 +8,7 @@ from numba import jit, cfunc, types, carray
 #### on Windows `mingw` anaconda package must be installed
 
 try:
+    os.chdir('algos/backtest') # need to figure out better way for this
     if os.name == 'nt': # windows
         os.system('gcc -std=gnu99 -c metaEngine.c -DBUILD_DLL -o metaEngine.o')
         os.system('gcc -shared -o metaengine.dll metaEngine.o -Wl,--out-implib,metaEngine.a')
@@ -17,10 +18,10 @@ try:
         os.system('gcc -c -fPIC metaEngine.c -o metaEngine.o')
         os.system('gcc -shared -Wl,-soname,metaEngine.so -o metaengine.so metaEngine.o')
         _lib = c.cdll.LoadLibrary('./metaengine.so')
-except:
+except Exception as excp:
     print("Problem compiling or loading the C dynamic library")
     print("Make sure you have gcc on Linux or `mingw` anaconda package on Windows")
-    exit()
+    raise(excp)
 
 cMetaEngineLib = _lib
 

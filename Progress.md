@@ -22,8 +22,7 @@ Lessons learned:
 
 Table of Definitions
 ￼￼￼￼
-
-Algorithm trading can be divided:
+Algorithm trading pillars are:
 1. Mathematical model (if used)  
 2. Trading strategy (stop-loss-gain size, time, trailing stop etc.)  
 
@@ -138,14 +137,14 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 - [ ] Rewrite backtest engine to support callback function on event `OnChange` making it support whatever time-frame of historical data. Also need to uncouple the predictions vector leting it be in whatever time-frame.
 
 #### Milestone: moved from everything above to minute time-frame Saulo's algorithm (November/2018)
-#### Reason: it was giving fake impressive results
+##### Reason: it was giving fake impressive results
 
 - The algorithm is based on classification of signals on bollinger bands. Using historical data first we analyze if there is a buy or sell signal from the bollinger band, a hold signal (no-buy nor-sell) we classify as class-0. Then we analyze if that buy signal and subsequent sell signal really made profit. If they did they are really buy and sell signals and are classified accordingly with 1, 2  classes, otherwise they are classified as hold 0. The set-up of the algorithm is only for long positions but I made tests changing to short positions.
 - Translate code for Saulo's free course is given in `Saulo_ml4t_traininig_clean.py`
 - Prototypes are `Sklearn Saulo Daimon WIN` and `Sklearn Saulo WIN`.
 - Code was entirely reorganized and `buybandsd.py` daemon was created.
 
-###### Milestone : predictions were contaminated by future, had to start again. Precision for class 1 of 90% were far too much.
+#### Milestone : predictions were contaminated by future, had to start again. Precision for class 1 of 90% were far too much.
 
 - Restarted testing real precision of classifier without future contamination. Bellow a summary of parameters test with a data window of 300 for training and making 30k random predictions on the entire data available for different symbols. 30k upon analysis seams to be the required amount of samples to not have a biased estimate of the precision probability distribution, even with a 2% percent `stdev`.
 
@@ -190,4 +189,24 @@ Quotting article Random-testtrain-split-is-not-always-enough.
 
 Learning to remember: Lost 20k due no stop loss and not sure that prediction was good.
 
-- [x] Implemented `NaiveExpert` based on `prototypes\Numpy Naive Buy - WIN` using pattern of 5 minutes up trend before to buy and surf on the uptrend.  Made backtest on metatrader 5 and it's clear that you cannot garantee that will buy on the `Open` and sell on the `Open` using the close by time is clearly otherwise. The metatrader 5 backtesting engine is really robust using 1 minute data OHLC to create aproximated Tick's using bar patterns. The accuracy went from 90% to 45% on real backtesting on metatrader 5. So better really use worst case buy scenario : `buy on high and sell on low`; to make backtesting on the engine code.
+#### Milestone : try Simple or Naive Strategies since many people with non-mathematical background reported (on-media) profit with robots
+
+- [x] Implemented `NaiveExpert` based on `prototypes\Numpy Naive Buy - WIN` using pattern of 5 minutes up trend before to buy and surf on the uptrend.  Made backtest on metatrader 5 and it's clear that you cannot garantee that will buy on the `Open` and sell on the `Open` using the close by time is clearly otherwise. The metatrader 5 backtesting engine is really robust using 1 minute data OHLC to create aproximated Tick's using bar patterns. The accuracy went from 90% to 45% on real backtesting on metatrader 5. So better really use worst case buy scenario on a 1 minute backtesting engine `buy on high and sell on low`. Another conclusion a new backtest engine based on ticks would help not waste time tasting naive strategies.
+
+-[ ] Implement `NaiveSupports` based on volume at price using Gaussian Mixture Models. Use maximum data of 21-days for support and resistences calculation. Calculate supports and resistences at every 5 minutes? and place stop or limit orders accordingly. Should use  Additionally maybe should consider using bigger positions where the trajectory is clear and small positions were there are many support and resistences close-by. 
+
+#### Milestone : based on algorithm trading pillars totally refactoring of backtesting Engine
+
+One pillar of algorithm trading is the *Trading strategy* and without a realiable backtest engine nothing can be done about that.
+Many results above point to the need of a more realistic backtest engine supported by Python. The reason is because writting code im mql5 every-time I think in a new strategy is just impossible.
+
+- [x] New engine works in Hedge Mode and supports `Buy Stop` and `Sell Stop` orders
+- [x] Implement `Buy Limit` and `Sell Limit` and fixed wrong entries of `Buy Stop` and `Sell Stop` orders
+- [ ] Restric wrong params for pending orders `Buy Stop`, `Sell Stop`, `Buy Limit` and `Sell Limit` ?
+- [x] code in C library `metaEngice.c` compiled as shared library imported by `metaEngine.py`
+- [x] `metaEngine.c` code supporting build on Windows (`*.dll`) or Linux (`*.so`)
+- [x] `metaEngine.py` access directly the global variables (in memory) exported by the shared library C code.
+That is done using `ctypes`
+- [x] old back-test engine were renamed as `_old` since their reliability was questionable
+- [ ] refactor strategyTester old `stester`
+- [ ] console program to make some unit tests `metaEngine.c` ?

@@ -171,17 +171,19 @@ void processOrder(double *tick, double *order, int pos){
     double price = tick[1];
     // replace buystop and sellstop by buy and sell for a execution kind
     double difvolume, exec_code = -1;
-    int exec_kind = ((int) order[OK] == Order_Kind_BuyStop)? Order_Kind_Buy  : order[OK];
-    exec_kind = ((int) exec_kind == Order_Kind_SellStop)? Order_Kind_Sell : exec_kind;
+    int exec_kind = ((int) order[OK] == Order_Kind_BuyStop ||
+      (int) order[OK] == Order_Kind_BuyLimit )? Order_Kind_Buy  : (int) order[OK];
+    exec_kind = ( exec_kind == Order_Kind_SellStop ||
+      exec_kind == Order_Kind_SellLimit)? Order_Kind_Sell : exec_kind;
 
 	if(pos < 0){ // new position
         exec_code = 0 + exec_kind;
         executeOrder(time, price, order, exec_code, -1);
     }
     else{ //modify/close an existing position
-    	if(pos >= _ipos ) // not a valid position
-    		return;
-		 // modify/close existing position
+      	if(pos >= _ipos ) // not a valid position
+      		return;
+  		 // modify/close existing position
         if(_positions[pos*N+OK] == exec_kind){ // same direction
             //exec_code = 2 if exec_kind == Order_Kind_Buy else 3
             exec_code = 2 + exec_kind;
@@ -208,46 +210,72 @@ void processOrder(double *tick, double *order, int pos){
                 }
             }
             //order[OK] == Order_Kind_Change: // change stops
-        }
+      }
     }
 }
 
-void evaluateOrders(double *tick, double *ptick){
+int insideLimits(double value, double base, double deviation){
+    if (value < (base + deviation) &&
+        value > (base - deviation))
+        return 1;
+    return 0;
+}
+
+void evaluateOrders(double *tick){
         // Flux of an order:
         // Evaluate -> Process -> Execute
         double deviation;
-        double pprice, price = tick[1];
+        double price = tick[1];
+
         for(int i=0; i<_iorder; i++){
             deviation = _orders[i*N+DI]; // acceptable tolerance
-            if(( (int) _orders[i*N+OK] == Order_Kind_Buy) || // buy or sell
-                ( (int) _orders[i*N+OK] == Order_Kind_Sell))
-                if( (_orders[i*N+OP] < (price + deviation)) ||
-                    (_orders[i*N+OP] > (price - deviation))){
-                    processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
-                    removeOrder(i);
+            switch ((int) _orders[i*N+OK]){
+
+              case  Order_Kind_Buy: case Order_Kind_Sell:  // buy or sell
+                if(insideLimits(_orders[i*N+OP], price, deviation)){
+                  processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
+                  removeOrder(i);
                 }
-            else
-            if( (int) _orders[i*N+OK] == Order_Kind_Change){ // change stops
+              break;
+              case Order_Kind_Change: // change stops
                 processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
                 removeOrder(i);
-            }
-            else { // pending orders
-                pprice = ptick[1]; // previous tick price
-                if( ((int) _orders[i*N+OK] == Order_Kind_BuyStop) &&
-                (_orders[i*N+OP] > pprice) && (_orders[i*N+OP] <= price) ) // buy stop order triggered
-                    if (_orders[i*N+OP] < (price + deviation) ||
-                        _orders[i*N+OP] > (price - deviation)){
-                        processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
-                        removeOrder(i);
-                    }
-                else
-                if( ( (int) _orders[i*N+OK] == Order_Kind_SellStop) &&
-                    _orders[i*N+OP] < pprice && _orders[i*N+OP] >= price)// sell stop order triggered
-                    if (_orders[i*N+OP] < (price + deviation) ||
-                        _orders[i*N+OP] > (price - deviation)){
-                        processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
-                        removeOrder(i);
-                    }
+              break;
+              // pending orders
+              case  Order_Kind_BuyStop:
+                // buy stop order triggered going up
+                if (price >= _orders[i*N+OP]
+                    && insideLimits(_orders[i*N+OP], price, deviation) ){
+                      processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
+                      removeOrder(i);
+                  }
+              break;
+              case Order_Kind_SellStop:
+                // sell stop order triggered going down
+                if(price <= _orders[i*N+OP]
+                  && insideLimits(_orders[i*N+OP], price, deviation)){
+                    processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
+                    removeOrder(i);
+                  }
+              break;
+              case Order_Kind_BuyLimit:
+              // buy limit  order triggered going down
+                if(price <= _orders[i*N+OP]
+                  && insideLimits(_orders[i*N+OP], price, deviation)){
+                  processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
+                  removeOrder(i);
+                }
+              break;
+              case Order_Kind_SellLimit:
+              // sell limit  order triggered going up
+                if(price >= _orders[i*N+OP]
+                  && insideLimits(_orders[i*N+OP], price, deviation)){
+                  processOrder(tick, &_orders[i*N], (int) _orders[i*N+TK]);
+                  removeOrder(i);
+                }
+              break;
+              default: // not a valid order
+              break;
             }
         }
 }
@@ -312,12 +340,12 @@ void Simulator(double init_money, double tick_value, double order_cost,
     _money = init_money;
     _tick_value = tick_value;
     _order_cost = order_cost;
-    pmoney[0] = _money;
-    for(int i=1; i<nticks; i++){
-        // second arg previous tick for buy/sell stop orders
-        evaluateOrders(&ticks[i*4], &ticks[(i-1)*4]);
+
+    for(int i=0; i<nticks; i++){
+        evaluateOrders(&ticks[i*4]);
         evaluateStops(&ticks[i*4]);
-        pmoney[i-1] = _money + positionsValue(&ticks[i*4]); // hedge first - net mode future
+        pmoney[i] = _money + positionsValue(&ticks[i*4]); // hedge first - net mode future
         onTick(&ticks[i*4]);
     }
+
 }

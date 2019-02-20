@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
 import datetime
+import random
 from numba import jit, njit, prange
-from Tools.util import progressbar
-from Tools.backtest.metaEngine import *
+from algos.util import progressbar
+from algos.backtest.metaEngine import *
 
 @njit(nogil=True, parallel=True)
 def _sortina(money, risk_free):
@@ -21,7 +22,7 @@ def _sortina(money, risk_free):
     excessreturn = money[-1]/money[0]-risk_free
     return excessreturn/(1+mean)
 
-def createTicks(obars):
+def createTicks(obars, seed=0):
     """
     Create ticks from Bars (1 minute time-frame): time, Open, High, Low, TickVol, RealVol
     - Real volume and tick volume are equally spread across ticks.
@@ -30,11 +31,16 @@ def createTicks(obars):
 
     * obars:
         bars data-frame 1 minute-time-frame downloaded by `meta5Ibov`
+    * seed:
+        by default reproducible seed=0
 
     Todo:
       - any time-frame
       - random tick and real volume?
     """
+    if not (seed is None):  # random tick times
+        random.seed(seed)
+
     bars = obars.copy()
     bars.drop(columns=['S'], inplace=True)
     bars['time'] = bars.index.astype(np.int64)//10**9 # (to unix timestamp seconds precision)

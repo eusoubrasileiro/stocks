@@ -2,13 +2,27 @@ import numpy as np
 import os
 import ctypes as c
 from numba import jit, cfunc, types, carray
-# hedge mode buy default
 
-if os.name == 'nt':
-    # WINFUNCTYPE for stdcall (standard call is c++ normally)
-    _lib = c.cdll.LoadLibrary('./metaengine.dll')
-else:
-    _lib = c.cdll.LoadLibrary('./metaengine.so')
+# hedge mode buy default
+##### Compile Python Module 'dll' or 'share library'
+#### on Windows `mingw` anaconda package must be installed
+
+try:
+    if os.name == 'nt': # windows
+        os.system('gcc -std=gnu99 -c metaEngine.c -DBUILD_DLL -o metaEngine.o')
+        os.system('gcc -shared -o metaengine.dll metaEngine.o -Wl,--out-implib,metaEngine.a')
+        # WINFUNCTYPE for stdcall (standard call is c++ normally)
+        _lib = c.cdll.LoadLibrary('./metaengine.dll')
+    else:
+        os.system('gcc -c -fPIC metaEngine.c -o metaEngine.o')
+        os.system('gcc -shared -Wl,-soname,metaEngine.so -o metaengine.so metaEngine.o')
+        _lib = c.cdll.LoadLibrary('./metaengine.so')
+except:
+    print("Problem compiling or loading the C dynamic library")
+    print("Make sure you have gcc on Linux or `mingw` anaconda package on Windows")
+    exit()
+
+cMetaEngineLib = _lib
 
 Order_Kind_Buy = 0.
 Order_Kind_Sell = 1.
@@ -45,26 +59,37 @@ def Simulator(ticks, onTick, money=5000, tick_value=0.2, order_cost=4.0, cnumba=
                   pmoney.ctypes.data, cOnTick)
     return pmoney
 
-
 #### Global variables from DLL
+### AMAZING C pointers with cast ! + numpy arrays with fixed memory loc.
 
 _pointer_orders = c.cast(_lib._orders, c.POINTER(c.c_double))
-Orders = np.ctypeslib.as_array(_pointer_orders, shape=(15*100,))
+Orders = np.ctypeslib.as_array(_pointer_orders, shape=(100, 15))
 
 _pointer_positions = c.cast(_lib._positions, c.POINTER(c.c_double))
-Positions = np.ctypeslib.as_array(_pointer_positions, shape=(15*100,))
+Positions = np.ctypeslib.as_array(_pointer_positions, shape=(100,15))
 
 _pointer_deals = c.cast(_lib._deals_history, c.POINTER(c.c_double))
-Deals = np.ctypeslib.as_array(_pointer_deals, shape=(15*10000,))
+Deals = np.ctypeslib.as_array(_pointer_deals, shape=(10000, 15))
+
+# counters as numpy arrays size 1
 
 _pointer_norders = c.cast(_lib._iorder, c.POINTER(c.c_int))
-nOrders = np.ctypeslib.as_array(_pointer_norders, shape=(1,))
+_nOrders = np.ctypeslib.as_array(_pointer_norders, shape=(1,))
 
 _pointer_npositions = c.cast(_lib._ipos, c.POINTER(c.c_int))
-nPositions = np.ctypeslib.as_array(_pointer_npositions, shape=(1,))
+_nPositions = np.ctypeslib.as_array(_pointer_npositions, shape=(1,))
 
 _pointer_ndeals = c.cast(_lib._ideals, c.POINTER(c.c_int))
-nDeals = np.ctypeslib.as_array(_pointer_ndeals, shape=(1,))
+_nDeals = np.ctypeslib.as_array(_pointer_ndeals, shape=(1,))
+
+def nOrders():
+    return _nOrders[0]
+
+def nDeals():
+    return _nDeals[0]
+
+def nPositions():
+    return _nPositions[0]
 
 ### Ctypes + Numba interface Awesome!!
 ### https://numba.pydata.org/numba-doc/dev/user/cfunc.html
@@ -103,8 +128,7 @@ sendOrder = c.CFUNCTYPE(None, c.c_double, c.c_double, c.c_double, c.c_double, \
 # DR=13 # deal result + money back , - money taken or 0 nothing
 # DE=14 # deal entry - in (1) or out(0) or inout reverse (2)
 
-bookvalues = "OK OP VV SL TP DI TK OS PP PT PC DT DV DR DE".split(' ')
-N = len(bookvalues)
+BookIndexes = dict( zip("OK OP VV SL TP DI TK OS PP PT PC DT DV DR DE".split(' '), np.arange(15)))
 
 #### Call-back function jitted with **Numba** > 1000x faster than non-jitted version
 ### All-ticks 9 seconds to 55 ms

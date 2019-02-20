@@ -40,6 +40,14 @@
 
 #define N 15 // number of collumns
 
+DLL_EXPORT void sendOrder(double kind, double price, double volume,
+              double sloss, double tprofit, double deviation,
+              double ticket, double source);
+
+DLL_EXPORT void Simulator(double init_money, double tick_value, double order_cost,
+        double *ticks, int nticks, double *pmoney, void (*onTick)(double*));
+        
+       
 DLL_EXPORT int _iorder = 0; // number of pending orders
 DLL_EXPORT double _orders[N*100]; // pending waiting for entry
 DLL_EXPORT int _ipos = 0; // number of open positions
@@ -50,9 +58,6 @@ DLL_EXPORT double _money = 0; // money on pouch
 DLL_EXPORT double _tick_value = 0.02; // ibov mini-contratc
 DLL_EXPORT double _order_cost = 0.0; // order cost in $money
 
-DLL_EXPORT void sendOrder(double kind, double price, double volume,
-              double sloss, double tprofit, double deviation,
-              double ticket, double source);
 
-DLL_EXPORT void Simulator(double init_money, double tick_value, double order_cost,
-        double *ticks, int nticks, double *pmoney, void (*onTick)(double*));
+
+

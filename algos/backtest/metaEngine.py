@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.ctypeslib import ndpointer
 import os
 import ctypes as c
 from numba import jit, cfunc, types, carray
@@ -46,86 +45,44 @@ def Simulator(ticks, onTick, money=5000, tick_value=0.2, order_cost=4.0, cnumba=
                   pmoney.ctypes.data, cOnTick)
     return pmoney
 
+
+#### Global variables from DLL
+
+_pointer_orders = c.cast(_lib._orders, c.POINTER(c.c_double))
+Orders = np.ctypeslib.as_array(_pointer_orders, shape=(15*100,))
+
+_pointer_positions = c.cast(_lib._positions, c.POINTER(c.c_double))
+Positions = np.ctypeslib.as_array(_pointer_positions, shape=(15*100,))
+
+_pointer_deals = c.cast(_lib._deals_history, c.POINTER(c.c_double))
+Deals = np.ctypeslib.as_array(_pointer_deals, shape=(15*10000,))
+
+_pointer_norders = c.cast(_lib._iorder, c.POINTER(c.c_int))
+nOrders = np.ctypeslib.as_array(_pointer_norders, shape=(1,))
+
+_pointer_npositions = c.cast(_lib._ipos, c.POINTER(c.c_int))
+nPositions = np.ctypeslib.as_array(_pointer_npositions, shape=(1,))
+
+_pointer_ndeals = c.cast(_lib._ideals, c.POINTER(c.c_int))
+nDeals = np.ctypeslib.as_array(_pointer_ndeals, shape=(1,))
+
+### Ctypes + Numba interface Awesome!!
+### https://numba.pydata.org/numba-doc/dev/user/cfunc.html
+
 _sendorder = _lib.sendOrder
 _sendorder.argtypes = [c.c_double]*8
 _sendorder.restype = None
 
-_norders = _lib.nOrders
-_norders.restype = c.c_int
-
-_npositions = _lib.nPositions
-_npositions.restype = c.c_int
-
-_ndeals = _lib.nDeals
-_ndeals.restype = c.c_int
-
-_orders = _lib.Orders
-_orders.argtypes = [c.POINTER(c.c_double)]
-_orders.restype = None
-
-_positions = _lib.Positions
-_positions.argtypes = [c.POINTER(c.c_double)]
-_positions.restype = None
-
-_deals = _lib.Deals
-_deals.argtypes = [c.POINTER(c.c_double)]
-_deals.restype = None
-#lib.function.restype = ndpointer(dtype=ctypes.c_double, shape=(10000,15))
-
+@jit
 def __sendorder(kind, price=-1.,  volume=-1.,
               sloss=-1., tprofit=-1., deviation=-1.,
               ticket=-1., source=Order_Source_Client):
     _sendorder(kind, price, volume, sloss, tprofit, deviation,
                  ticket, source)
 
-def __ndeals():
-    return _ndeals()
-
-def __npositions():
-    return _npositions()
-
-def __norders():
-    return _norders()
-
-def __deals():
-    deals = c.c_double*150000
-    deals = deals() # c_double_Array_150000
-    _deals(deals)
-    # deals = (c.c_double*150000).from_address(
-    #     c.addressof(deals.contents))
-    return np.ctypeslib.as_array(deals).reshape(15,10000)
-
-def __positions():
-    positions = c.POINTER(c.c_double) # this is a real c pointer
-    _positions(positions)
-    positions = (c.c_double*1500).from_address(
-        c.addressof(positions.contents))
-    return np.ctypeslib.as_array(positions, shape=(15,100))
-
-def __orders():
-    orders = c.POINTER(c.c_double)
-    _orders(orders)
-    orders = (c.c_double*1500).from_address(
-        c.addressof(orders.contents))
-    return np.ctypeslib.as_array(orders, shape=(15,100))
-
 sendOrder = c.CFUNCTYPE(None, c.c_double, c.c_double, c.c_double, c.c_double, \
                      c.c_double, c.c_double, c.c_double, c.c_double)(__sendorder)
 
-nDeals = c.CFUNCTYPE(c.c_int32)(__ndeals)
-
-nPositions = c.CFUNCTYPE(c.c_int32)(__npositions)
-
-nOrders = c.CFUNCTYPE(c.c_int32)(__norders)
-
-Deals = __deals
-#Deals = c.CFUNCTYPE(None, ndpointer(c.c_double, shape=(15, 10000)))(__deals)
-
-Positions = __positions
-# Positions = c.CFUNCTYPE(c.c_void_p, c.c_int32)(__positions)
-
-Orders = __orders
-# Orders = c.CFUNCTYPE(c.c_void_p, c.c_int32)(__orders)
 
 # orders
 # OK=0 # order Kind 0-sell, 1-buy, 2-change stops pendings : 3-buy stop, 4-sell stop, 5-buy limit, 6-sell limit

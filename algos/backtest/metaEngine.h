@@ -50,13 +50,6 @@ DLL_EXPORT double _money = 0; // money on pouch
 DLL_EXPORT double _tick_value = 0.02; // ibov mini-contratc
 DLL_EXPORT double _order_cost = 0.0; // order cost in $money
 
-DLL_EXPORT int nDeals();
-DLL_EXPORT int nPositions();
-DLL_EXPORT int nOrders();
-DLL_EXPORT void Deals(double *arr);
-DLL_EXPORT void Positions(double *arr);
-DLL_EXPORT void Orders(double *arr);
-
 DLL_EXPORT void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,
               double ticket, double source);

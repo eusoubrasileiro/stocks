@@ -2,28 +2,6 @@
 #include <string.h>
 #include "metaEngine.h"
 
-int nDeals(){
-    return _ideals;
-}
-int nOrders(){
-    return _iorder;
-}
-int nPositions(){
-    return _ipos;
-}
-void Deals(double *arr){
-    memcpy(arr, _deals_history, sizeof(_deals_history));
-    //arr = (double*) &_deals_history;
-}
-void Orders(double *arr){
-    memcpy(arr, _orders, sizeof(_orders));
-    //arr = (double*) &_orders;
-}
-void Positions(double *arr){
-    memcpy(arr, _positions, sizeof(_positions));
-    //arr = (double*) &_positions;
-}
-
 void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,
               double ticket, double source){
@@ -130,11 +108,11 @@ void executeOrder(double time, double price, double *order,
             break;
         case 2: case 3: // increasing hand
             // modifying existing position
-            memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             updatePositionTime(pos, time);
             updatePositionStops(pos, order);
             updatePositionPrice(pos, order, price);
             _positions[pos*N+VV] += order[VV];
+            memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
             _deals_history[_ideals*N+DV] = order[VV];
             _deals_history[_ideals*N+DR] = result;
@@ -147,6 +125,7 @@ void executeOrder(double time, double price, double *order,
             updatePositionTime(pos, time);
             _positions[pos*N*VV] -= order[VV]; // decrease volume
             _positions[pos*N+VV] += order[VV];
+            memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
             _deals_history[_ideals*N+DV] = order[VV];
             _deals_history[_ideals*N+DR] = result;
@@ -157,12 +136,13 @@ void executeOrder(double time, double price, double *order,
             result = dealResult(price, order, pos, (code%8));
             _money += result;
             updatePositionTime(pos, time);
-            removePosition(pos);
+            memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
             _deals_history[_ideals*N+DV] = order[VV];
             _deals_history[_ideals*N+DR] = result;
             _deals_history[_ideals*N+DE] = Deal_Entry_Out;
             _ideals++;
+            removePosition(pos);
             break;
         case 8: // code 8 reverse a buy
             order_volume = order[VV]-_positions[pos*N+VV];

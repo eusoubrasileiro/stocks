@@ -38,6 +38,10 @@ Order_Source_Take_Profit = 2.
 Deal_Entry_In = 0.
 Deal_Entry_Out = 1.
 
+columns = "OK OP OV SL TP DI TK OS PP PV PT PK PC DT DV DR DE".split(' ')
+nCols = len(columns)
+BookIndexes = dict(zip(columns, np.arange(nCols)))
+
 #### Ctypes + Numba interface Awesome!!
 ### https://numba.pydata.org/numba-doc/dev/user/cfunc.html
 
@@ -64,13 +68,13 @@ def Simulator(ticks, onTick, money=5000, tick_value=0.2, order_cost=4.0, cnumba=
 ### AMAZING C pointers with cast ! + numpy arrays with fixed memory loc.
 
 _pointer_orders = c.cast(_lib._orders, c.POINTER(c.c_double))
-Orders = np.ctypeslib.as_array(_pointer_orders, shape=(100, 15))
+Orders = np.ctypeslib.as_array(_pointer_orders, shape=(100, nCols))
 
 _pointer_positions = c.cast(_lib._positions, c.POINTER(c.c_double))
-Positions = np.ctypeslib.as_array(_pointer_positions, shape=(100,15))
+Positions = np.ctypeslib.as_array(_pointer_positions, shape=(100, nCols))
 
 _pointer_deals = c.cast(_lib._deals_history, c.POINTER(c.c_double))
-Deals = np.ctypeslib.as_array(_pointer_deals, shape=(10000, 15))
+Deals = np.ctypeslib.as_array(_pointer_deals, shape=(10000, nCols))
 
 # counters as numpy arrays size 1
 
@@ -113,7 +117,7 @@ sendOrder = c.CFUNCTYPE(None, c.c_double, c.c_double, c.c_double, c.c_double, \
 # orders
 # OK=0 # order Kind 0-sell, 1-buy, 2-change stops pendings : 3-buy stop, 4-sell stop, 5-buy limit, 6-sell limit
 # OP=1 # order price
-# VV=2 # order or position volume or deal volume
+# OV=2 # order or position volume or deal volume
 # SL=3 # stop loss maybe -1 not set
 # TP=4 # take profit maybe -1 not set
 # DI=5 # devitation accepted maybe -1 not set
@@ -121,33 +125,12 @@ sendOrder = c.CFUNCTYPE(None, c.c_double, c.c_double, c.c_double, c.c_double, \
 # OS=7 # source of order client or some event
 # # positions
 # PP=8 # position weighted price
-# PT=9 # position time openned - needed by algos closing by time
-# PC=10 # last time changed
+# PV=9 # positoin volume
+# PT=10 # position time openned - needed by algos closing by time
+# PK=11 # position kind buy or sell
+# PC=12 # last time changed
 # # deals
-# DT=11 # deal time
-# DV=12 # deal volume
-# DR=13 # deal result + money back , - money taken or 0 nothing
-# DE=14 # deal entry - in (1) or out(0) or inout reverse (2)
-
-BookIndexes = dict( zip("OK OP VV SL TP DI TK OS PP PT PC DT DV DR DE".split(' '), np.arange(15)))
-
-#### Call-back function jitted with **Numba** > 1000x faster than non-jitted version
-### All-ticks 9 seconds to 55 ms
-### Altough:
-###  AssertionError: Keyword arguments are not supported, yet
-# c_sig = types.void(types.CPointer(types.double))
-#
-# @cfunc(c_sig)
-# def onTickFunc(tick):
-#     #tick = np.ctypeslib.as_array(tick, shape=(4,))
-#     tick = carray(tick, (4))
-#     time, price = tick[:2]
-#     if time == 1388657280:
-#         sendOrder(Order_Kind_Buy, price, 3., -1., -1., 10, -1, 0)
-#     if time == 1388663280:
-#         sendOrder(Order_Kind_Sell, price, 6, -1, -1, 10, -1, 0)
-#     if time > 1388663280+60*10 and time < 1388663280+60*11: # 60 minutes after
-#         sendOrder(Order_Kind_Buy, price, 6, -1, -1, 10, 1, 0)
-
-# __all__ = [ Simulator, sendOrder,
-#            nDeals, nPositions, nOrders ]
+# DT=13 # deal time
+# DV=14 # deal volume
+# DR=15 # deal result + money back , - money taken or 0 nothing
+# DE=16 # deal entry - in (1) or out(0) or inout reverse (2)

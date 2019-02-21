@@ -5,14 +5,14 @@
 void sendOrder(double kind, double price, double volume,
               double sloss, double tprofit, double deviation,
               double ticket, double source){
-    _orders[_iorder*N+0] = kind;
-    _orders[_iorder*N+1] = price;
-    _orders[_iorder*N+2] = volume;
-    _orders[_iorder*N+3] = sloss;
-    _orders[_iorder*N+4] = tprofit;
-    _orders[_iorder*N+5] = deviation;
-    _orders[_iorder*N+6] = ticket;
-    _orders[_iorder*N+7] = source;
+    _orders[_iorder*N+OK] = kind;
+    _orders[_iorder*N+OP] = price;
+    _orders[_iorder*N+OV] = volume;
+    _orders[_iorder*N+SL] = sloss;
+    _orders[_iorder*N+TP] = tprofit;
+    _orders[_iorder*N+DI] = deviation;
+    _orders[_iorder*N+TK] = ticket;
+    _orders[_iorder*N+OS] = source;
     _iorder++;
 }
 
@@ -21,10 +21,12 @@ void updatePositionStops(int ipos, double *order){
     _positions[ipos*N+TP] = ((int) order[TP] == -1)? _positions[ipos*N+TP] : order[TP];
 }
 
-void newPosition(double time, double price, double *order){
+void newPosition(double time, double price, double *order, double poskind){
     memcpy(&_positions[_ipos*N], order, sizeof(double)*7);
     _positions[_ipos*N+PT] = time; // time position opened
     _positions[_ipos*N+PP] = price;
+    _positions[_ipos*N+PK] = poskind;
+    _positions[_ipos*N+PV] = order[OV];
     updatePositionStops(_ipos, order);
 }
 
@@ -34,8 +36,8 @@ void updatePositionTime(int ipos, double time){
 
 void updatePositionPrice(int ipos, double *order, double price){
     // calculate and update average price of position (v0*p0+v1*p1)/(v0+v1)
-    double wprice = _positions[ipos*N+VV]*_positions[ipos*N+PP]+order[VV]*price;
-    wprice /= _positions[ipos*N+VV]+order[VV];
+    double wprice = _positions[ipos*N+PV]*_positions[ipos*N+PP]+order[OV]*price;
+    wprice /= _positions[ipos*N+PV]+order[OV];
     _positions[ipos*N+PP] = wprice;
 }
 
@@ -46,7 +48,7 @@ double dealResult(double price, double *order, int pos, int was_sell){
     //     0  was a buy
     //     1  was a sell
     double result = 0;
-    double volume = order[VV];
+    double volume = order[OV];
     double start_price = _positions[pos*N+PP];
     if(was_sell)
         result = volume*(start_price-price)*_tick_value-_order_cost*2;
@@ -94,13 +96,13 @@ void removeOrder(int i){
 void executeOrder(double time, double price, double *order,
         int code, int pos){
     double result = 0; // profit or loss of deal
-    double order_volume=0;
+    double reverse_volume=0;
     switch(code){
         case 0: case 1: // new position
-            newPosition(time, price, order);
+            newPosition(time, price, order, code-0);
             memcpy(&_deals_history[_ideals*N], &_positions[_ipos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
-            _deals_history[_ideals*N+DV] = order[VV];
+            _deals_history[_ideals*N+DV] = order[OV];
             _deals_history[_ideals*N+DR] = result;
             _deals_history[_ideals*N+DE] = Deal_Entry_In;
             _ipos++;
@@ -111,10 +113,10 @@ void executeOrder(double time, double price, double *order,
             updatePositionTime(pos, time);
             updatePositionStops(pos, order);
             updatePositionPrice(pos, order, price);
-            _positions[pos*N+VV] += order[VV];
+            _positions[pos*N+PV] += order[OV];
             memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
-            _deals_history[_ideals*N+DV] = order[VV];
+            _deals_history[_ideals*N+DV] = order[OV];
             _deals_history[_ideals*N+DR] = result;
             _deals_history[_ideals*N+DE] = Deal_Entry_In;
             _ideals++;
@@ -123,11 +125,10 @@ void executeOrder(double time, double price, double *order,
             result = dealResult(price, order, pos, (code%6));
             _money += result;
             updatePositionTime(pos, time);
-            _positions[pos*N*VV] -= order[VV]; // decrease volume
-            _positions[pos*N+VV] += order[VV];
+            _positions[pos*N+PV] -= order[OV]; // decrease volume
             memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
-            _deals_history[_ideals*N+DV] = order[VV];
+            _deals_history[_ideals*N+DV] = order[OV];
             _deals_history[_ideals*N+DR] = result;
             _deals_history[_ideals*N+DE] = Deal_Entry_Out;
             _ideals++;
@@ -138,25 +139,25 @@ void executeOrder(double time, double price, double *order,
             updatePositionTime(pos, time);
             memcpy(&_deals_history[_ideals*N], &_positions[pos*N], sizeof(double)*N);
             _deals_history[_ideals*N+DT] = time;
-            _deals_history[_ideals*N+DV] = order[VV];
+            _deals_history[_ideals*N+DV] = order[OV];
             _deals_history[_ideals*N+DR] = result;
             _deals_history[_ideals*N+DE] = Deal_Entry_Out;
             _ideals++;
             removePosition(pos);
             break;
         case 8: // code 8 reverse a buy
-            order_volume = order[VV]-_positions[pos*N+VV];
-            order[VV] = _positions[pos*N+VV];
-            executeOrder(time, price, order, 6, -1);
-            order[VV] = order_volume;
-            executeOrder(time, price, order, 1, -1);
+            reverse_volume = order[OV]-_positions[pos*N+PV];
+            order[OV] = _positions[pos*N+PV];
+            executeOrder(time, price, order, 6, pos); // close
+            order[OV] = reverse_volume;
+            executeOrder(time, price, order, 1, -1); // sell-in
             break;
         case 9:// code 9 reverse a sell
-            order_volume = order[VV]-_positions[pos*N+VV];
-            order[VV] = _positions[pos*N+VV];
-            executeOrder(time, price, order, 7, -1);
-            order[VV] = order_volume;
-            executeOrder(time, price, order, 0, -1);
+            reverse_volume = order[OV]-_positions[pos*N+PV];
+            order[OV] = _positions[pos*N+PV];
+            executeOrder(time, price, order, 7, pos); // close
+            order[OV] = reverse_volume;
+            executeOrder(time, price, order, 0, -1); // buy-in
             break;
     }
 }
@@ -169,7 +170,7 @@ void processOrder(double *tick, double *order, int pos){
     //    modify an existing order
     double time = tick[0];
     double price = tick[1];
-    // replace buystop and sellstop by buy and sell for a execution kind
+    // replace buystop and sellstop by buy and sell for a exec_kind
     double difvolume, exec_code = -1;
     int exec_kind = ((int) order[OK] == Order_Kind_BuyStop ||
       (int) order[OK] == Order_Kind_BuyLimit )? Order_Kind_Buy  : (int) order[OK];
@@ -177,35 +178,35 @@ void processOrder(double *tick, double *order, int pos){
       exec_kind == Order_Kind_SellLimit)? Order_Kind_Sell : exec_kind;
 
 	if(pos < 0){ // new position
-        exec_code = 0 + exec_kind;
-        executeOrder(time, price, order, exec_code, -1);
+        exec_kind = 0 + exec_kind;
+        executeOrder(time, price, order, exec_kind, -1);
     }
     else{ //modify/close an existing position
       	if(pos >= _ipos ) // not a valid position
       		return;
   		 // modify/close existing position
-        if(_positions[pos*N+OK] == exec_kind){ // same direction
+        if(_positions[pos*N+PK] == exec_kind){ // same direction
             //exec_code = 2 if exec_kind == Order_Kind_Buy else 3
-            exec_code = 2 + exec_kind;
-            executeOrder(time, price, order, exec_code, pos);
+            exec_kind = 2 + exec_kind;
+            executeOrder(time, price, order, exec_kind, pos);
         }
         else {
-            if(( ((int) _positions[pos*N+OK]) == Order_Kind_Buy && exec_kind == Order_Kind_Sell) || // was bought and now is selling
-             ( ((int) _positions[pos*N+OK]) == Order_Kind_Sell && exec_kind == Order_Kind_Buy)){ // was selling and now is buying
-                difvolume = _positions[pos*N+VV] - order[VV];
+            if(( ((int) _positions[pos*N+PK]) == Position_Kind_Buy && exec_kind == Order_Kind_Sell) || // was bought and now is selling
+             ( ((int) _positions[pos*N+PK]) == Position_Kind_Sell && exec_kind == Order_Kind_Buy)){ // was selling and now is buying
+                difvolume = _positions[pos*N+PV] - order[OV];
                 difvolume = (difvolume>0)? 1: (difvolume==0)? 0: -1;
                 switch((int) difvolume){
                     case 0: // closing
-                    exec_code = 6 + _positions[pos*N+OK];
-                    executeOrder(time, price, order, exec_code, pos);
+                    exec_kind = 6 + _positions[pos*N+PK];
+                    executeOrder(time, price, order, exec_kind, pos);
                     break;
                     case 1: //  decreasing position
-                    exec_code = 4 + _positions[pos*N+OK];
-                    executeOrder(time, price, order, exec_code, pos);
+                    exec_kind = 4 + _positions[pos*N+PK];
+                    executeOrder(time, price, order, exec_kind, pos);
                     break;
                     case -1: // reversing position
-                    exec_code = 8 + _positions[pos*N+OK];
-                    executeOrder(time, price, order, exec_code, pos);
+                    exec_kind = 8 + _positions[pos*N+PK];
+                    executeOrder(time, price, order, exec_kind, pos);
                     break;
                 }
             }
@@ -281,33 +282,35 @@ void evaluateOrders(double *tick){
 }
 
 
+// need to implement Order_Kind_BuyStop Order_Kind_BuyLimit etc.
+// maybe should implement position direction
 void evaluateStops(double *tick){
     double price = tick[1];
     for(int i=0; i<_ipos; i++){
-        if( (int) _positions[i*N+OK] == Order_Kind_Buy){
+        if( (int) _positions[i*N+PK] == Position_Kind_Buy){
             if( _positions[i*N+SL] != -1 &&
                price <= _positions[i*N+SL]){
                 // deviation high to make sure it`s executed
-                sendOrder(Order_Kind_Sell, price, _positions[i*N+VV], -1, -1,
+                sendOrder(Order_Kind_Sell, price, _positions[i*N+PV], -1, -1,
                           1000, i, Order_Source_Stop_Loss);
             }
             else
             if( _positions[i*N+TP] != -1 &&
                 price >= _positions[i*N+TP])
-                sendOrder(Order_Kind_Sell, price, _positions[i*N+VV], -1, -1,
+                sendOrder(Order_Kind_Sell, price, _positions[i*N+PV], -1, -1,
                           1000, i, Order_Source_Take_Profit);
         }
         else { // sell position
             if( _positions[i*N+SL] != -1 &&
                price >= _positions[i*N+SL]){
                 // deviation high to make sure it`s executed
-                sendOrder(Order_Kind_Buy, price, _positions[i*N+VV], -1, -1,
+                sendOrder(Order_Kind_Buy, price, _positions[i*N+PV], -1, -1,
                           1000, i, Order_Source_Stop_Loss);
             }
             if( _positions[i*N+TP] != -1 &&
                 price <= _positions[i*N+TP])
                 // deviation high to make sure it`s executed
-                sendOrder(Order_Kind_Buy, price, _positions[i*N+VV], -1, -1,
+                sendOrder(Order_Kind_Buy, price, _positions[i*N+PV], -1, -1,
                           1000, i, Order_Source_Take_Profit);
         }
     }
@@ -319,9 +322,9 @@ double positionsValue(double *tick){
     double volume, start_price, value = 0;
     // possible parallel
     for(int i=0; i<_ipos;i++){
-        volume = _positions[i*N+VV];
+        volume = _positions[i*N+PV];
         start_price = _positions[i*N+PP];
-        if( (int) _positions[i*N+OK] == Order_Kind_Buy)
+        if( (int) _positions[i*N+PK] == Position_Kind_Buy)
             value += volume*(price-start_price)*_tick_value-_order_cost*2;
         else
             value += volume*(start_price-price)*_tick_value-_order_cost*2;

@@ -4,8 +4,8 @@ import datetime
 import random
 from numba import jit, njit, prange
 from algos.util import progressbar
-from algos.backtest.metaEngine import *
-
+#from algos.backtest.metaEngine import *
+    
 @njit(nogil=True, parallel=True)
 def _sortina(money, risk_free):
     """reward-to-variability ratio fast sortina numba"""

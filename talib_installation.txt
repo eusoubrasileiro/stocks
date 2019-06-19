@@ -2,6 +2,20 @@ From here:.
 
 https://mrjbq7.github.io/ta-lib/install.html
 
+Windows:
+
+Use this binary package here:
+
+https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
+search for 'TA-Lib'
+Place it in C:\ such as C:\talib is the folder.
+
+use something like this to install the whl package above using the library:
+
+`C:\ta-lib\c>pip install D:\Users\alferreira\Downloads\TA_Lib-0.4.17-cp37-cp37m-win_amd64.whl`
+
+Linux:
+
 Download de source code and:.
 
 $ untar and cd
@@ -21,5 +35,3 @@ cd /usr/local/lib/talib/lib
 cp * /home/alferreira/anaconda3/lib
 
 Everything is ready.
-
-

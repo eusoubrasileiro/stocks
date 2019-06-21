@@ -1,0 +1,10 @@
+Install https://atom.io/packages/file-types
+
+And copy this to Atom>File>Config..
+
+to associate mql5 language to C++ syntax
+
+"*":
+  "file-types":
+     "*.mq5": "source.cpp"
+     "*.mqh": "source.cpp"

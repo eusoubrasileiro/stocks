@@ -89,7 +89,7 @@ void ClosePositionbyTime(){
    //--- if the MagicNumber matches MagicNumber of the position
    if(PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)
       return;
-    
+
    if(positiontime +  expiretime > timenow && timenow < dayend )
         return;
     // close whatever volume is open
@@ -175,4 +175,21 @@ int ndealsDay(){
       }
     }
     return open;
+}
+
+void pivotPoints(MqlRates &rates[], double &pivots[]){
+    // S3 and R3 are too low or too high normally never reached I found
+    int size = ArraySize(rates);
+    ArrayResize(pivots, size*4);
+
+    // for every day in mqlrate calculate the pivot points
+    for(int i=0; i<size; i++){
+        pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
+        pivots[i*4] = pivot*2 - rates[i].low; // R1
+        pivots[i*4+1] = pivot + rates[i].high - rates[i].low; // R2
+        pivots[i*4+2] = pivot*2 - rates[i].high; // S1
+        pivots[i*4+3] = pivot - rates[i].high + rates[i].low; // S2
+    }
+
+    ArraySort(pivots);
 }

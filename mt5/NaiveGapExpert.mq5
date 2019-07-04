@@ -72,11 +72,20 @@ double stopStdev(){
     return stdev[0]*2;
 }
 
-void PlaceOrder(int sign, double tp){
+#include <Arrays\ArrayDouble.mqh>
+
+void PlaceOrders(int sign, double tp){
+    double pivots[];
+    CArrayDouble *cpivots = new CArrayDouble;
     MqlTradeRequest request={0};
     MqlTradeResult result={0};
     int ncontracts = 1;
     double stop;
+    int pos;
+
+    pivotPoints(mqlrates, pivots)
+    cpivots.AddArray(pivots);
+
 
     // stop loss based on standard deviation of last 5 days on H4 time-frame
     stop = stopStdev();
@@ -88,6 +97,15 @@ void PlaceOrder(int sign, double tp){
     request.symbol=sname;                               // symbol
     //+ postive buy order
     if(sign > 0){
+
+      //Place Buy Limit Orders
+      // search all supports bellow the asking price
+      // array is ascending sorted so first element greater
+      // them the  ask price defines the boundary of the supports
+      // all supports for this ask price are before this position one element
+      // pos = SearchGreat(SYMBOL_ASK);
+      // PlaceLimitOrders(pivots, pos-1, 2); // last param is ratio
+
       request.price= SymbolInfoDouble(request.symbol, SYMBOL_ASK); // ask price
       request.type=ORDER_TYPE_BUY;
       // stop loss and take profit 3:1 rount to 5
@@ -95,7 +113,7 @@ void PlaceOrder(int sign, double tp){
       request.tp = MathFloor(request.tp/ticksize)*ticksize;
       double range = request.tp - request.price;
       //request.sl = request.price-stop;
-      request.sl = request.price - 5*range; // 1:3
+      request.sl = request.price - 500; // 1:3
       request.sl = MathFloor(request.sl/ticksize)*ticksize;
     }
     else{
@@ -106,8 +124,11 @@ void PlaceOrder(int sign, double tp){
       request.tp = MathFloor(request.tp/ticksize)*ticksize;
       double range =  request.price - request.tp;
       //request.sl = request.price+stop;
-      request.sl = request.price + 5*range; // 1:3
+      request.sl = request.price + 500; // 1:3
       request.sl = MathFloor(request.sl/ticksize)*ticksize;
+
+      // place Sell Limit Orders
+      pos = SearchGreat(SYMBOL_BID);
     }
 
     request.volume=quantity*ncontracts; // volume executed in contracts
@@ -147,17 +168,18 @@ void OnTimer() {
       }
 
       previousday = todaynow;  // just entered a position today
-      
+
       gap = todayopen[0] - pdayclose[0];
       // positive gap will close so it is a sell order
       // negative gap will close si it is a by order
       if (MathAbs(gap) < 250 && MathAbs(gap) > 50 ){ // Go in
         gapsign = gap/MathAbs(gap);
+
         // place take profit 25 points before gap close
-        PlaceOrder(-gapsign, pdayclose[0]+(gapsign*25));        
+        PlaceOrders(-gapsign, pdayclose[0]+(gapsign*25));
       }
 
-      
+
     }
 
     // in case did not reach the take profit close it by the day end

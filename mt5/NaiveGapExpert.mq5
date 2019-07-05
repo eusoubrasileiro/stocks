@@ -1,5 +1,6 @@
 #property copyright "Andre L. Ferreira"
 #property version   "1.01"
+#include <Arrays\ArrayDouble.mqh>
 #include "GapDefinitions.mqh"
 
 // 5 days simple moving average window for stdev calculation on H4 time frame
@@ -7,6 +8,7 @@ const int  window=5*2;
 int hstdev;
 MqlDateTime previousday;
 bool alreadyin = false; // // did not entry yet
+int positions; // number of openned positions
 
 //| Expert initialization function
 int OnInit(){
@@ -21,7 +23,7 @@ int OnInit(){
 
    // start day is the previous day
    TimeCurrent(previousday);
-   alreadyin = false;
+   positions = PositionsTotal(); // number of openned positions
 
    // time in seconds from 1970 current time
    Print("Begining Gap Expert now: ", TimeCurrent());
@@ -72,29 +74,58 @@ double stopStdev(){
     return stdev[0]*2;
 }
 
-#include <Arrays\ArrayDouble.mqh>
-
-void PlaceOrders(int sign, double tp){
-    double pivots[];
-    CArrayDouble *cpivots = new CArrayDouble;
+void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 buy sell otherwise
     MqlTradeRequest request={0};
     MqlTradeResult result={0};
-    int ncontracts = 1;
-    double stop;
-    int pos;
 
-    pivotPoints(mqlrates, pivots)
+    request.action=TRADE_ACTION_PENDING;      // type of trade operation
+    request.price = MathFloor(entry/ticksize)*ticksize;; // ask price
+    request.tp = tp;
+    request.tp = MathFloor(request.tp/ticksize)*ticksize;
+    request.sl = sl;
+    request.sl = MathFloor(request.sl/ticksize)*ticksize;
+
+    if(sign > 0)
+        request.type = ORDER_TYPE_BUY_LIMIT;
+    else
+        request.type = ORDER_TYPE_SELL_LIMIT;
+
+    request.volume=quantity; // volume executed in contracts
+    request.deviation=deviation*ticksize;    //  allowed deviation from the price
+    request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
+
+    if(!OrderSend(request,result))
+        Print("Place Limit Order OrderSend error ",GetLastError());
+    //--- information about the operation
+    Print("retcode ",result.retcode,"  deal ", result.deal);
+
+}
+
+void PlaceOrders(int sign, double tp){
+    MqlTradeRequest request={0};
+    MqlTradeResult result={0};
+    int pos;
+    MqlRates rates[];
+    double pivots[];
+    CArrayDouble *cpivots = new CArrayDouble;
+    double sl;
+
+    CopyRates(sname, PERIOD_D1, 0, 5, rates); // 5 last days
+    pivotPoints(rates, pivots);
     cpivots.AddArray(pivots);
 
-
-    // stop loss based on standard deviation of last 5 days on H4 time-frame
-    stop = stopStdev();
-    if(stop == 0)
-      stop = 1000;
+    // // stop loss based on standard deviation of last 5 days on H4 time-frame
+    // stop = stopStdev();
+    // if(stop == 0)
+    //   stop = 1000;
 
     //--- parameters of request
     request.action=TRADE_ACTION_DEAL;      // type of trade operation
     request.symbol=sname;                               // symbol
+
+    request.tp = tp;
+    request.tp = MathFloor(request.tp/ticksize)*ticksize;
+
     //+ postive buy order
     if(sign > 0){
 
@@ -103,35 +134,37 @@ void PlaceOrders(int sign, double tp){
       // array is ascending sorted so first element greater
       // them the  ask price defines the boundary of the supports
       // all supports for this ask price are before this position one element
-      // pos = SearchGreat(SYMBOL_ASK);
-      // PlaceLimitOrders(pivots, pos-1, 2); // last param is ratio
+      pos = cpivots.SearchGreat(SYMBOL_ASK)-1; // position of first pivot bigger than ask price
+      // everything before are supports
+      sl = pivots[0]; // and the first support is the SL
+      // for every support bellow ask price (except first) put a buy limit order
+      // with the same target
+      for(int i=1; i<pos; i+=1)
+        PlaceLimitOrders(pivots[i], sl, tp, sign);
 
+      // Finally place the first buy order Now!
       request.price= SymbolInfoDouble(request.symbol, SYMBOL_ASK); // ask price
       request.type=ORDER_TYPE_BUY;
-      // stop loss and take profit 3:1 rount to 5
-      request.tp = tp;
-      request.tp = MathFloor(request.tp/ticksize)*ticksize;
-      double range = request.tp - request.price;
       //request.sl = request.price-stop;
-      request.sl = request.price - 500; // 1:3
-      request.sl = MathFloor(request.sl/ticksize)*ticksize;
     }
     else{
-      request.price= SymbolInfoDouble(request.symbol, SYMBOL_BID); // ask price
-      request.type=ORDER_TYPE_SELL;
-      // stop loss and take profit 3:1 rount to 5
-      request.tp = tp;
-      request.tp = MathFloor(request.tp/ticksize)*ticksize;
-      double range =  request.price - request.tp;
-      //request.sl = request.price+stop;
-      request.sl = request.price + 500; // 1:3
-      request.sl = MathFloor(request.sl/ticksize)*ticksize;
 
-      // place Sell Limit Orders
-      pos = SearchGreat(SYMBOL_BID);
+      pos = cpivots.SearchGreat(SYMBOL_BID)-1; // position of first pivot bigger than bid price
+      // everything including this above are resistences
+      sl = pivots[ArraySize(pivots)-1]; // and the last resistence is the SL
+      // for every resistence above the bid price (except last) put a sell limit order
+      // with the same target
+      for(int i=pos; i<pos-1; i+=1)
+        PlaceLimitOrders(pivots[i], sl, tp, sign);
+
+        // Finally place the first  sell Now!
+        request.price= SymbolInfoDouble(request.symbol, SYMBOL_BID); // bid price
+        request.type=ORDER_TYPE_SELL;
     }
 
-    request.volume=quantity*ncontracts; // volume executed in contracts
+    request.sl = sl; // 1:3
+    request.sl = MathFloor(request.sl/ticksize)*ticksize;
+    request.volume=quantity; // volume executed in contracts
     request.deviation=deviation*ticksize;    //  allowed deviation from the price
     request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
     if(!OrderSend(request,result))
@@ -200,9 +233,15 @@ void OnTick(){
 
 //| Trade function                                                   |
 void OnTrade(){
-     // when position is closed zeroed the lastemachange
-    //if(PositionsTotal()==0 || PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)
-    //    tsop.clean();
+
+    // just closed a position by time, stop or whatever
+    if(PositionsTotal() == 0 && previous_positions == 1){
+        CloseOpenOrders(); // close all pending limit orders
+        previous_positions = 0;
+    }
+    else
+        previous_positions = PositionsTotal();
+
 }
 
 //| TradeTransaction function                                        |

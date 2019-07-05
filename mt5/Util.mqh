@@ -112,6 +112,40 @@ void ClosePositionbyTime(){
     Print("Closed by Time - retcode ",result.retcode," deal ",result.deal);
 }
 
+void CloseOpenOrders(){
+      int total = OrdersTotal();
+      for(int i=total-1;i>=0;i--)
+      {
+        OrderSelect(i, SELECT_BY_POS);
+        int type   = OrderType();
+
+        bool result = false;
+
+        switch(type)
+        {
+          //Close opened long positions
+          case OP_BUY       : result = OrderClose( OrderTicket(), OrderLots(), MarketInfo(OrderSymbol(), MODE_BID), 5, Red );
+                              break;
+          //Close opened short positions
+          case OP_SELL      : result = OrderClose( OrderTicket(), OrderLots(), MarketInfo(OrderSymbol(), MODE_ASK), 5, Red );
+                              break;
+          //Close pending orders
+          case OP_BUYLIMIT  :
+          case OP_BUYSTOP   :
+          case OP_SELLLIMIT :
+          case OP_SELLSTOP  : result = OrderDelete( OrderTicket() );
+        }
+
+        if(result == false)
+        {
+          Alert("Order " , OrderTicket() , " failed to close. Error:" , GetLastError() );
+          Sleep(3000);
+        }
+      }
+
+      return(0);
+}
+
 datetime dayEnd(datetime timenow){
     // set end of THIS day for operations, 15 minutes before closing the stock market
     // http://www.b3.com.br/en_us/solutions/platforms/puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/

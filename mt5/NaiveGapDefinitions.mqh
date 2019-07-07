@@ -9,8 +9,8 @@ const double ticksize=5; // minicontratos ibovespa 5 points price variation
 // deviation accept by price in tick sizes
 const double deviation=5;
 // expert operations end (no further sells or buys) close all positions
-const int endhour=15;
-const int endminute=30;
+const int endhour=14;
+const int endminute=00;
 
 //--- object for performing trade operations - Trade Class
 CTrade  trade;

@@ -8,7 +8,7 @@
 const int  window=5*2;
 int hstdev;
 MqlDateTime previousday;
-bool alreadyin = false; // // did not entry yet
+
 int previous_positions; // number of openned positions
 
 //| Expert initialization function
@@ -91,7 +91,7 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 
         result = trade.BuyLimit(quantity, entry, sname, sl, tp);
     else
         result = trade.SellLimit(quantity, entry, sname, sl, tp);
-        
+
     if(!result)
           Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
                 ". Code description: ",trade.ResultRetcodeDescription());
@@ -156,7 +156,7 @@ void PlaceOrders(int sign, double tp){
       // for every resistence above the bid price (except last) put a sell limit order
       // with the same target
       sl = MathFloor(sl/ticksize)*ticksize;
-      
+
       for(int i=pos; i<MathMin(size, pos+2); i+=1)
         PlaceLimitOrder(pivots[i], sl, tp, sign);
 
@@ -173,16 +173,30 @@ void PlaceOrders(int sign, double tp){
 }
 
 
+double gap_tp;  // gap take profit
+bool on_gap=false;
 
 //| Timer function -- Every 5 minutes
 void OnTimer() {
     double pdayclose[2];
-    double todayopen[1]; // previous day close and open today
+    MqlRates ratesnow[1]; // previous day close and open today
     MqlDateTime todaynow;
     int copied, gapsign;
     double gap;
 
     TimeCurrent(todaynow);
+
+    copied = CopyRates(sname, PERIOD_M5, 0, 1, ratesnow);
+    if( copied == -1){
+      Print("Failed to get today data");
+      return;
+    }
+
+    // check if gap take profit was reached if so close all pending orders
+    if(gap_tp >= ratesnow[0].low && gap_tp <= ratesnow[0].high && on_gap){
+        CloseOpenOrders();
+        on_gap = false;
+    }
 
     if(todaynow.day != previousday.day){
 
@@ -192,30 +206,26 @@ void OnTimer() {
         return;
       }
 
-      copied = CopyOpen(sname, PERIOD_M5, 0, 1, todayopen);
-      if( copied == -1){
-        Print("Failed to get today data");
-        return;
-      }
-
       previousday = todaynow;  // just entered a position today
 
-      gap = todayopen[0] - pdayclose[0];
+      gap = ratesnow[0].open - pdayclose[0];
       // positive gap will close so it is a sell order
       // negative gap will close si it is a by order
-      if (MathAbs(gap) < 320 && MathAbs(gap) > 100 ){ // Go in
+      if (MathAbs(gap) < 320 && MathAbs(gap) > 80){ // Go in
         gapsign = gap/MathAbs(gap);
 
         // place take profit 15 points before gap close
-        PlaceOrders(-gapsign, pdayclose[0]+gapsign*15);
+        gap_tp = pdayclose[0]+gapsign*15;
+        PlaceOrders(-gapsign, gap_tp);
       }
-
-
+      on_gap = true;
     }
+
 
     // in case did not reach the take profit close it by the day end
     // check to see if we should close any position
     DayEndingClosePositions();
+
  }
 
 // Useless stuff
@@ -245,8 +255,9 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
                             if(PositionsTotal() == 0 && previous_positions == 1){
                                 CloseOpenOrders(); // close all pending limit orders
                                 previous_positions = 0;
+                                on_gap = false;
                             }
-                                previous_positions = PositionsTotal();                        
+                                previous_positions = PositionsTotal();
                         }
 }
 

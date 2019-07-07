@@ -193,7 +193,7 @@ Learning to remember: Lost 20k due no stop loss and not sure that prediction was
 
 - [x] Implemented `NaiveExpert` based on `prototypes\Numpy Naive Buy - WIN` using pattern of 5 minutes up trend before to buy and surf on the uptrend.  Made backtest on metatrader 5 and it's clear that you cannot garantee that will buy on the `Open` and sell on the `Open` using the close by time is clearly otherwise. The metatrader 5 backtesting engine is really robust using 1 minute data OHLC to create aproximated Tick's using bar patterns. The accuracy went from 90% to 45% on real backtesting on metatrader 5. So better really use worst case buy scenario on a 1 minute backtesting engine `buy on high and sell on low`. Another conclusion a new backtest engine based on ticks would help not waste time tasting naive strategies.
 
--[ ] Implement `NaiveSupports` based on volume at price using Gaussian Mixture Models. Use maximum data of 21-days for support and resistences calculation. Calculate supports and resistences at every 5 minutes? and place stop or limit orders accordingly. Should use  Additionally maybe should consider using bigger positions where the trajectory is clear and small positions were there are many support and resistences close-by. 
+-[ ] Implement `NaiveSupports` based on volume at price using Gaussian Mixture Models. Use maximum data of 21-days for support and resistences calculation. Calculate supports and resistences at every 5 minutes? and place stop or limit orders accordingly. Should use  Additionally maybe should consider using bigger positions where the trajectory is clear and small positions were there are many support and resistences close-by.
 
 #### Milestone : based on algorithm trading pillars totally refactoring of backtesting Engine
 
@@ -209,4 +209,14 @@ Many results above point to the need of a more realistic backtest engine support
 That is done using `ctypes`
 - [x] old back-test engine were renamed as `_old` since their reliability was questionable
 - [ ] refactor strategyTester old `stester`
-- [ ] console program to make some unit tests `metaEngine.c` ?
+- [ ] console program to make some unit tests `metaEngine.c` ?\
+
+#### Milestone : first real profitable EA on back-test on Metatrader 5
+
+- [x] Implement `NaiveGapExpert` based on analysis that ~93% of gaps smaller than 230 points close for `WIN@` mini-bovespa (prototype `Gaps Closing Patterns - WIN`) Used 4 pivot points (R1, R2, S1 and S2) formula on each of the last 5 days and placed limit orders on support and resistances closer to the open-price. Limit orders where limited to 2 per gap. Metatrader 5 backtest gave first EA profitable with 8 expected pay-off and sharp of 0.08. Back-tested also with `WIN@D` and `WIN@N` with similar results.     
+    - [x] Need to remove limit orders if gap is reached before they are triggered
+    - [ ] Remove support-resistances equal or too close from array of pivots
+    - [ ] Use different stop-loss for each limit orders smaller
+    - [ ] Can be improved by using better support and resistences based on volume at price
+    - [ ] Maybe use trailling stops?
+    - [ ] Use different size of positions for different support/resistences?

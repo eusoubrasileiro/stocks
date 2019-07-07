@@ -1,19 +1,26 @@
 #property copyright "Andre L. Ferreira"
 #property version   "1.01"
 #include <Arrays\ArrayDouble.mqh>
-#include "GapDefinitions.mqh"
+#include <Trade\Trade.mqh>
+#include "NaiveGapDefinitions.mqh"
 
 // 5 days simple moving average window for stdev calculation on H4 time frame
 const int  window=5*2;
 int hstdev;
 MqlDateTime previousday;
 bool alreadyin = false; // // did not entry yet
-int positions; // number of openned positions
+int previous_positions; // number of openned positions
 
 //| Expert initialization function
 int OnInit(){
 
    EventSetTimer(5);
+
+   trade.SetExpertMagicNumber(EXPERT_MAGIC);
+   trade.SetDeviationInPoints(deviation*ticksize);
+   //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
+   trade.SetAsyncMode(true);
+
    hstdev = iStdDev(sname, PERIOD_H4, window, 0, MODE_SMA, PRICE_CLOSE);
 
    if(hstdev == INVALID_HANDLE){
@@ -23,7 +30,7 @@ int OnInit(){
 
    // start day is the previous day
    TimeCurrent(previousday);
-   positions = PositionsTotal(); // number of openned positions
+   previous_positions = PositionsTotal(); // number of openned positions
 
    // time in seconds from 1970 current time
    Print("Begining Gap Expert now: ", TimeCurrent());
@@ -75,56 +82,42 @@ double stopStdev(){
 }
 
 void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 buy sell otherwise
-    MqlTradeRequest request={0};
-    MqlTradeResult result={0};
-
-    request.action=TRADE_ACTION_PENDING;      // type of trade operation
-    request.price = MathFloor(entry/ticksize)*ticksize;; // ask price
-    request.tp = tp;
-    request.tp = MathFloor(request.tp/ticksize)*ticksize;
-    request.sl = sl;
-    request.sl = MathFloor(request.sl/ticksize)*ticksize;
+    bool result = false;
+    entry = MathFloor(entry/ticksize)*ticksize;; // ask price
+    tp = MathFloor(tp/ticksize)*ticksize;
+    sl = MathFloor(sl/ticksize)*ticksize;
 
     if(sign > 0)
-        request.type = ORDER_TYPE_BUY_LIMIT;
+        result = trade.BuyLimit(quantity, entry, sname, sl, tp);
     else
-        request.type = ORDER_TYPE_SELL_LIMIT;
-
-    request.volume=quantity; // volume executed in contracts
-    request.deviation=deviation*ticksize;    //  allowed deviation from the price
-    request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
-
-    if(!OrderSend(request,result))
-        Print("Place Limit Order OrderSend error ",GetLastError());
-    //--- information about the operation
-    Print("retcode ",result.retcode,"  deal ", result.deal);
-
+        result = trade.SellLimit(quantity, entry, sname, sl, tp);
+        
+    if(!result)
+          Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
+                ". Code description: ",trade.ResultRetcodeDescription());
+    else
+         Print("Buy()/Sell() Limit method executed successfully. Return code=",trade.ResultRetcode(),
+                " (",trade.ResultRetcodeDescription(),")");
 }
 
 void PlaceOrders(int sign, double tp){
-    MqlTradeRequest request={0};
-    MqlTradeResult result={0};
-    int pos;
+    int pos, size;
     MqlRates rates[];
     double pivots[];
-    CArrayDouble *cpivots = new CArrayDouble;
     double sl;
+    bool result;
 
     CopyRates(sname, PERIOD_D1, 0, 5, rates); // 5 last days
     pivotPoints(rates, pivots);
-    cpivots.AddArray(pivots);
-
+    size = ArraySize(pivots);
     // // stop loss based on standard deviation of last 5 days on H4 time-frame
     // stop = stopStdev();
     // if(stop == 0)
     //   stop = 1000;
-
-    //--- parameters of request
-    request.action=TRADE_ACTION_DEAL;      // type of trade operation
-    request.symbol=sname;                               // symbol
-
-    request.tp = tp;
-    request.tp = MathFloor(request.tp/ticksize)*ticksize;
+    double bid, ask;
+    bid = SymbolInfoDouble(sname,SYMBOL_BID);
+    ask = SymbolInfoDouble(sname,SYMBOL_ASK);
+    tp = MathFloor(tp/ticksize)*ticksize;
 
     //+ postive buy order
     if(sign > 0){
@@ -134,44 +127,49 @@ void PlaceOrders(int sign, double tp){
       // array is ascending sorted so first element greater
       // them the  ask price defines the boundary of the supports
       // all supports for this ask price are before this position one element
-      pos = cpivots.SearchGreat(SYMBOL_ASK)-1; // position of first pivot bigger than ask price
+      pos = searchGreat(pivots, ask); // position of first pivot bigger than ask price
+      if(pos == -1)
+        return; // this is an error somthing is wrong
+        //pos = ArraySize(pivots);
       // everything before are supports
-      sl = pivots[0]; // and the first support is the SL
+      sl = pivots[MathMax(0, pos-3)]; // and the first support is the SL
+     // sl = ask-500;
+      sl = MathFloor(sl/ticksize)*ticksize;
       // for every support bellow ask price (except first) put a buy limit order
       // with the same target
-      for(int i=1; i<pos; i+=1)
-        PlaceLimitOrders(pivots[i], sl, tp, sign);
+      for(int i=MathMax(0, pos-2); i<pos; i+=1)
+        PlaceLimitOrder(pivots[i], sl, tp, sign);
 
       // Finally place the first buy order Now!
-      request.price= SymbolInfoDouble(request.symbol, SYMBOL_ASK); // ask price
-      request.type=ORDER_TYPE_BUY;
-      //request.sl = request.price-stop;
+      //result = trade.Buy(quantity, sname, ask,sl, tp);
     }
     else{
 
-      pos = cpivots.SearchGreat(SYMBOL_BID)-1; // position of first pivot bigger than bid price
+      pos = searchGreat(pivots, bid); // position of first pivot bigger than bid price
+      // so everything above including this are resistences
+      if(pos == -1)
+        return; // something is wrong
+
       // everything including this above are resistences
-      sl = pivots[ArraySize(pivots)-1]; // and the last resistence is the SL
+      sl = pivots[MathMin(size-1, pos+3)]; // and the last resistence is the SL
+      //sl = bid+500;
       // for every resistence above the bid price (except last) put a sell limit order
       // with the same target
-      for(int i=pos; i<pos-1; i+=1)
-        PlaceLimitOrders(pivots[i], sl, tp, sign);
+      sl = MathFloor(sl/ticksize)*ticksize;
+      
+      for(int i=pos; i<MathMin(size, pos+2); i+=1)
+        PlaceLimitOrder(pivots[i], sl, tp, sign);
 
         // Finally place the first  sell Now!
-        request.price= SymbolInfoDouble(request.symbol, SYMBOL_BID); // bid price
-        request.type=ORDER_TYPE_SELL;
+       // result = trade.Sell(quantity, sname, bid, sl, tp);
     }
 
-    request.sl = sl; // 1:3
-    request.sl = MathFloor(request.sl/ticksize)*ticksize;
-    request.volume=quantity; // volume executed in contracts
-    request.deviation=deviation*ticksize;    //  allowed deviation from the price
-    request.magic=EXPERT_MAGIC;   // MagicNumber for this Expert
-    if(!OrderSend(request,result))
-        Print("BuyNow OrderSend error ",GetLastError());
-    //--- information about the operation
-    Print("retcode ",result.retcode,"  deal ",result.deal);
-    //--- output information about the closure by opposite position
+    if(!result)
+          Print("Buy()/Sell() method failed. Return code=",trade.ResultRetcode(),
+                ". Code description: ",trade.ResultRetcodeDescription());
+    else
+         Print("Buy()/Sell() method executed successfully. Return code=",trade.ResultRetcode(),
+                " (",trade.ResultRetcodeDescription(),")");
 }
 
 
@@ -205,11 +203,11 @@ void OnTimer() {
       gap = todayopen[0] - pdayclose[0];
       // positive gap will close so it is a sell order
       // negative gap will close si it is a by order
-      if (MathAbs(gap) < 250 && MathAbs(gap) > 50 ){ // Go in
+      if (MathAbs(gap) < 320 && MathAbs(gap) > 100 ){ // Go in
         gapsign = gap/MathAbs(gap);
 
-        // place take profit 25 points before gap close
-        PlaceOrders(-gapsign, pdayclose[0]+(gapsign*25));
+        // place take profit 15 points before gap close
+        PlaceOrders(-gapsign, pdayclose[0]+gapsign*15);
       }
 
 
@@ -234,13 +232,7 @@ void OnTick(){
 //| Trade function                                                   |
 void OnTrade(){
 
-    // just closed a position by time, stop or whatever
-    if(PositionsTotal() == 0 && previous_positions == 1){
-        CloseOpenOrders(); // close all pending limit orders
-        previous_positions = 0;
-    }
-    else
-        previous_positions = PositionsTotal();
+
 
 }
 
@@ -248,9 +240,14 @@ void OnTrade(){
 void OnTradeTransaction(const MqlTradeTransaction &trans,
                         const MqlTradeRequest &request,
                         const MqlTradeResult &result){
-
-
-
+                        if ( trans.type == TRADE_TRANSACTION_DEAL_ADD){
+                            // just closed a position by time, stop or whatever
+                            if(PositionsTotal() == 0 && previous_positions == 1){
+                                CloseOpenOrders(); // close all pending limit orders
+                                previous_positions = 0;
+                            }
+                                previous_positions = PositionsTotal();                        
+                        }
 }
 
 //| TesterInit function

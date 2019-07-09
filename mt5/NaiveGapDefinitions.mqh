@@ -13,8 +13,8 @@ const double ticksize=5; // minicontratos ibovespa 5 points price variation
 // deviation accept by price in tick sizes
 const double deviation=5;
 // expert operations end (no further sells or buys) close all positions
-const int endhour=14;
-const int endminute=00;
+const int endhour=15;
+const int endminute=30;
 
 //--- object for performing trade operations - Trade Class
 CTrade  trade;
@@ -115,7 +115,7 @@ void pivotPoints(MqlRates &rates[], double &pivots[]){
     double pivot;
 
     // for every day in mqlrate calculate the pivot points
-    for(int i=0; i<size; i++){
+        for(int i=0; i<size; i++){
         pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
         pivots[i*4] = pivot*2 - rates[i].low; // R1
         pivots[i*4+1] = pivot + rates[i].high - rates[i].low; // R2
@@ -126,6 +126,7 @@ void pivotPoints(MqlRates &rates[], double &pivots[]){
     ArraySort(pivots);
     size = Unique(pivots, size*4);
     ArrayResize(pivots, size);
+    size = ArraySize(pivots);
 
     for(int i=0; i<size; i++)
         Print(i+": "+StringFormat("%G", pivots[i]));

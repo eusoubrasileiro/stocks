@@ -37,49 +37,14 @@ int OnInit(){
    return(INIT_SUCCEEDED);
 }
 
-
-//// will not be needed
-//double percentile(double &data[], double perc)
-//    double sorted[];
-//    ArrayCopy(sorted, data, 0, 0, WHOLE_ARRAY)
-//    as = ArraySize(sorted)
-//    ArraySort(sorted)
-//    int n = MathMax(MathRound(perc * as + 0.5), 2)
-//    return sorted[n-2]
-
-// bool isBuyPattern(){ // is up trend
-//     double stdh[5];
-//     double stdl[5];
-//     double emah[6];
-//     double emal[6];
-//     bool isbuypattern = true;
-//
-//     if (CopyBuffer(hstdevh, 0, 0, 5, stdh) != 5 ||
-//         CopyBuffer(hstdevl, 0, 0, 5, stdl) != 5 ||
-//         CopyBuffer(hemah, 0, 0, 6, emah) != 6 || // 5+1 due diff
-//         CopyBuffer(hemal, 0, 0, 6, emal) != 6
-//         ){
-//        Print("CopyBuffer from isPattern failed");
-//        return false;
-//     }
-//     for(int i=1; i<6; i++)
-//         if(emah[i]-emah[i-1] <= 0 || emal[i]-emal[i-1] <=0 ||
-//            stdh[i-1] <= 15 || stdh[i-1] >= 90 ||
-//            stdl[i-1] <= 15 || stdl[i-1] >= 90 || stdl[i-1]  > stdh[i-1] + 40 || stdh[i-1]  > stdl[i-1] + 40 ){
-//                isbuypattern = false;
-//                break;
-//            }
-//     return isbuypattern;
+// double stopStdev(){
+//     double stdev[1];
+//     if (CopyBuffer(hstdev, 0, 0, 1, stdev) != 1){
+//        Print("CopyBuffer from Stdev failed");
+//        return 0;
+//        }
+//     return stdev[0]*2;
 // }
-
-double stopStdev(){
-    double stdev[1];
-    if (CopyBuffer(hstdev, 0, 0, 1, stdev) != 1){
-       Print("CopyBuffer from Stdev failed");
-       return 0;
-       }
-    return stdev[0]*2;
-}
 
 void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 buy sell otherwise
     bool result = false;
@@ -105,7 +70,7 @@ void PlaceOrders(int sign, double tp){
     MqlRates rates[];
     double pivots[];
     double sl;
-    bool result;
+    //bool result;
 
     CopyRates(sname, PERIOD_D1, 1, 5, rates); // 5 last days
     pivotPoints(rates, pivots);
@@ -164,12 +129,12 @@ void PlaceOrders(int sign, double tp){
        // result = trade.Sell(quantity, sname, bid, sl, tp);
     }
 
-    if(!result)
-          Print("Buy()/Sell() method failed. Return code=",trade.ResultRetcode(),
-                ". Code description: ",trade.ResultRetcodeDescription());
-    else
-         Print("Buy()/Sell() method executed successfully. Return code=",trade.ResultRetcode(),
-                " (",trade.ResultRetcodeDescription(),")");
+    //if(!result)
+    //      Print("Buy()/Sell() method failed. Return code=",trade.ResultRetcode(),
+    //            ". Code description: ",trade.ResultRetcodeDescription());
+    //else
+    //     Print("Buy()/Sell() method executed successfully. Return code=",trade.ResultRetcode(),
+    //            " (",trade.ResultRetcodeDescription(),")");
 }
 
 

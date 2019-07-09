@@ -215,12 +215,18 @@ That is done using `ctypes`
 
 - [x] Implement `NaiveGapExpert` based on analysis that ~93% of gaps smaller than 230 points close for `WIN@` mini-bovespa (prototype `Gaps Closing Patterns - WIN`) Used 4 pivot points (R1, R2, S1 and S2) formula on each of the last 5 days and placed limit orders on support and resistances closer to the open-price. Limit orders where limited to 2 per gap. Metatrader 5 backtest gave first EA profitable with 8 expected pay-off and sharp of 0.08. Back-tested also with `WIN@D` and `WIN@N` with similar results.     
     - [x] Need to remove limit orders if gap is reached before they are triggered
-    - [x] Wrote simple unit test script for Armadillo C++ library `dll` wrapping 
-    - [x] Remove support-resistances equal - Using unique from Armadillo C++ library
+    - [x] Built C++ dll from Armadillo library compiling with mingw targeting x86-64
+    - [x] Wrote simple mql5 unit test script for Armadillo C++ library `dll` wrapping
+    - [x] Remove support-resistances equal. Used unique function from Armadillo library "cpparm.dll"
     - [x] Fixed wrong usage of `CopyRates` and `CopyOpen` including for previous day pivots calculation
-    - [ ] Remove support-resistences too closer apart from array of pivots
+    1. When using `CopyRates(sname, PERIOD_D1, 0, 5, rates)` for calculation of pivots the actual day index 0 gets included (with ohlc all equal to open-price). Somehow that makes the pivots more closer and make sharp go to 0.10 and the expected pay-off to 9.3 . We can think as we modify the formula of pivots as consequence the stops and limits are placed closer to our entries. We can see on graph better results also after 2017 (where we have a big up trend?). Long trades won goes to 100% 269. Loss trades were 15%.  436 Trades 1245 Deals
+    2. When removing the unique support-resistances expected pay-off went to 4.5. Loss trades went to 34%. 443 Trades 1122 Deals
+    3. When using `CopyRates` just with the last 5 days and unique support-resistances the expected pay-off goes to 7.88 sharp goes to 0.06 and Loss Trades to 43%. Total Trades 335 and 867 Deals. Seams to be accordingly explained above much less entries probably due support-resistances too far-apart.
+    - It's expected that once histogram of volume at price are used for defining support-resistance zones better results than those points 1, 2 and 3 above will be reached.
+    - [ ] Improve by using support and resistances based on volume at price.
+    - [ ] Improve also including size of order based on strength of resistance-support.
+    - [ ] Remove support-resistances too closer apart from array of pivots
     - [ ] Make it generic for stocks or other instruments
     - [ ] Use different stop-loss for each limit orders smaller
-    - [ ] Can be improved by using better support and resistences based on volume at price
     - [ ] Maybe use trailling stops?
     - [ ] Use different size of positions for different support/resistences?

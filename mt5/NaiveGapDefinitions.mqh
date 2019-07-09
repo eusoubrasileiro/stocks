@@ -1,5 +1,9 @@
 #define EXPERT_MAGIC 1  // MagicNumber of the expert
 
+#import "cpparm.dll"
+int Unique(double &arr[], int n);
+#import
+
 //string isname = "WING19"; // symbol for orders
 string sname = "WIN@"; // symbol for indicators
 // number of contracts to buy for each direction/quantity
@@ -120,10 +124,10 @@ void pivotPoints(MqlRates &rates[], double &pivots[]){
     }
 
     ArraySort(pivots);
+    size = Unique(pivots, size*4);
+    ArrayResize(pivots, size);
 
-    for(int i=0; i<size*4; i++)
-    {
+    for(int i=0; i<size; i++)
         Print(i+": "+StringFormat("%G", pivots[i]));
-    }
-
+        
 }

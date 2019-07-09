@@ -215,7 +215,11 @@ That is done using `ctypes`
 
 - [x] Implement `NaiveGapExpert` based on analysis that ~93% of gaps smaller than 230 points close for `WIN@` mini-bovespa (prototype `Gaps Closing Patterns - WIN`) Used 4 pivot points (R1, R2, S1 and S2) formula on each of the last 5 days and placed limit orders on support and resistances closer to the open-price. Limit orders where limited to 2 per gap. Metatrader 5 backtest gave first EA profitable with 8 expected pay-off and sharp of 0.08. Back-tested also with `WIN@D` and `WIN@N` with similar results.     
     - [x] Need to remove limit orders if gap is reached before they are triggered
-    - [ ] Remove support-resistances equal or too close from array of pivots
+    - [x] Wrote simple unit test script for Armadillo C++ library `dll` wrapping 
+    - [x] Remove support-resistances equal - Using unique from Armadillo C++ library
+    - [x] Fixed wrong usage of `CopyRates` and `CopyOpen` including for previous day pivots calculation
+    - [ ] Remove support-resistences too closer apart from array of pivots
+    - [ ] Make it generic for stocks or other instruments
     - [ ] Use different stop-loss for each limit orders smaller
     - [ ] Can be improved by using better support and resistences based on volume at price
     - [ ] Maybe use trailling stops?

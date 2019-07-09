@@ -14,7 +14,7 @@ int previous_positions; // number of openned positions
 //| Expert initialization function
 int OnInit(){
 
-   EventSetTimer(5);
+    EventSetTimer(5);
 
    trade.SetExpertMagicNumber(EXPERT_MAGIC);
    trade.SetDeviationInPoints(deviation*ticksize);
@@ -107,7 +107,7 @@ void PlaceOrders(int sign, double tp){
     double sl;
     bool result;
 
-    CopyRates(sname, PERIOD_D1, 0, 5, rates); // 5 last days
+    CopyRates(sname, PERIOD_D1, 1, 5, rates); // 5 last days
     pivotPoints(rates, pivots);
     size = ArraySize(pivots);
     // // stop loss based on standard deviation of last 5 days on H4 time-frame
@@ -178,8 +178,7 @@ bool on_gap=false;
 
 //| Timer function -- Every 5 minutes
 void OnTimer() {
-    double pdayclose[2];
-    MqlRates ratesnow[1]; // previous day close and open today
+    MqlRates ratesnow[1], pday[1]; // previous day close and open today
     MqlDateTime todaynow;
     int copied, gapsign;
     double gap;
@@ -200,7 +199,7 @@ void OnTimer() {
 
     if(todaynow.day != previousday.day){
 
-      copied = CopyClose(sname, PERIOD_D1, 0, 2, pdayclose);
+      copied = CopyRates(sname, PERIOD_D1, 1, 1, pday);
       if( copied == -1){
         Print("Failed to get previous day data");
         return;
@@ -208,14 +207,14 @@ void OnTimer() {
 
       previousday = todaynow;  // just entered a position today
 
-      gap = ratesnow[0].open - pdayclose[0];
+      gap = ratesnow[0].open - pday[0].close;
       // positive gap will close so it is a sell order
       // negative gap will close si it is a by order
-      if (MathAbs(gap) < 320 && MathAbs(gap) > 80){ // Go in
+      if (MathAbs(gap) < 350 && MathAbs(gap) > 40 ){ // Go in
         gapsign = gap/MathAbs(gap);
 
         // place take profit 15 points before gap close
-        gap_tp = pdayclose[0]+gapsign*15;
+        gap_tp = pday[0].close+gapsign*15;
         PlaceOrders(-gapsign, gap_tp);
       }
       on_gap = true;

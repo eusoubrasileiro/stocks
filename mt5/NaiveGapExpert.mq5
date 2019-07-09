@@ -171,18 +171,18 @@ void OnTimer() {
       }
 
       previousday = todaynow;  // just entered a position today
-
       gap = ratesnow[0].open - pday[0].close;
       // positive gap will close so it is a sell order
       // negative gap will close si it is a by order
-      if (MathAbs(gap) < 350 && MathAbs(gap) > 40 ){ // Go in
+      if (MathAbs(gap) < MaxGap && MathAbs(gap) >  MinGap ){ // Go in
         gapsign = gap/MathAbs(gap);
 
         // place take profit 15 points before gap close
-        gap_tp = pday[0].close+gapsign*15;
+        gap_tp = pday[0].close+gapsign*before_tp;
         PlaceOrders(-gapsign, gap_tp);
+        on_gap = true;
       }
-      on_gap = true;
+      
     }
 
 

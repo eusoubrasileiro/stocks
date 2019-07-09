@@ -5,11 +5,15 @@ int Unique(double &arr[], int n);
 #import
 
 //string isname = "WING19"; // symbol for orders
-string sname = "WIN@"; // symbol for indicators
+string sname = "PETR4"; // symbol for indicators
+const double MinGap = 0.05; // minimal Gap to foresee some profit
+const double MaxGap = 0.30; // maximum Gap where we expect it to close
+const double before_tp = 0.02; // discount on gap in case it is no reached in full 
+// that's applied on take profit before_tp*ticksize'
 // number of contracts to buy for each direction/quantity
-int quantity = 1;
+int quantity = 500;
 // tick-size
-const double ticksize=5; // minicontratos ibovespa 5 points price variation
+const double ticksize=0.01; // minicontratos ibovespa 5 points price variation
 // deviation accept by price in tick sizes
 const double deviation=5;
 // expert operations end (no further sells or buys) close all positions

@@ -226,7 +226,8 @@ That is done using `ctypes`
     - [ ] Improve by using support and resistances based on volume at price.
     - [ ] Improve also including size of order based on strength of resistance-support.
     - [ ] Remove support-resistances too closer apart from array of pivots
-    - [ ] Make it generic for stocks or other instruments
+    - [x] Make it generic for stocks or other instruments
+        - Tested on PETR4 entire-history sharp of 0.1
     - [ ] Use different stop-loss for each limit orders smaller
     - [ ] Maybe use trailling stops?
     - [ ] Use different size of positions for different support/resistences?

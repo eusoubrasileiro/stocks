@@ -6,7 +6,7 @@ using namespace std;
 using namespace arma;
 
 // a sample exported function
-int DLL_EXPORT __stdcall Unique(double arr[], int n)
+int DLL_EXPORT Unique(double arr[], int n)
 {
     vec v = vec(arr, n); // copy the same memory
     vec u = unique(v);
@@ -19,6 +19,8 @@ int DLL_EXPORT __stdcall Unique(double arr[], int n)
 
     return u.n_elem;
 }
+
+void histogram_bin
 
 
 extern "C" DLL_EXPORT BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)

@@ -8,9 +8,9 @@
  */
 
 #ifdef BUILDING_DLL
-    #define DLL_EXPORT __declspec(dllexport)
+    #define DLL_EXPORT __declspec(dllexport) __stdcall
 #else
-    #define DLL_EXPORT __declspec(dllimport)
+    #define DLL_EXPORT __declspec(dllimport) __stdcall
 #endif
 
 
@@ -19,7 +19,7 @@ extern "C"
 {
 #endif
 
-int DLL_EXPORT __stdcall Unique(double arr[], int n);
+int DLL_EXPORT Unique(double arr[], int n);
 
 #ifdef __cplusplus
 }

@@ -109,6 +109,13 @@ def setDataPath(_path_data_bundle, _path_bin_data, preload=True, verbose=True):
 #   long     real_volume;  // Volume de negociação
 #  };
 
+# Por exemplo, imagine o seguinte histórico de negociações:
+# Ativo	Preço	Quantidade
+# PETR4	14,00	1.000
+# PETR4	14,05	1.500
+# PETR4	13,95	300
+# No quadro acima nós temos um total de 3 negócios realizados (logo, volume de ticks = 3), totalizando 2.800 ações negociagadas (logo, volume real = 2.800).
+
 def loadMeta5Binary(filename):
     dtype = np.dtype([
         ("time", np.int64),
@@ -116,8 +123,8 @@ def loadMeta5Binary(filename):
         ("H", np.float64),
         ("L", np.float64),
         ("C", np.float64),
-        ("TV", np.int64),
-        ("S", np.int32),
+        ("TV", np.int64), # number of deals between people
+        ("S", np.int32), # number of contracts really negociated 
         ("RV", np.int64)
     ])
     data = np.fromfile(filename, dtype=dtype)

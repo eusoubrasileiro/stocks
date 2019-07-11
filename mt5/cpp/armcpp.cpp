@@ -20,7 +20,23 @@ int DLL_EXPORT Unique(double arr[], int n)
     return u.n_elem;
 }
 
-void histogram_bin
+
+// https://stackoverflow.com/questions/15213082/c-histogram-bin-sorting
+//
+// unsigned int bin;
+// for (unsigned int sampleNum = 0; sampleNum < SAMPLE_COUNT; ++sampleNum)
+// {
+//       const int sample = data0[sampleNum];
+//       bin = BIN_COUNT;
+//       for (unsigned int binNum = 0; binNum < BIN_COUNT; ++binNum)  {
+//             const int rightEdge = binranges[binNum];
+//             if (sample <= rightEdge) {
+//                bin = binNum;
+//                break;
+//            }
+//       }
+//       bins[bin]++;
+//  }
 
 
 extern "C" DLL_EXPORT BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)

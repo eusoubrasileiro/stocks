@@ -40,7 +40,7 @@ if args.meta5build:
 
 if args.newdata:
     subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Files';
-                    cp * /home/andre/Projects/stocks/data """, shell=True)
+                    cp *.mt5bin /home/andre/Projects/stocks/data """, shell=True)
 
 
 # daemon:

@@ -21,6 +21,8 @@ extern "C"
 
 int DLL_EXPORT Unique(double arr[], int n);
 
+void DLL_EXPORT Histsma(double data[], int n, double bins[], int nb, int nwindow);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,4 +1,4 @@
-#include "exports.h"
+    #include "exports.h"
 #include <iostream>
 #include <armadillo>
 
@@ -11,15 +11,25 @@ int DLL_EXPORT Unique(double arr[], int n)
     vec v = vec(arr, n); // copy the same memory
     vec u = unique(v);
     double *uarr = u.memptr();
-    //v.colptr(0)
-    //uvec h1 = hist(v, 11);
-    //uvec h2 = hist(v, linspace<vec>(-2,2,11));
     for(unsigned int i=0; i<u.n_elem; i++)
         arr[i] = uarr[i];
-
     return u.n_elem;
 }
 
+
+// histogram of counts smoothed by sma
+// // M = floor((end-start)/delta), so that (start + M*delta) ≤ end >> (vmax-vmin+2binsize)/binsize
+// bins array gets replaced by counts on each bin smoothed by SMA of size window
+void DLL_EXPORT Histsma(double data[], int n, double bins[], int nb, int window){
+    vec vec_data = vec(data, n);  // copy the memory
+    uvec uvec_hist = hist(vec_data, vec(bins, nb));
+    vec vec_hist(uvec_hist.n_elem);
+    copy(uvec_hist.begin(), uvec_hist.end(), vec_hist.begin()); // convert to double
+    // centered simple moving average
+    vec _histsma = conv(vec_hist, (1./window) * ones<vec>(window), "same");
+    // back to array
+    copy(_histsma.begin(), _histsma.end(), bins);
+}
 
 // https://stackoverflow.com/questions/15213082/c-histogram-bin-sorting
 //

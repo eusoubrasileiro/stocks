@@ -223,10 +223,11 @@ That is done using `ctypes`
     2. When removing the repeated support-resistances (w. unique) expected pay-off went to 4.5. Loss trades went to 34%. 443 Trades 1122 Deals
     3. When using `CopyRates` just with the last 5 days and unique support-resistances the expected pay-off goes to 7.88 sharp goes to 0.06 and Loss Trades to 43%. Total Trades 335 and 867 Deals. Seams to be accordingly explained above much less entries probably due support-resistances too far-apart.
     - It's expected that once histogram of volume at price are used for defining support-resistance zones better results than those points 1, 2 and 3 above will be reached.
-    - [ ] Use trailing stops, certainly will improve something of profit.
-        - [x] Found trailing stop classes like `CTrailingPSAR` but found it difficult to use without the expert class. Many nice ready-made stuff done there (Experts, Signals etc.) that I need to explore. 
-    - [x] Use support and resistances based histograms of price. Did not improve results. Sharp, pay-off all went worse. It seams that you get too dependent on the previous days. Levels never reached will not be taking in to account. Seams good when market is trending up and down but not for all history.
-    - [x] Included camarilla support and resistances using 6 previous days without removing repeated points with unique. Sharp went to 0.11 and pay-off to 5.6. 328 trades and 1108 deals. Loss trades 23%. Draw-down maximum relative 6.7% Need to see how to reach again results on point 1.
+    - [x] Use trailing stops, certainly will improve something on profit.
+        - [x] Found trailing stop classes like `CTrailingPSAR` but found it difficult to use without the expert class. Many nice ready-made stuff done there (Experts, Signals etc.) that I need to explore.
+        - [x] Used previously created code for bbands based on EMA. Sharp went to 0.16 and pay-off to 8.42. Loss trades 22%. 429 Total Trades 1440 Deals. Using also camarilla and 0 to 6 last days without using `Unique`. Long trades won also 100%. Maximum draw-down relative of 4.5%
+    - [x] Use support and resistances based histograms of price. Did not improve results. Sharp, pay-off all went worse. It seams that you get too dependent on the previous days. Levels never reached will not be taking in to account. Might be good when market is trending up and down but not for all history.
+    - [x] Included camarilla support and resistances using 6 previous days without removing repeated points with unique. Sharp went to 0.11 and pay-off to 5.6. 328 trades and 1108 deals. Loss trades 23%. Draw-down maximum relative 6.7%
     - [ ] Include size of order based on strength of resistance-support.
     - [ ] Remove support-resistances too closer apart from array of pivots
     - [x] Make it generic for stocks or other instruments

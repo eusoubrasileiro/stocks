@@ -8,9 +8,9 @@ int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 
 //string isname = "WING19"; // symbol for orders
 string sname = "WIN@"; // symbol for indicators
-const double MinGap = 50; // minimal Gap to foresee some profit
-const double MaxGap = 250; // maximum Gap where we expect it to close
-const double before_tp = 25; // discount on gap in case it is no reached in full
+const double MinGap = 30; // minimal Gap to foresee some profit
+const double MaxGap = 300; // maximum Gap where we expect it to close
+const double before_tp = 15; // discount on gap in case it is no reached in full
 // that's applied on take profit before_tp*ticksize'
 // number of contracts to buy for each direction/quantity
 int quantity = 1;
@@ -25,6 +25,15 @@ const int pivot_order=15;
 const int nentry_pivots = 2; // number of orders that will be placed on pivot points
 // time to expire a position (close it)
 const int expiretime=(1.5)*60*60;
+
+const double trailing_value = 1*ticksize; // independent stoploss for trailing
+// handle for EMA of trailing stop smooth
+// the price variation on this EMA controls to change on the trailling stop
+int    hema=0;
+const int  windowema=5; //  5 minutes
+double lastema=1; // last value of the EMA 1 minute
+double lastemachange=0; // last EMA value when there was a change on stop loss positive
+
 
 //--- object for performing trade operations - Trade Class
 CTrade  trade;
@@ -87,7 +96,7 @@ void CloseOpenOrders(){
         ticket=OrderGetTicket(i);
         result = trade.OrderDelete(ticket);
         if(!result)
-        Print("DeleteOrder error ", GetLastError());
+            Print("DeleteOrder error ", GetLastError());
     }
 }
 
@@ -108,15 +117,49 @@ double percentile(double &data[], double perc){
     return sorted[n-2];
 }
 
-// threshold = np.percentile(sma_rvprices, [60])[0]
-// threshold
+void changeStop(double change) {
+   // modify stop loss
+   double sl, tp;
 
-// order = 15 # 15*5 = 75 points distance minimum between peaks
-// # for i in range(order+1):
-// # not threating the borders 0 to order - len-order
-//
-// peaks = []
-//
+   sl = PositionGetDouble(POSITION_SL)  +  change;
+   sl = MathFloor(sl/ticksize)*ticksize;
+   tp = PositionGetDouble(POSITION_TP);
+   tp = MathFloor(tp/ticksize)*ticksize;
+
+    if(!trade.PositionModify(sname, sl, tp))
+        Print("OrderSend  Change SL error ",GetLastError());
+}
+
+bool TrailingStopLossEma(){
+   double ema[1]; // actual ema value
+   bool trailled = false;
+
+   if (CopyBuffer(hema, 0,  0,  1, ema) != 1){
+      Print("CopyBuffer from Stdev failed");
+   }
+   if( PositionsTotal() > 0){        // net mode
+         if( PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY &&
+            PositionGetInteger(POSITION_MAGIC) == EXPERT_MAGIC){
+            if(ema[0] > lastema && ema[0] > lastemachange) {
+             // it is going up steady  compared with last ema value  and with last changed stop
+               changeStop(ema[0]-lastema);
+               trailled = true;
+               lastemachange = ema[0];
+            }
+         }
+         if( PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_SELL &&
+            PositionGetInteger(POSITION_MAGIC) == EXPERT_MAGIC){
+            if(ema[0] < lastema && ema[0] < lastemachange) {
+             // it is going up steady  compared with last ema value  and with last changed stop
+               changeStop(ema[0]-lastema);
+               trailled = true;
+               lastemachange = ema[0];
+            }
+         }
+   }
+   lastema = ema[0];
+   return trailled;
+}
 
 
 int pivotsHistSMA(double &data[], double binsize, double &pivots[]){

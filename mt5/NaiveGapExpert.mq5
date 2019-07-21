@@ -8,13 +8,13 @@
 MqlDateTime previousday;
 
 int previous_positions; // number of openned positions
-CTrailingPSAR trailing;
+//CTrailingPSAR trailing;
 
 //| Expert initialization function
 int OnInit(){
 
-    EventSetTimer(5);
-    trailing.Maximum(0.02);
+    EventSetTimer(1);
+   // trailing.Maximum(0.02);
 
     trade.SetExpertMagicNumber(EXPERT_MAGIC);
     trade.SetDeviationInPoints(deviation*ticksize);
@@ -25,6 +25,12 @@ int OnInit(){
     TimeCurrent(previousday);
     previous_positions = PositionsTotal(); // number of openned positions
 
+    hema=iMA(sname,PERIOD_M1, windowema, 0, MODE_EMA, PRICE_TYPICAL);
+
+    if(hema == INVALID_HANDLE){
+       printf("Error creating EMAindicator");
+       return(INIT_FAILED);
+    }
     // time in seconds from 1970 current time
     Print("Begining Gap Expert now: ", TimeCurrent());
     return(INIT_SUCCEEDED);
@@ -111,7 +117,7 @@ void PlaceOrders(int sign, double tp){
         //result = trade.Buy(quantity, sname, ask,sl, tp);
     }
     else{
-
+        // this seams wrong just giving 3 orders 
         pos = searchGreat(pivots, bid); // position of first pivot bigger than bid price
         // so everything above including this are resistences
         if(pos <  0){
@@ -152,6 +158,8 @@ void OnTimer() {
     MqlDateTime todaynow;
     int copied, gapsign;
     double gap;
+
+    TrailingStopLossEma();
 
     TimeCurrent(todaynow);
 

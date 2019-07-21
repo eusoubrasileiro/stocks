@@ -1,4 +1,4 @@
-#define EXPERT_MAGIC 1  // MagicNumber of the expert
+#define EXPERT_MAGIC 120986  // MagicNumber of the expert
 
 #import "cpparm.dll"
 int Unique(double &arr[], int n);
@@ -7,30 +7,46 @@ int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 #import
 
 //string isname = "WING19"; // symbol for orders
-string sname = "WIN@"; // symbol for indicators
-const double MinGap = 30; // minimal Gap to foresee some profit
-const double MaxGap = 300; // maximum Gap where we expect it to close
-const double before_tp = 15; // discount on gap in case it is no reached in full
+// string sname = "WIN@"; // symbol for indicators
+// const double MinGap = 30; // minimal Gap to foresee some profit
+// const double MaxGap = 300; // maximum Gap where we expect it to close
+// const double before_tp = 15; // discount on gap in case it is no reached in full
+// // that's applied on take profit before_tp*ticksize'
+// // number of contracts to buy for each direction/quantity
+// int quantity = 1;
+// // tick-size
+// const double ticksize=5; // minicontratos ibovespa 5 points price variation
+// // deviation accept by price in tick sizes
+// const double deviation=5;
+
+//+------------------------------------------------------------------+
+//| Inputs                                                           |
+//+------------------------------------------------------------------+
+//--- inputs for expert
+input string Inp_Expert_Title            ="ExpertGapCloser";
+
+input string sname = "PETR4"; // symbol for indicators
+input double MinGap = 0.05; // minimal Gap to foresee some profit
+input double MaxGap = 0.20; // maximum Gap where we expect it to close
+input double before_tp = 0.02; // discount on gap in case it is not reached in full
 // that's applied on take profit before_tp*ticksize'
-// number of contracts to buy for each direction/quantity
-int quantity = 1;
-// tick-size
-const double ticksize=5; // minicontratos ibovespa 5 points price variation
-// deviation accept by price in tick sizes
-const double deviation=5;
+input int quantity = 1000; // number of contracts to buy for each direction/quantity
+input double ticksize=0.01; // ticksize points price variation
+input double deviation=5; // deviation accept by price in tick sizes
+
 // expert operations end (no further sells or buys) close all positions
-const int endhour=16;
-const int endminute=00;
+input int endhour=16;
+input int endminute=00;
 const int pivot_order=15;
-const int nentry_pivots = 2; // number of orders that will be placed on pivot points
+input int nentry_pivots = 2; // number of orders that will be placed on pivot points
 // time to expire a position (close it)
-const int expiretime=(1.5)*60*60;
+input int expiretime=(1.5)*60*60;
 
 const double trailing_value = 1*ticksize; // independent stoploss for trailing
 // handle for EMA of trailing stop smooth
 // the price variation on this EMA controls to change on the trailling stop
 int    hema=0;
-const int  windowema=5; //  5 minutes
+input int  windowema=5; //  EMA for trailing stop 5 minutes
 double lastema=1; // last value of the EMA 1 minute
 double lastemachange=0; // last EMA value when there was a change on stop loss positive
 

@@ -2,39 +2,32 @@
 #property version   "1.01"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
+#include <Expert\Trailing\TrailingParabolicSAR.mqh>
 #include "NaiveGapDefinitions.mqh"
 
-// 5 days simple moving average window for stdev calculation on H4 time frame
-const int  window=5*2;
-int hstdev;
 MqlDateTime previousday;
 
 int previous_positions; // number of openned positions
+CTrailingPSAR trailing;
 
 //| Expert initialization function
 int OnInit(){
 
     EventSetTimer(5);
+    trailing.Maximum(0.02);
 
-   trade.SetExpertMagicNumber(EXPERT_MAGIC);
-   trade.SetDeviationInPoints(deviation*ticksize);
-   //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
-   trade.SetAsyncMode(true);
+    trade.SetExpertMagicNumber(EXPERT_MAGIC);
+    trade.SetDeviationInPoints(deviation*ticksize);
+    //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
+    trade.SetAsyncMode(true);
 
-   hstdev = iStdDev(sname, PERIOD_H4, window, 0, MODE_SMA, PRICE_CLOSE);
+    // start day is the previous day
+    TimeCurrent(previousday);
+    previous_positions = PositionsTotal(); // number of openned positions
 
-   if(hstdev == INVALID_HANDLE){
-      Print("Gap Expert : Error creating indicator");
-      return(INIT_FAILED);
-   }
-
-   // start day is the previous day
-   TimeCurrent(previousday);
-   previous_positions = PositionsTotal(); // number of openned positions
-
-   // time in seconds from 1970 current time
-   Print("Begining Gap Expert now: ", TimeCurrent());
-   return(INIT_SUCCEEDED);
+    // time in seconds from 1970 current time
+    Print("Begining Gap Expert now: ", TimeCurrent());
+    return(INIT_SUCCEEDED);
 }
 
 // double stopStdev(){
@@ -58,22 +51,27 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 
         result = trade.SellLimit(quantity, entry, sname, sl, tp);
 
     if(!result)
-          Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
-                ". Code description: ",trade.ResultRetcodeDescription());
+        Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
+        ". Code description: ",trade.ResultRetcodeDescription());
     else
-         Print("Buy()/Sell() Limit method executed successfully. Return code=",trade.ResultRetcode(),
-                " (",trade.ResultRetcodeDescription(),")");
+        Print("Buy()/Sell() Limit method executed successfully. Return code=",trade.ResultRetcode(),
+        " (",trade.ResultRetcodeDescription(),")");
 }
 
 void PlaceOrders(int sign, double tp){
     int pos, size;
     MqlRates rates[];
+    double closes[];
     double pivots[];
     double sl;
-    //bool result;
+    bool result;
 
-    CopyRates(sname, PERIOD_D1, 1, 5, rates); // 5 last days
-    pivotPoints(rates, pivots);
+    CopyRates(sname, PERIOD_D1, 0, 6, rates);
+    //CopyClose(sname, PERIOD_M1, 1, 21*9*60, closes); // 5 last days of 8 hours
+    //classic_pivotPoints(rates, pivots);
+     camarilla_pivotPoints(rates, pivots);
+    //pivotsHistSMA(closes, ticksize, pivots); // works well when market is dancing up and down
+
     size = ArraySize(pivots);
     // // stop loss based on standard deviation of last 5 days on H4 time-frame
     // stop = stopStdev();
@@ -87,46 +85,53 @@ void PlaceOrders(int sign, double tp){
     //+ postive buy order
     if(sign > 0){
 
-      //Place Buy Limit Orders
-      // search all supports bellow the asking price
-      // array is ascending sorted so first element greater
-      // them the  ask price defines the boundary of the supports
-      // all supports for this ask price are before this position one element
-      pos = searchGreat(pivots, ask); // position of first pivot bigger than ask price
-      if(pos == -1)
-        return; // this is an error somthing is wrong
-        //pos = ArraySize(pivots);
-      // everything before are supports
-      sl = pivots[MathMax(0, pos-3)]; // and the first support is the SL
-     // sl = ask-500;
-      sl = MathFloor(sl/ticksize)*ticksize;
-      // for every support bellow ask price (except first) put a buy limit order
-      // with the same target
-      for(int i=MathMax(0, pos-2); i<pos; i+=1)
-        PlaceLimitOrder(pivots[i], sl, tp, sign);
+        //Place Buy Limit Orders
+        // search all supports bellow the asking price
+        // array is ascending sorted so first element greaterw
+        // them the  ask price defines the boundary of the supports
+        // all supports for this ask price are before this position one element
+        pos = searchGreat(pivots, ask) - 1; // position of first pivot bigger than ask price
+        if(pos <  0){
+             Print("Not enough pivots to place limit orders ");
+             return; // this is an erroor something is wrong or or there is no pivots
+        }
+        if(pos+1 < nentry_pivots){ // less entries than desired
+            Print("Will not place all limit orders ");
+        }
 
-      // Finally place the first buy order Now!
-      //result = trade.Buy(quantity, sname, ask,sl, tp);
+        // everything before are supports
+        sl = pivots[MathMax(0, pos-nentry_pivots)]; // and the first support is the SL
+        sl = MathFloor(sl/ticksize)*ticksize;
+        // for every support bellow ask price (except first) put a buy limit order
+        // with the same target
+        for(int i=MathMax(0, pos-nentry_pivots); i<=pos; i+=1) // 3-2=1 <= 3
+            PlaceLimitOrder(pivots[i], sl, tp, sign);
+
+        // Finally place the first buy order Now!
+        //result = trade.Buy(quantity, sname, ask,sl, tp);
     }
     else{
 
-      pos = searchGreat(pivots, bid); // position of first pivot bigger than bid price
-      // so everything above including this are resistences
-      if(pos == -1)
-        return; // something is wrong
+        pos = searchGreat(pivots, bid); // position of first pivot bigger than bid price
+        // so everything above including this are resistences
+        if(pos <  0){
+             Print("Not enough pivots to place limit orders ");
+             return; // this is an erroor something is wrong or or there is no pivots
+        }
+        if( MathAbs(size-pos) < nentry_pivots) {
+            Print("Will not place all limit orders ");
+        }
+        // everything including this above are resistences
+        sl = pivots[MathMin(size-1, pos+nentry_pivots)]; // and the last resistence is the SL
+        // for every resistence above the bid price (except last) put a sell limit order
+        // with the same target
+        sl = MathFloor(sl/ticksize)*ticksize;
 
-      // everything including this above are resistences
-      sl = pivots[MathMin(size-1, pos+3)]; // and the last resistence is the SL
-      //sl = bid+500;
-      // for every resistence above the bid price (except last) put a sell limit order
-      // with the same target
-      sl = MathFloor(sl/ticksize)*ticksize;
-
-      for(int i=pos; i<MathMin(size, pos+2); i+=1)
-        PlaceLimitOrder(pivots[i], sl, tp, sign);
+        for(int i=pos; i<MathMin(size, pos+nentry_pivots); i+=1)
+            PlaceLimitOrder(pivots[i], sl, tp, sign);
 
         // Finally place the first  sell Now!
-       // result = trade.Sell(quantity, sname, bid, sl, tp);
+        //result = trade.Sell(quantity, sname, bid, sl, tp);
     }
 
     //if(!result)
@@ -152,8 +157,8 @@ void OnTimer() {
 
     copied = CopyRates(sname, PERIOD_M5, 0, 1, ratesnow);
     if( copied == -1){
-      Print("Failed to get today data");
-      return;
+        Print("Failed to get today data");
+        return;
     }
 
     // check if gap take profit was reached if so close all pending orders
@@ -164,33 +169,33 @@ void OnTimer() {
 
     if(todaynow.day != previousday.day){
 
-      copied = CopyRates(sname, PERIOD_D1, 1, 1, pday);
-      if( copied == -1){
-        Print("Failed to get previous day data");
-        return;
-      }
+        copied = CopyRates(sname, PERIOD_D1, 1, 1, pday);
+        if( copied == -1){
+            Print("Failed to get previous day data");
+            return;
+        }
 
-      previousday = todaynow;  // just entered a position today
-      gap = ratesnow[0].open - pday[0].close;
-      // positive gap will close so it is a sell order
-      // negative gap will close si it is a by order
-      if (MathAbs(gap) < MaxGap && MathAbs(gap) >  MinGap ){ // Go in
-        gapsign = gap/MathAbs(gap);
+        previousday = todaynow;  // just entered a position today
+        gap = ratesnow[0].open - pday[0].close;
+        // positive gap will close so it is a sell order
+        // negative gap will close si it is a by order
+        if (MathAbs(gap) < MaxGap && MathAbs(gap) >  MinGap ){ // Go in
+            gapsign = gap/MathAbs(gap);
 
-        // place take profit 15 points before gap close
-        gap_tp = pday[0].close+gapsign*before_tp;
-        PlaceOrders(-gapsign, gap_tp);
-        on_gap = true;
-      }
-      
+            // place take profit 15 points before gap close
+            gap_tp = pday[0].close+gapsign*before_tp;
+            PlaceOrders(-gapsign, gap_tp);
+            on_gap = true;
+        }
+
     }
 
 
     // in case did not reach the take profit close it by the day end
     // check to see if we should close any position
-    DayEndingClosePositions();
+    ClosePositionbyTime();
 
- }
+}
 
 // Useless stuff
 //| Expert deinitialization function                                 |
@@ -212,23 +217,23 @@ void OnTrade(){
 
 //| TradeTransaction function                                        |
 void OnTradeTransaction(const MqlTradeTransaction &trans,
-                        const MqlTradeRequest &request,
-                        const MqlTradeResult &result){
-                        if ( trans.type == TRADE_TRANSACTION_DEAL_ADD){
-                            // just closed a position by time, stop or whatever
-                            if(PositionsTotal() == 0 && previous_positions == 1){
-                                CloseOpenOrders(); // close all pending limit orders
-                                previous_positions = 0;
-                                on_gap = false;
-                            }
-                                previous_positions = PositionsTotal();
-                        }
-}
+    const MqlTradeRequest &request,
+    const MqlTradeResult &result){
+        if ( trans.type == TRADE_TRANSACTION_DEAL_ADD){
+            // just closed a position by time, stop or whatever
+            if(PositionsTotal() == 0 && previous_positions == 1){
+                CloseOpenOrders(); // close all pending limit orders
+                previous_positions = 0;
+                on_gap = false;
+            }
+            previous_positions = PositionsTotal();
+        }
+    }
 
-//| TesterInit function
-void OnTesterInit(){
-}
+    //| TesterInit function
+    void OnTesterInit(){
+    }
 
-//+------------------------------------------------------------------+
-void OnTesterDeinit(){
-}
+    //+------------------------------------------------------------------+
+    void OnTesterDeinit(){
+    }

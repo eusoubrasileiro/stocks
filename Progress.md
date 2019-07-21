@@ -220,14 +220,17 @@ That is done using `ctypes`
     - [x] Remove support-resistances equal. Used unique function from Armadillo library "cpparm.dll"
     - [x] Fixed wrong usage of `CopyRates` and `CopyOpen` including for previous day pivots calculation
     1. When using `CopyRates(sname, PERIOD_D1, 0, 5, rates)` for calculation of pivots the actual day index 0 gets included (with ohlc all equal to open-price). Somehow that makes the pivots more closer and make sharp go to 0.10 and the expected pay-off to 9.3 . We can think as we modify the formula of pivots as consequence the stops and limits are placed closer to our entries. We can see on graph better results also after 2017 (where we have a big up trend?). Long trades won goes to 100% 269. Loss trades were 15%.  436 Trades 1245 Deals
-    2. When removing the unique support-resistances expected pay-off went to 4.5. Loss trades went to 34%. 443 Trades 1122 Deals
+    2. When removing the repeated support-resistances (w. unique) expected pay-off went to 4.5. Loss trades went to 34%. 443 Trades 1122 Deals
     3. When using `CopyRates` just with the last 5 days and unique support-resistances the expected pay-off goes to 7.88 sharp goes to 0.06 and Loss Trades to 43%. Total Trades 335 and 867 Deals. Seams to be accordingly explained above much less entries probably due support-resistances too far-apart.
     - It's expected that once histogram of volume at price are used for defining support-resistance zones better results than those points 1, 2 and 3 above will be reached.
-    - [ ] Improve by using support and resistances based on volume at price.
-    - [ ] Improve also including size of order based on strength of resistance-support.
+    - [ ] Use trailing stops, certainly will improve something of profit.
+        - [x] Found trailing stop classes like `CTrailingPSAR` but found it difficult to use without the expert class. Many nice ready-made stuff done there (Experts, Signals etc.) that I need to explore. 
+    - [x] Use support and resistances based histograms of price. Did not improve results. Sharp, pay-off all went worse. It seams that you get too dependent on the previous days. Levels never reached will not be taking in to account. Seams good when market is trending up and down but not for all history.
+    - [x] Included camarilla support and resistances using 6 previous days without removing repeated points with unique. Sharp went to 0.11 and pay-off to 5.6. 328 trades and 1108 deals. Loss trades 23%. Draw-down maximum relative 6.7% Need to see how to reach again results on point 1.
+    - [ ] Include size of order based on strength of resistance-support.
     - [ ] Remove support-resistances too closer apart from array of pivots
     - [x] Make it generic for stocks or other instruments
         - Tested on PETR4 entire-history sharp of 0.1
     - [ ] Use different stop-loss for each limit orders smaller
-    - [ ] Maybe use trailling stops?
+    - [ ] Just found trading today that resistances older than 5 days was reached. Maybe test using last 1 year of support and resistances and clip histogram by last 5 day min-max?
     - [ ] Use different size of positions for different support/resistences?

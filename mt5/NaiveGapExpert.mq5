@@ -2,7 +2,7 @@
 #property version   "1.01"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
-#include <Expert\Trailing\TrailingParabolicSAR.mqh>
+//#include <Expert\Trailing\TrailingParabolicSAR.mqh>
 #include "NaiveGapDefinitions.mqh"
 
 MqlDateTime previousday;
@@ -31,19 +31,9 @@ int OnInit(){
        printf("Error creating EMAindicator");
        return(INIT_FAILED);
     }
-    // time in seconds from 1970 current time
     Print("Begining Gap Expert now: ", TimeCurrent());
     return(INIT_SUCCEEDED);
 }
-
-// double stopStdev(){
-//     double stdev[1];
-//     if (CopyBuffer(hstdev, 0, 0, 1, stdev) != 1){
-//        Print("CopyBuffer from Stdev failed");
-//        return 0;
-//        }
-//     return stdev[0]*2;
-// }
 
 void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 buy sell otherwise
     bool result = false;
@@ -93,14 +83,13 @@ void PlaceOrders(int sign, double tp){
 
         //Place Buy Limit Orders
         // search all supports bellow the asking price
-        // array is ascending sorted so first element greaterw
-        // them the  ask price defines the boundary of the supports
-        // all supports for this ask price are before this position one element
-        pos = searchGreat(pivots, ask) - 1; // position of first pivot bigger than ask price
+        // array is ascending sorted so first element greater or equal ask price defines the ceil (boundary) of the last support
+        // all rest bellow are also supports for this ask price are before this position one element
+        pos = searchGreatEqual(pivots, ask) - 1; // position of first pivot bigger than ask price
         if(pos <  0){
              Print("Not enough pivots to place limit orders ");
              return; // this is an erroor something is wrong or or there is no pivots
-        }
+        } // +1 due zero based index 
         if(pos+1 < nentry_pivots){ // less entries than desired
             Print("Will not place all limit orders ");
         }
@@ -110,19 +99,19 @@ void PlaceOrders(int sign, double tp){
         sl = MathFloor(sl/ticksize)*ticksize;
         // for every support bellow ask price (except first) put a buy limit order
         // with the same target
-        for(int i=MathMax(0, pos-nentry_pivots); i<=pos; i+=1) // 3-2=1 <= 3
+        for(int i=MathMax(0, pos-nentry_pivots); i<=pos; i++) // 3-2=1 <= 3
             PlaceLimitOrder(pivots[i], sl, tp, sign);
 
-        // Finally place the first buy order Now!
+        // Finally place the first buy order Now! Not good
         //result = trade.Buy(quantity, sname, ask,sl, tp);
     }
     else{
-        // this seams wrong just giving 3 orders 
+        // this seams wrong giving 3 orders 
         pos = searchGreat(pivots, bid); // position of first pivot bigger than bid price
         // so everything above including this are resistences
         if(pos <  0){
              Print("Not enough pivots to place limit orders ");
-             return; // this is an erroor something is wrong or or there is no pivots
+             return; // this is an erroor something is wrong or or there are no pivots
         }
         if( MathAbs(size-pos) < nentry_pivots) {
             Print("Will not place all limit orders ");
@@ -133,7 +122,7 @@ void PlaceOrders(int sign, double tp){
         // with the same target
         sl = MathFloor(sl/ticksize)*ticksize;
 
-        for(int i=pos; i<MathMin(size, pos+nentry_pivots); i+=1)
+        for(int i=pos; i<MathMin(size, pos+nentry_pivots); i++)
             PlaceLimitOrder(pivots[i], sl, tp, sign);
 
         // Finally place the first  sell Now!

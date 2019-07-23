@@ -212,6 +212,7 @@ That is done using `ctypes`
 - [ ] console program to make some unit tests `metaEngine.c` ?\
 
 #### Milestone : first real profitable EA on back-test on Metatrader 5
+July 2019
 
 - [x] Implement `NaiveGapExpert` based on analysis that ~93% of gaps smaller than 230 points close for `WIN@` mini-bovespa (prototype `Gaps Closing Patterns - WIN`) Used 4 pivot points (R1, R2, S1 and S2) formula on each of the last 5 days and placed limit orders on support and resistances closer to the open-price. Limit orders where limited to 2 per gap. Metatrader 5 backtest gave first EA profitable with 8 expected pay-off and sharp of 0.08. Back-tested also with `WIN@D` and `WIN@N` with similar results.     
     - [x] Need to remove limit orders if gap is reached before they are triggered
@@ -226,13 +227,24 @@ That is done using `ctypes`
     - [x] Use trailing stops, certainly will improve something on profit.
         - [x] Found trailing stop classes like `CTrailingPSAR` but found it difficult to use without the expert class. Many nice ready-made stuff done there (Experts, Signals etc.) that I need to explore.
         - [x] Used previously created code for bbands based on EMA. Sharp went to 0.16 and pay-off to 8.42. Loss trades 22%. 429 Total Trades 1440 Deals. Using also camarilla and 0 to 6 last days without using `Unique`. Long trades won also 100%. Maximum draw-down relative of 4.5%
-    - [x] Use support and resistances based histograms of price. Did not improve results. Sharp, pay-off all went worse. It seams that you get too dependent on the previous days. Levels never reached will not be taking in to account. Might be good when market is trending up and down but not for all history. 
+    - [x] Use support and resistances based histograms of price. Did not improve results. Sharp, pay-off all went worse. It seams that you get too dependent on the previous days. Levels never reached will not be taking in to account. Might be good when market is trending up and down but not for all history.
     - [x] Included camarilla support and resistances using 6 previous days without removing repeated points with unique. Sharp went to 0.11 and pay-off to 5.6. 328 trades and 1108 deals. Loss trades 23%. Draw-down maximum relative 6.7%
-    - [ ] Include size of order based on strength of resistance-support.
-    - [ ] Test include positions on gaps that are too bigger and will not close? 
-    - [ ] Remove support-resistances too closer apart from array of pivots
     - [x] Make it generic for stocks or other instruments
         - Tested on PETR4 entire-history sharp of 0.1
+        - Tested on WEGE3 very low beta with Bovespa entire-history nice results
+
+ ##### - Discovered parameters optimizer of Metatrader - July 2019
+
+    - [x] Re-thinking ideas since the beginning I lost huge amount of time wring a back-test engine. That ended-up not being reliable and because it was in Python the backtest was very complicated to be reproduced on MQL5 - MT5. Many failures were due to wrong code porting. Although difficult writing everything on MQL5 the advantage that it can be readily  deployed and all testes are in real operation environment. If anything is wrong it will be thousand times easier to figure out earlier. Due that I am not thinking on using those back-test engines anymore. Moving everything to mql5 that's the way. Finding the optimizer of parameter was the last drop for that decision. A big downside is the machine learning libraries but that apparently can be solved bellow and even Sklearn and my all python codes can be used.
+    - On my deception tried to find other brokers and trader software with a Python API. The problem is that they don't cover Brazil and the usable ones (that also include futures) require USA citizenship.  
+    - [ ] Try use Sklearn / Pytorch through `Roffild Dll Python Library` on optimization and backtest
+    - [ ] Re-organize Progress file as back-log lasts first
+    - [ ] Store optimizer results
+    - [x] Ported best version of `NaiveGapExpert` above to use property inputs and used the optimizer aiming smaller drawn-down and higher Sharp and Balance. Tested with entire history of PETR4 until 2014 results were impressive. The earlier the history data worse the performance, I bet is due AI being more and more incorporated. Still results were far above the ones above sharp around 0.24 or 0.42.  
+    - [ ] Include size of order based on strength of resistance-support.
+    - [ ] Test include positions on gaps that are too bigger and will not close?
+    - [ ] Remove support-resistances too closer apart from array of pivots
+
     - [ ] Use different stop-loss for each limit orders smaller
-    - [ ] Just found trading today that resistances older than 5 days was reached. Maybe test using last 1 year of support and resistances and clip histogram by last 5 day min-max? Select wether use pivots or histogram of price based on market trending (swinging around previous prices) or not. 
+    - [ ] Just found trading today that resistances older than 5 days was reached. Maybe test using last 1 year of support and resistances and clip histogram by last 5 day min-max? Select wether use pivots or histogram of price based on market trending (swinging around previous prices) or not.
     - [ ] Use different size of positions for different support/resistences?

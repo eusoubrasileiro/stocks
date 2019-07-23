@@ -6,50 +6,54 @@ int Unique(double &arr[], int n);
 int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 #import
 
-//string isname = "WING19"; // symbol for orders
-// string sname = "WIN@"; // symbol for indicators
-// const double MinGap = 30; // minimal Gap to foresee some profit
-// const double MaxGap = 300; // maximum Gap where we expect it to close
-// const double before_tp = 15; // discount on gap in case it is no reached in full
-// // that's applied on take profit before_tp*ticksize'
-// // number of contracts to buy for each direction/quantity
-// int quantity = 1;
+//string itargetSymbol = "WING19"; // symbol for orders
+// string targetSymbol = "WIN@"; // symbol for indicators
+// const double minimumGapSize = 30; // minimal Gap to foresee some profit
+// const double maximumGapSize = 300; // maximum Gap where we expect it to close
+// const double discountGap = 15; // discount on gap in case it is no reached in full
+// // that's applied on take profit discountGap*ticksize'
+// // number of contracts to buy for each direction/orderSize
+// int orderSize = 1;
 // // tick-size
 // const double ticksize=5; // minicontratos ibovespa 5 points price variation
-// // deviation accept by price in tick sizes
-// const double deviation=5;
+// // orderDeviation accept by price in tick sizes
+// const double orderDeviation=5;
 
 //+------------------------------------------------------------------+
 //| Inputs                                                           |
 //+------------------------------------------------------------------+
-//--- inputs for expert
-input string Inp_Expert_Title            ="ExpertGapCloser";
-
-input string sname = "PETR4"; // symbol for indicators
-input double MinGap = 0.05; // minimal Gap to foresee some profit
-input double MaxGap = 0.20; // maximum Gap where we expect it to close
-input double before_tp = 0.02; // discount on gap in case it is not reached in full
-// that's applied on take profit before_tp*ticksize'
-input int quantity = 1000; // number of contracts to buy for each direction/quantity
-input double ticksize=0.01; // ticksize points price variation
-input double deviation=5; // deviation accept by price in tick sizes
-
+input string targetSymbol = "PETR4"; // Symbol for negotiation
+input double minimumGapSize = 0.05; // Minimal Gap size to enter (entry condition)
+//foresee some profit
+input double maximumGapSize = 0.45; // Maximum Gap size to enter (entry condition)
+//  where we expect it to close
+input double discountGap = 0.02; // Discount on gap in case it is not reached in full
+// that's applied on take profit discountGap*ticksize'
+input int orderSize = 1000; // Number of contracts to buy for each direction/orderSize
+input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
 // expert operations end (no further sells or buys) close all positions
-input int endhour=16;
-input int endminute=00;
-const int pivot_order=15;
-input int nentry_pivots = 2; // number of orders that will be placed on pivot points
-// time to expire a position (close it)
-input int expiretime=(1.5)*60*60;
-
-const double trailing_value = 1*ticksize; // independent stoploss for trailing
+input double expertEndHour = 15.5; // Operational window maximum day hour
+input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
+input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
+// looking at formulas means all 4/5 pivots calculated will be equal to open price
+// if daily bar ohlc is all equal but depending on the time it's called ohlc for
+// current day not completed ohlc will not be equal
+input int expertEntries = 2; // Number of orders placed per day
+input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
+int positionExpireTime; // expertPositionExpireHours converted to seconds on Expert Init
+input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
+input int histPeakIntervalOrder = 15; // Minimum Interval Between Peaks in Histogram of Price
 // handle for EMA of trailing stop smooth
 // the price variation on this EMA controls to change on the trailling stop
-int    hema=0;
-input int  windowema=5; //  EMA for trailing stop 5 minutes
+int    hema;
 double lastema=1; // last value of the EMA 1 minute
 double lastemachange=0; // last EMA value when there was a change on stop loss positive
+double tickSize; // will be initiliazed on Expert Init
 
+// round price value to tick size of symbol
+double roundTickSize(double price){
+    return MathFloor(price/tickSize)*tickSize;
+}
 
 //--- object for performing trade operations - Trade Class
 CTrade  trade;
@@ -61,17 +65,14 @@ void ClosePositionbyTime(){
    int total = PositionsTotal(); // number of open positions
    if(total < 1) // nothing to do
       return;
-   ulong  position_ticket = PositionGetTicket(0);  // ticket of the position
    datetime positiontime  = (datetime) PositionGetInteger(POSITION_TIME);
-   double volume = PositionGetDouble(POSITION_VOLUME);
    //--- if the MagicNumber matches MagicNumber of the position
    if(PositionGetInteger(POSITION_MAGIC) != EXPERT_MAGIC)
       return;
-
-   if(positiontime +  expiretime > timenow && timenow < dayend )
+   if(positiontime +  positionExpireTime > timenow && timenow < dayend )
         return;
     // close whatever position is open NET_MODE
-    trade.PositionClose(sname);
+    trade.PositionClose(targetSymbol);
     Print("Closed by Time");
 }
 
@@ -83,7 +84,7 @@ datetime dayEnd(datetime timenow){
     TimeToStruct(timenow, mqltime);
     // calculate begin of the day
     day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return day0hour+endhour*3600+endminute*60;
+    return day0hour+int(expertEndHour*3600);
 }
 
 
@@ -91,15 +92,26 @@ datetime dayEnd(datetime timenow){
 int searchGreat( double &arr[], double value){
     int size = ArraySize(arr);
     for(int i=0; i<size; i++)
-    if(arr[i] > value)
-    return i;
+        if(arr[i] > value)
+            return i;
     return -1;
 }
+
+
+int searchGreatEqual( double &arr[], double value){
+    int size = ArraySize(arr);
+    for(int i=0; i<size; i++)
+        if(arr[i] >= value)
+            return i;
+    return -1;
+}
+
+
 int searchLess(double &arr[], double value){
     int size = ArraySize(arr);
     for(int i=size; i>=0; i--)
-    if(arr[i] < value)
-    return i;
+        if(arr[i] < value)
+            return i;
     return -1;
 }
 
@@ -133,16 +145,16 @@ double percentile(double &data[], double perc){
     return sorted[n-2];
 }
 
+// modify stop loss
 void changeStop(double change) {
-   // modify stop loss
    double sl, tp;
 
    sl = PositionGetDouble(POSITION_SL)  +  change;
-   sl = MathFloor(sl/ticksize)*ticksize;
+   sl = roundTickSize(sl);
    tp = PositionGetDouble(POSITION_TP);
-   tp = MathFloor(tp/ticksize)*ticksize;
+   tp = roundTickSize(tp);
 
-    if(!trade.PositionModify(sname, sl, tp))
+    if(!trade.PositionModify(targetSymbol, sl, tp))
         Print("OrderSend  Change SL error ",GetLastError());
 }
 
@@ -194,11 +206,11 @@ int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
 
     bool flag = false;
     int ipivots = 0; // counter of peaks
-    for(int i=pivot_order; i<ArraySize(histsma)-pivot_order; i++){
+    for(int i=histPeakIntervalOrder; i<ArraySize(histsma)-histPeakIntervalOrder; i++){
         if(histsma[i] < threshold) // no peaks smaller than this
             continue;
         flag = true;
-        for(int j=1; j<pivot_order+1; j++){
+        for(int j=1; j<histPeakIntervalOrder+1; j++){
             if(histsma[i] <= histsma[i-j] || histsma[i] <= histsma[i+j]){
                 flag = false;
                 break; // not a maximum

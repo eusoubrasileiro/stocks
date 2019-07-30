@@ -6,8 +6,6 @@ int Unique(double &arr[], int n);
 int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 #import
 
-//string itargetSymbol = "WING19"; // symbol for orders
-// string targetSymbol = "WIN@"; // symbol for indicators
 // const double minimumGapSize = 30; // minimal Gap to foresee some profit
 // const double maximumGapSize = 300; // maximum Gap where we expect it to close
 // const double discountGap = 15; // discount on gap in case it is no reached in full
@@ -22,15 +20,16 @@ int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 //+------------------------------------------------------------------+
 //| Inputs                                                           |
 //+------------------------------------------------------------------+
-input string targetSymbol = "PETR4"; // Symbol for negotiation
-input double minimumGapSize = 0.05; // Minimal Gap size to enter (entry condition)
+// input string targetSymbol = "PETR4"; // Symbol for negotiation // use current Symbol
+input double minimumGapSize = 30; // Minimal Gap size to enter (entry condition)
 //foresee some profit
-input double maximumGapSize = 0.45; // Maximum Gap size to enter (entry condition)
+input double maximumGapSize = 300; // Maximum Gap size to enter (entry condition)
 //  where we expect it to close
-input double discountGap = 0.02; // Discount on gap in case it is not reached in full
+input double discountGap = 15; // Discount on gap in case it is not reached in full
 // that's applied on take profit discountGap*ticksize'
-input int orderSize = 1000; // Number of contracts to buy for each direction/orderSize
+input int orderSize = 1; // Number of contracts to buy for each direction/orderSize
 input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
+input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 4 fibo, 3 hist
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
 input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
@@ -42,7 +41,7 @@ input int expertEntries = 2; // Number of orders placed per day
 input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
 int positionExpireTime; // expertPositionExpireHours converted to seconds on Expert Init
 input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
-input int histPeakIntervalOrder = 15; // Minimum Interval Between Peaks in Histogram of Price
+input int histPeakIntervalOrder = 15; // Min Interval Between Peaks in Hist (typePivots=4)
 // handle for EMA of trailing stop smooth
 // the price variation on this EMA controls to change on the trailling stop
 int    hema;
@@ -72,7 +71,7 @@ void ClosePositionbyTime(){
    if(positiontime +  positionExpireTime > timenow && timenow < dayend )
         return;
     // close whatever position is open NET_MODE
-    trade.PositionClose(targetSymbol);
+    trade.PositionClose(Symbol());
     Print("Closed by Time");
 }
 
@@ -154,7 +153,7 @@ void changeStop(double change) {
    tp = PositionGetDouble(POSITION_TP);
    tp = roundTickSize(tp);
 
-    if(!trade.PositionModify(targetSymbol, sl, tp))
+    if(!trade.PositionModify(Symbol(), sl, tp))
         Print("OrderSend  Change SL error ",GetLastError());
 }
 
@@ -199,7 +198,8 @@ int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
     int nbins = arange(vmin-binsize, vmax+binsize, binsize, bins);
     ArrayCopy(histsma, bins, 0, 0, WHOLE_ARRAY); // copy bins to histsma will be input bellow
     // for win futures 15 smooth equals 15*5 = 75 points between maximums
-    Histsma(data, ArraySize(data), histsma, nbins, 15); // window 1 means no smooth at all
+    // instead of histPeakIntervalOrder it was 15 of smooth window 
+    Histsma(data, ArraySize(data), histsma, nbins, 5); // window 1 means no smooth at all
 
     double threshold = percentile(histsma, 0.35); // will this work when ...
     ArrayResize(pivots, 5000); // storing selected peaks, if more exception

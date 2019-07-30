@@ -7,3 +7,13 @@
 *.csv
 *.npy
 *.pdf
+*.o
+*.so
+*.png
+*.zip
+*.lib
+*.def
+*.a
+*.bin
+*.win
+*.dev

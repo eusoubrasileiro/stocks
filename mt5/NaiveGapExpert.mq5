@@ -12,11 +12,10 @@ int previous_positions; // number of openned positions
 //| Expert initialization function
 int OnInit(){
 
-
     EventSetTimer(1);
    // trailing.Maximum(0.02);
     positionExpireTime = (int) (expertPositionExpireHours*3600); // hours to seconds
-    tickSize = SymbolInfoDouble(targetSymbol, SYMBOL_TRADE_TICK_SIZE);
+    tickSize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
     trade.SetExpertMagicNumber(EXPERT_MAGIC);
     trade.SetDeviationInPoints(orderDeviation*tickSize);
     //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
@@ -26,7 +25,7 @@ int OnInit(){
     TimeCurrent(previousday);
     previous_positions = PositionsTotal(); // number of openned positions
 
-    hema=iMA(targetSymbol, PERIOD_M1, trailingEmaWindow, 0, MODE_EMA, PRICE_TYPICAL);
+    hema=iMA(Symbol(), PERIOD_M1, trailingEmaWindow, 0, MODE_EMA, PRICE_TYPICAL);
 
     if(hema == INVALID_HANDLE){
        printf("Error creating EMAindicator");
@@ -43,9 +42,9 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 
     sl = roundTickSize(sl);
 
     if(sign > 0)
-        result = trade.BuyLimit(orderSize, entry, targetSymbol, sl, tp);
+        result = trade.BuyLimit(orderSize, entry, Symbol(), sl, tp);
     else
-        result = trade.SellLimit(orderSize, entry, targetSymbol, sl, tp);
+        result = trade.SellLimit(orderSize, entry, Symbol(), sl, tp);
 
     if(!result)
         Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
@@ -62,21 +61,33 @@ void PlaceOrders(int sign, double tp){
     double pivots[];
     double sl;
     bool result;
-
-    CopyRates(targetSymbol, PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
-    //CopyClose(targetSymbol, PERIOD_M1, 1, 21*9*60, closes); // 5 last days of 8 hours
-    //classic_pivotPoints(rates, pivots);
-    camarilla_pivotPoints(rates, pivots);
-    //pivotsHistSMA(closes, tickSize, pivots); // works well when market is dancing up and down
-
+    
+    switch(typePivots){
+        case 1: // classic
+        CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);    
+        classic_pivotPoints(rates, pivots);
+        break;
+        case 2: // camarilla
+        CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
+        camarilla_pivotPoints(rates, pivots);
+        break;
+        case 3: // hist count of prices on M1 time-frame
+        CopyClose(Symbol(), PERIOD_M1, expertUseCurrentDay, expertnDaysPivots*9*60, closes); // days of 9 hours
+        pivotsHistSMA(closes, tickSize, pivots); // works well when market is dancing up and down
+        break;
+        case 4: // fibo
+        // to implement
+        break;
+    }
+      
     size = ArraySize(pivots);
     // // stop loss based on standard orderDeviation of last 5 days on H4 time-frame
     // stop = stopStdev();
     // if(stop == 0)
     //   stop = 1000;
     double bid, ask;
-    bid = SymbolInfoDouble(targetSymbol,SYMBOL_BID);
-    ask = SymbolInfoDouble(targetSymbol,SYMBOL_ASK);
+    bid = SymbolInfoDouble(Symbol(),SYMBOL_BID);
+    ask = SymbolInfoDouble(Symbol(),SYMBOL_ASK);
     tp = roundTickSize(tp);
 
     //+ postive buy order
@@ -104,7 +115,7 @@ void PlaceOrders(int sign, double tp){
             PlaceLimitOrder(pivots[i], sl, tp, sign);
 
         // Finally place the first buy order Now! Not good
-        //result = trade.Buy(orderSize, targetSymbol, ask,sl, tp);
+        //result = trade.Buy(orderSize, Symbol(), ask,sl, tp);
     }
     else{
         // this seams wrong giving 3 orders
@@ -127,7 +138,7 @@ void PlaceOrders(int sign, double tp){
             PlaceLimitOrder(pivots[i], sl, tp, sign);
 
         // Finally place the first  sell Now!
-        //result = trade.Sell(orderSize, targetSymbol, bid, sl, tp);
+        //result = trade.Sell(orderSize, Symbol(), bid, sl, tp);
     }
 
     //if(!result)
@@ -153,7 +164,7 @@ void OnTimer() {
 
     TimeCurrent(todaynow);
 
-    copied = CopyRates(targetSymbol, PERIOD_M5, 0, 1, ratesnow);
+    copied = CopyRates(Symbol(), PERIOD_M5, 0, 1, ratesnow);
     if( copied == -1){
         Print("Failed to get today data");
         return;
@@ -167,7 +178,7 @@ void OnTimer() {
 
     if(todaynow.day != previousday.day){
 
-        copied = CopyRates(targetSymbol, PERIOD_D1, 1, 1, pday);
+        copied = CopyRates(Symbol(), PERIOD_D1, 1, 1, pday);
         if( copied == -1){
             Print("Failed to get previous day data");
             return;

@@ -49,7 +49,7 @@ void DLL_EXPORT Histsma(double data[], int n, double bins[], int nb, int window)
 //  }
 
 
-extern "C" DLL_EXPORT BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+extern "C" DLL_EXPORT int APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     switch (fdwReason)
     {

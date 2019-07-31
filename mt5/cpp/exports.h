@@ -8,9 +8,9 @@
  */
 
 #ifdef BUILDING_DLL
-    #define DLL_EXPORT __declspec(dllexport) __stdcall
+    #define DLL_EXPORT __declspec(dllexport)
 #else
-    #define DLL_EXPORT __declspec(dllimport) __stdcall
+    #define DLL_EXPORT __declspec(dllimport)  
 #endif
 
 

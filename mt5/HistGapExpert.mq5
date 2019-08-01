@@ -138,8 +138,10 @@ void PlaceOrders(int sign, double tp){
     }
 
     // just for debugging
+    Print("Percentile " + StringFormat("%G", percentile));
     for(int i=0; i<size; i++)
         Print(i +" : "+StringFormat("%G", pivots[i]));
+
     //if(!result)
     //      Print("Buy()/Sell() method failed. Return code=",trade.ResultRetcode(),
     //            ". Code description: ",trade.ResultRetcodeDescription());

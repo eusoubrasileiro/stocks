@@ -6,17 +6,6 @@ int Unique(double &arr[], int n);
 int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 #import
 
-// const double minimumGapSize = 30; // minimal Gap to foresee some profit
-// const double maximumGapSize = 300; // maximum Gap where we expect it to close
-// const double discountGap = 15; // discount on gap in case it is no reached in full
-// // that's applied on take profit discountGap*ticksize'
-// // number of contracts to buy for each direction/orderSize
-// int orderSize = 1;
-// // tick-size
-// const double ticksize=5; // minicontratos ibovespa 5 points price variation
-// // orderDeviation accept by price in tick sizes
-// const double orderDeviation=5;
-
 //+------------------------------------------------------------------+
 //| Inputs                                                           |
 //+------------------------------------------------------------------+
@@ -29,11 +18,12 @@ input double discountGap = 15; // Discount on gap in case it is not reached in f
 // that's applied on take profit discountGap*ticksize'
 input int orderSize = 1; // Number of contracts to buy for each direction/orderSize
 input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
-input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 4 fibo, 3 hist
+input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 3 fibo
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
 input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
 input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
+input double expertMaxDistantPivot = 1000; // Pending orders can't bet farther than this
 // looking at formulas means all 4/5 pivots calculated will be equal to open price
 // if daily bar ohlc is all equal but depending on the time it's called ohlc for
 // current day not completed ohlc will not be equal
@@ -41,7 +31,6 @@ input int expertEntries = 2; // Number of orders placed per day
 input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
 int positionExpireTime; // expertPositionExpireHours converted to seconds on Expert Init
 input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
-input int histPeakIntervalOrder = 15; // Min Interval Between Peaks in Hist (typePivots=4)
 // handle for EMA of trailing stop smooth
 // the price variation on this EMA controls to change on the trailling stop
 int    hema;
@@ -96,23 +85,15 @@ int searchGreat( double &arr[], double value){
     return -1;
 }
 
-
-int searchGreatEqual( double &arr[], double value){
-    int size = ArraySize(arr);
-    for(int i=0; i<size; i++)
-        if(arr[i] >= value)
-            return i;
-    return -1;
-}
-
-
+// Search for a value smaller than value in a sorted array
 int searchLess(double &arr[], double value){
     int size = ArraySize(arr);
-    for(int i=size; i>=0; i--)
+    for(int i=size-1; i>=0; i--) // start by the end
         if(arr[i] < value)
             return i;
     return -1;
 }
+
 
 void CloseOpenOrders(){
     ulong ticket;
@@ -188,50 +169,7 @@ bool TrailingStopLossEma(){
    return trailled;
 }
 
-
-int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
-    double bins[]; // first bins after calling Histsma bin counts (histogram) smoothed
-    double histsma[];
-    double vmin = data[ArrayMinimum(data)];
-    double vmax = data[ArrayMaximum(data)];
-
-    int nbins = arange(vmin-binsize, vmax+binsize, binsize, bins);
-    ArrayCopy(histsma, bins, 0, 0, WHOLE_ARRAY); // copy bins to histsma will be input bellow
-    // for win futures 15 smooth equals 15*5 = 75 points between maximums
-    // instead of histPeakIntervalOrder it was 15 of smooth window 
-    Histsma(data, ArraySize(data), histsma, nbins, 5); // window 1 means no smooth at all
-
-    double threshold = percentile(histsma, 0.35); // will this work when ...
-    ArrayResize(pivots, 5000); // storing selected peaks, if more exception
-
-    bool flag = false;
-    int ipivots = 0; // counter of peaks
-    for(int i=histPeakIntervalOrder; i<ArraySize(histsma)-histPeakIntervalOrder; i++){
-        if(histsma[i] < threshold) // no peaks smaller than this
-            continue;
-        flag = true;
-        for(int j=1; j<histPeakIntervalOrder+1; j++){
-            if(histsma[i] <= histsma[i-j] || histsma[i] <= histsma[i+j]){
-                flag = false;
-                break; // not a maximum
-            }
-        }
-        if(flag){
-            pivots[ipivots] = bins[i]; // or histsma[i] for histogram count for that
-            ipivots++;
-        }
-    }
-
-    ArrayResize(pivots, ipivots);
-    ArraySort(pivots);
-
-    for(int i=0; i<ipivots; i++)
-        Print(i+": "+StringFormat("%G", pivots[i]));
-
-    return ipivots;
-}
-
-void classic_pivotPoints(MqlRates &rates[], double &pivots[]){
+int classic_pivotPoints(MqlRates &rates[], double &pivots[]){
     // S3 and R3 are too low or too high normally never reached I found
     int size = ArraySize(rates);
     ArrayResize(pivots, size*4);
@@ -250,16 +188,51 @@ void classic_pivotPoints(MqlRates &rates[], double &pivots[]){
     //size = Unique(pivots, size*4);
     //ArrayResize(pivots, size);
     size = ArraySize(pivots);
-
-    for(int i=0; i<size; i++)
-        Print(i+": "+StringFormat("%G", pivots[i]));
-
+    return size;
 }
 
-void camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
+// R3 = PP + ((High – Low) x 1.000)
+//
+// R2 = PP + ((High – Low) x .618)
+//
+// R1 = PP + ((High – Low) x .382)
+//
+// PP = (H + L + C) / 3
+//
+// S1 = PP – ((High – Low) x .382)
+//
+// S2 = PP – ((High – Low) x .618)
+//
+// S3 = PP – ((High – Low) x 1.000)
+int fibonacci_pivotPoints(MqlRates &rates[], double &pivots[]){
     // S3 and R3 are too low or too high normally never reached I found
     int size = ArraySize(rates);
     ArrayResize(pivots, size*5);
+    double pivot, range;
+
+    // for every day in mqlrate calculate the pivot points
+    for(int i=0; i<size; i++){
+        pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
+        range = (rates[i].high - rates[i].low);
+        pivots[i*4] = pivot - range*1; // S3
+        pivots[i*4+1] = pivot - range*0.618; // S2
+        pivots[i*4+2] = pivot + range*0.618; // R2
+        pivots[i*4+3] = pivot + range*1; // R3
+    }
+
+    ArraySort(pivots);
+    //size = Unique(pivots, size*4);
+    //ArrayResize(pivots, size);
+    size = ArraySize(pivots);
+
+    return size;
+}
+
+// camarilla is the only one using the pivot point as an pivot value
+int camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
+    // S3 and R3 are too low or too high normally never reached I found
+    int size = ArraySize(rates);
+    ArrayResize(pivots, size*4);
     double pivot, range;
 
     // for every day in mqlrate calculate the pivot points
@@ -282,10 +255,11 @@ void camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
     //ArrayResize(pivots, size);
     size = ArraySize(pivots);
 
-    for(int i=0; i<size; i++)
-        Print(i+": "+StringFormat("%G", pivots[i]));
-
+    return size;
 }
+
+
+
 
 
 // Camarilla

@@ -1,5 +1,6 @@
 #define EXPERT_MAGIC 120986  // MagicNumber of the expert
 
+
 #import "cpparm.dll"
 int Unique(double &arr[], int n);
 // bins specify center of bins
@@ -20,12 +21,13 @@ input int orderSize = 1; // Number of contracts to buy for each direction/orderS
 input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
-input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
+input int expertnDaysPivots = 21; // Number of previous days to calc. pivots
+input double expertMaxDistantPivot = 1000; // Pending orders can't bet farther than this
 input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
 // looking at formulas means all 4/5 pivots calculated will be equal to open price
 // if daily bar ohlc is all equal but depending on the time it's called ohlc for
 // current day not completed ohlc will not be equal
-input int expertEntries = 2; // Number of orders placed per day
+input int expertEntries = 4; // Number of orders placed per day
 input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
 int positionExpireTime; // expertPositionExpireHours converted to seconds on Expert Init
 input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
@@ -74,7 +76,6 @@ datetime dayEnd(datetime timenow){
     return day0hour+int(expertEndHour*3600);
 }
 
-
 // utils for sorted arrays
 int searchGreat( double &arr[], double value){
     int size = ArraySize(arr);
@@ -84,19 +85,10 @@ int searchGreat( double &arr[], double value){
     return -1;
 }
 
-
-int searchGreatEqual( double &arr[], double value){
-    int size = ArraySize(arr);
-    for(int i=0; i<size; i++)
-        if(arr[i] >= value)
-            return i;
-    return -1;
-}
-
-
+// Search for a value smaller than value in a sorted array
 int searchLess(double &arr[], double value){
     int size = ArraySize(arr);
-    for(int i=size; i>=0; i--)
+    for(int i=size-1; i>=0; i--) // start by the end
         if(arr[i] < value)
             return i;
     return -1;
@@ -142,7 +134,7 @@ void changeStop(double change) {
    tp = roundTickSize(tp);
 
     if(!trade.PositionModify(Symbol(), sl, tp))
-        Print("OrderSend  Change SL error ",GetLastError());
+        Print("OrderSend  Change SL error ", GetLastError());
 }
 
 bool TrailingStopLossEma(){
@@ -176,8 +168,35 @@ bool TrailingStopLossEma(){
    return trailled;
 }
 
+// using daily data analyse if it is Swinging or inside
+// price values that have been before,
+bool isSwinging(){
+  double previous_days_high[];
+  double previous_days_low[];
+  int copied = CopyHigh(Symbol(), PERIOD_D1, 0, 6*21, previous_days_high);
+  if( copied == -1)
+    return false;
+  copied = CopyLow(Symbol(), PERIOD_D1, 0, 6*21, previous_days_low);
+  if( copied == -1)
+      return false;
+  double today_price = previous_days_high[expertnDaysPivots-1];
 
-int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
+  int result  = ArrayMaximum(previous_days_high, 0, WHOLE_ARRAY);
+  if(result == -1)
+    return false;
+  double maximum = previous_days_high[result];
+  result  = ArrayMinimum(previous_days_low, 0, WHOLE_ARRAY);
+  if(result == -1)
+    return false;
+  double minimum = previous_days_low[result];
+  if(today_price < 0.99*maximum && today_price > 1.01*minimum)
+    return true;
+  else
+    return false;
+}
+
+
+int pivotsHistSMA(double &data[], double binsize, double perc, double &pivots[]){
     double bins[]; // first bins after calling Histsma bin counts (histogram) smoothed
     double histsma[];
     double vmin = data[ArrayMinimum(data)];
@@ -187,19 +206,24 @@ int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
     ArrayCopy(histsma, bins, 0, 0, WHOLE_ARRAY); // copy bins to histsma will be input bellow
     // for win futures 15 smooth equals 15*5 = 75 points between maximums
     // instead of histPeakIntervalOrder it was 15 of smooth window
-    Histsma(data, ArraySize(data), histsma, nbins, 5); // window 1 means no smooth at all
+    Histsma(data, ArraySize(data), histsma, nbins, histPeakIntervalOrder);
+    // window 1 means no smooth at all
 
-    double threshold = percentile(histsma, 0.35); // will this work when ...
     ArrayResize(pivots, 5000); // storing selected peaks, if more exception
+    // increase percentile until we have enough pivots    
+    int i, ipivots; // counter of peaks
+    // double perc; // initial or start percentile do define threshold for peaks
+    double threshold = percentile(histsma, perc); // will this work when ...
 
     bool flag = false;
-    int ipivots = 0; // counter of peaks
-    for(int i=histPeakIntervalOrder; i<ArraySize(histsma)-histPeakIntervalOrder; i++){
+    for(ipivots = 0, i=histPeakIntervalOrder; i<ArraySize(histsma)-histPeakIntervalOrder; i++){
         if(histsma[i] < threshold) // no peaks smaller than this
             continue;
         flag = true;
-        for(int j=1; j<histPeakIntervalOrder+1; j++){
-            if(histsma[i] <= histsma[i-j] || histsma[i] <= histsma[i+j]){
+        for(int j=1; j<histPeakIntervalOrder+1; j++){ // look at the sides laterally
+        // for a bigger peak inside the defined window
+        // at the right and the left at the same time
+            if(histsma[i] < histsma[i-j] || histsma[i] < histsma[i+j]){
                 flag = false;
                 break; // not a maximum
             }
@@ -212,9 +236,6 @@ int pivotsHistSMA(double &data[], double binsize, double &pivots[]){
 
     ArrayResize(pivots, ipivots);
     ArraySort(pivots);
-
-    for(int i=0; i<ipivots; i++)
-        Print(i+": "+StringFormat("%G", pivots[i]));
 
     return ipivots;
 }

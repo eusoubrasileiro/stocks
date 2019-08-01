@@ -17,3 +17,6 @@
 *.bin
 *.win
 *.dev
+*.ex5
+*.obj
+*.exp

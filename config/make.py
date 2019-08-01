@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import subprocess
-import os, sys
+import os, sys, glob
+import shutil
 from argparse import ArgumentParser
 
 mt5advpath = r"/home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors/"
@@ -15,18 +16,24 @@ parser.add_argument("-clean", dest="clean", default=False, action="store_true",
                     help="clean all symlinks")
 parser.add_argument("-newdata", dest="newdata", default=False, action="store_true",
                     help="copy new Metatrader 5 binary files to data folder")
+parser.add_argument("-cpdll", dest="cpdll", default=False, action="store_true",
+                    help="copy built dll and dependencies to all Metatrader 5 tester agent library folders")
 
 args = parser.parse_args()
 
 if os.name == 'nt':
-    rootpath = r'D:\Users\andre.ferreira\Projects\stocks'
+    # repository and libraries paths
+    repopath = r'D:\Users\andre.ferreira\Projects\stocks'
     armadilloroot  = r"D:\Users\andre.ferreira\Projects\armadillo-code-9.600.x" # c++ library
+    # local user paths for MetaTrader 5 installation
+    usermt5hash = '8B052D0699A0083067EBF3A36123603B' # represents the local MetaTrader 5 installation
+    usermt5path = r"D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes"
     if args.cppbuild:
         ### Using vs build tools
-        vsenvsetup = os.path.join(rootpath, r'config\vsbuildtools.bat')
+        vsenvsetup = os.path.join(repopath, r'config\vsbuildtools.bat')
         armadilloincludes = os.path.join(armadilloroot, "include")
         armadillolibblas64 = os.path.join(armadilloroot, r"examples\lib_win64\blas_win64_MT.lib")
-        cpppath = os.path.join(rootpath, r"mt5\cpp")
+        cpppath = os.path.join(repopath, r"mt5\cpp")
         ## cl /LD /EHsc /Gz /Fe"cpparm" /std:c++17 armcpp.cpp /I
         ## /DBUILDING_DLL /LINK D:\Users\andre.ferreira\Projects\armadillo-code-9.600.x\examples\lib_win64\blas_win64_MT.lib
         ## /Fe"cpparm" output name dll (could also be a path)
@@ -38,10 +45,34 @@ if os.name == 'nt':
         ## Windows & is the equivalent of ; on linux
         compile = ("cd "+ cpppath + " & " +
                     vsenvsetup +" & "+
-                r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++17 /DBUILDING_DLL /O2 armcpp.cpp"+
-                " -I "+ armadilloincludes +" /LINK " + armadillolibblas64)
+                r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++latest /DBUILDING_DLL /O2 armcpp.cpp"+
+                " -I "+ armadilloincludes +" /link " + armadillolibblas64)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
+    if args.meta5: # create a softlink between repo folder and metatrader5 users advisors path
+        # cannot create hardlink but a softlink (junction) works
+        # can only create a junction without being admin
+        repopath_mt5 = os.path.join(repopath, 'mt5')
+        # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Experts\Advisors\mt5"
+        usermt5path_advisorsmt5 = os.path.join(usermt5path, "Terminal", usermt5hash, "MQL5\Experts\Advisors\mt5")
+        symlink = r'mklink /j ' + "\"" + usermt5path_advisorsmt5 + "\""+ " " +  repopath_mt5
+        print(symlink, file=sys.stderr)
+        subprocess.call(symlink, shell=True)
+    if args.cpdll:
+        repopath_dlls = os.path.join(repopath, 'mt5\cpp\*.dll')
+        dllpaths = glob.glob(repopath_dlls, recursive=True) # all dlls
+        #print(dllpaths, file=sys.stderr)
+        usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
+        #print(usermt5path_testeragents,  file=sys.stderr)
+        # search and get all local tester agents paths
+        testeragents= glob.glob(os.path.join(usermt5path_testeragents, 'Agent-127.0.0.1*'))
+        for testeragent in testeragents: # for all tester agents copy all dlls
+            testeragentpath = os.path.join(usermt5path_testeragents, testeragent, r'MQL5\Libraries')
+            for dll in dllpaths: # every dll
+                shutil.copy(dll, testeragentpath)
+        # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Tester\8B052D0699A0083067EBF3A36123603B
+        # ...\Agent-127.0.0.1-3000\MQL5\Experts\Advisors
+
 else: ### Ubuntu
     if args.clean:
         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';

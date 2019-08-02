@@ -32,7 +32,7 @@ if os.name == 'nt':
         usermt5hash = "8B052D0699A0083067EBF3A36123603B" # represents the local MetaTrader 5 installation
         usermt5path = r"C:\Users\andre\AppData\Roaming\MetaQuotes"
         # command to create build env using vsbuildtools default installation paths
-        vsbuildenvcmd = r"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat amd64"
+        vsbuildenvcmd = "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\"" +" amd64"
     else: # work
         # repository and libraries paths
         repopath = r'D:\Users\andre.ferreira\Projects\stocks'
@@ -56,7 +56,7 @@ if os.name == 'nt':
         ## /D make a predefinition of symbol BUILDING_DLL
         ## Windows & is the equivalent of ; on linux
         compile = ("cd "+ cpppath + " & " +
-                    vsbuildenvcmd +" & "+
+                    vsbuildenvcmd +" && "+
                 r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++latest /DBUILDING_DLL /O2 armcpp.cpp"+
                 " -I "+ armadilloincludes +" /link " + armadillolibblas64)
         print(compile, file=sys.stderr)

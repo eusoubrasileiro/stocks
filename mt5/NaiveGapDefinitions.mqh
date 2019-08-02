@@ -16,18 +16,18 @@ input double maximumGapSize = 300; // Maximum Gap size to enter (entry condition
 //  where we expect it to close
 input double discountGap = 15; // Discount on gap in case it is not reached in full
 // that's applied on take profit discountGap*ticksize'
-input int orderSize = 1; // Number of contracts to buy for each direction/orderSize
+input int maxOrderSize = 1; // Number of contracts/stocks to buy for each direction/orderSize
 input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
 input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 3 fibo
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
 input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
 input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
-input double expertRewardRiskRatio = 3; // Pending orders can't have rewar-risk smaller than this
+input double expertRewardRiskRatio = 0.25; // Pending orders can't have rewar-risk smaller than this
 // looking at formulas means all 4/5 pivots calculated will be equal to open price
 // if daily bar ohlc is all equal but depending on the time it's called ohlc for
 // current day not completed ohlc will not be equal
-input int expertEntries = 2; // Number of orders placed per day
+input int expertnOdersperDay = 2; // Number of orders placed per day
 input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
 int positionExpireTime; // expertPositionExpireHours converted to seconds on Expert Init
 input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
@@ -116,6 +116,33 @@ int arange(double start, double stop, double step, double &arr[]){
     return size;
 }
 
+  // a naive histogram were empty bins are not taken in account
+  // prices must be sorted
+  // prices will be rounded to tickSize to define bins
+  // empty bins will not be taken in account
+int naivehistPriceTicksize(double &prices[], double &bins[], int &count_bins[]){
+  int nprices = ArraySize(prices);
+  // bins[] bins with unique price values
+  // round prices to tickSize
+  for(int i=0; i<nprices; i++)
+    prices[i] = roundTickSize(prices[i]);
+
+  ArrayCopy(bins, prices); // 'Unique' armadillo overwrites input array
+  int nbins = Unique(bins, nprices); // get unique price values
+  ArrayResize(bins, nbins); // bins based on unique values
+  ArrayResize(count_bins, nbins);
+
+  // naive histogram of counts pretty fast because prices is sorted
+  // and rounded
+  for(int i=0; i<nbins; i++){
+      count_bins[i] = 0;
+      for(int j=0; j<nprices; j++)
+          if(prices[j] == bins[i])
+              count_bins[i] += 1;
+  }
+  return nbins;
+}
+
 double percentile(double &data[], double perc){
     double sorted[];
     ArrayCopy(sorted, data, 0, 0, WHOLE_ARRAY);
@@ -178,10 +205,10 @@ int classic_pivotPoints(MqlRates &rates[], double &pivots[]){
     // for every day in mqlrate calculate the pivot points
     for(int i=0; i<size; i++){
         pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
-        pivots[i*4] = pivot*2 - rates[i].low; // R1
-        pivots[i*4+1] = pivot + rates[i].high - rates[i].low; // R2
-        pivots[i*4+2] = pivot*2 - rates[i].high; // S1
-        pivots[i*4+3] = pivot - rates[i].high + rates[i].low; // S2
+        pivots[i*4] = roundTickSize(pivot*2 - rates[i].low); // R1
+        pivots[i*4+1] = roundTickSize(pivot + rates[i].high - rates[i].low); // R2
+        pivots[i*4+2] = roundTickSize(pivot*2 - rates[i].high); // S1
+        pivots[i*4+3] = roundTickSize(pivot - rates[i].high + rates[i].low); // S2
     }
 
     ArraySort(pivots);
@@ -214,10 +241,10 @@ int fibonacci_pivotPoints(MqlRates &rates[], double &pivots[]){
     for(int i=0; i<size; i++){
         pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
         range = (rates[i].high - rates[i].low);
-        pivots[i*4] = pivot - range*1; // S3
-        pivots[i*4+1] = pivot - range*0.618; // S2
-        pivots[i*4+2] = pivot + range*0.618; // R2
-        pivots[i*4+3] = pivot + range*1; // R3
+        pivots[i*4] = roundTickSize(pivot - range*1); // S3
+        pivots[i*4+1] = roundTickSize(pivot - range*0.618); // S2
+        pivots[i*4+2] = roundTickSize(pivot + range*0.618); // R2
+        pivots[i*4+3] = roundTickSize(pivot + range*1); // R3
     }
 
     ArraySort(pivots);
@@ -237,17 +264,17 @@ int camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
 
     // for every day in mqlrate calculate the pivot points
     for(int i=0; i<size; i++){
-        pivot = (rates[i].high + rates[i].low + rates[i].close)/3;
-        range = (rates[i].high - rates[i].low);
+        pivot = roundTickSize((rates[i].high + rates[i].low + rates[i].close)/3);
+        range = roundTickSize((rates[i].high - rates[i].low));
         //pivots[i*5] = rates[i].close - range*(1.1/12); // S1
         //pivots[i*5+1] = rates[i].close - range*(1.1/6); // S2
-        pivots[i*5] = rates[i].close - range*(1.1/4); // S3
-        pivots[i*5+1] = rates[i].close - range*(1.1/2); // S4
+        pivots[i*5] = roundTickSize(rates[i].close - range*(1.1/4)); // S3
+        pivots[i*5+1] = roundTickSize(rates[i].close - range*(1.1/2)); // S4
 //        pivots[i*5+2] = rates[i].close + range*(1.1/12); // R1
 //        pivots[i*5+3] = rates[i].close + range*(1.1/6); // R2
-        pivots[i*5+2] = pivot;
-        pivots[i*5+3] = rates[i].close + range*(1.1/4); // R3
-        pivots[i*5+4] = rates[i].close + range*(1.1/2); // R4
+        pivots[i*5+2] = roundTickSize(pivot);
+        pivots[i*5+3] = roundTickSize(rates[i].close + range*(1.1/4)); // R3
+        pivots[i*5+4] = roundTickSize(rates[i].close + range*(1.1/2)); // R4
     }
 
     ArraySort(pivots);

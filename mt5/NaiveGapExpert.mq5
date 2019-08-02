@@ -35,16 +35,16 @@ int OnInit(){
     return(INIT_SUCCEEDED);
 }
 
-void PlaceLimitOrder(double entry, double sl, double tp, int sign, int size){ // sign > 0 buy sell otherwise
+void PlaceLimitOrder(double entry, double sl, double tp, int sign, int amount){ // sign > 0 buy sell otherwise
     bool result = false;
     entry = roundTickSize(entry); // ask price
     tp = roundTickSize(tp);
     sl = roundTickSize(sl);
 
     if(sign > 0)
-        result = trade.BuyLimit(orderSize*size, entry, Symbol(), sl, tp);
+        result = trade.BuyLimit(maxOrderSize*amount, entry, Symbol(), sl, tp);
     else
-        result = trade.SellLimit(orderSize*size, entry, Symbol(), sl, tp);
+        result = trade.SellLimit(maxOrderSize*amount, entry, Symbol(), sl, tp);
 
     if(!result)
         Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
@@ -55,112 +55,135 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign, int size){ //
 }
 
 void PlaceOrders(int sign, double tp){
-    int size;
+    int npivots, nuse_pivots; // number of pivots calculated
+    // and efective usefull number used  of pivots bellow or above the ask/bid price
     MqlRates rates[];
     double pivots[];
-    double sl;
+    double sl, rwr_ratio;
+    int iorders; // counter of orders being placed
+    int i, start_usepivots, end_usepivots, nunique_pivots;
 
     switch(typePivots){
         case 1: // classic
         CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
-        size = classic_pivotPoints(rates, pivots);
+        npivots = classic_pivotPoints(rates, pivots);
         break;
         case 2: // camarilla
         CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
-        size = camarilla_pivotPoints(rates, pivots);
+        npivots = camarilla_pivotPoints(rates, pivots);
         break;
         default:
         case 3: // fibo
         CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
-        size = fibonacci_pivotPoints(rates, pivots);
+        npivots = fibonacci_pivotPoints(rates, pivots);
         break;
     }
 
-    size = ArraySize(pivots);
-    // // stop loss based on standard orderDeviation of last 5 days on H4 time-frame
-    // stop = stopStdev();
-    // if(stop == 0)
-    //   stop = 1000;
     double bid, ask;
     bid = SymbolInfoDouble(Symbol(),SYMBOL_BID);
     ask = SymbolInfoDouble(Symbol(),SYMBOL_ASK);
     tp = roundTickSize(tp);
 
     // there are repeated pivots due multiple days
-    int count_upivots[]; // frequency count like a histogram but for unique values
-    double upivots[]; // unique price values
-    ArrayCopy(upivots, pivots);
-    int nunique = Unique(upivots, size); // get unique price values
-    ArrayResize(count_upivots, nunique);
-    // count unique frequency
-    for(int i=0; i<nunique; i++){
-        count_upivots[i] = 0;
-        for(int j=0; j<size; j++)
-            if(pivots[j] == upivots[i])
-                count_upivots[i] += 1;
-    }
-    size = nunique;
+    int count_unique_pivots[]; // frequency count like a histogram but for unique values
+    double unique_pivots[]; // unique pivots price values
+    nunique_pivots = naivehistPriceTicksize(pivots, unique_pivots, count_unique_pivots);
     //+ postive buy order
     if(sign > 0){ // gonna go up
         //Place Buy Limit Orders
         // search all supports bellow the asking price
-        // array is ascending sorted so all bellow are also supports for this ask price
-        int ifirst_support = searchLess(upivots, ask); // position of first support
-
-        if(ifirst_support <  0){
-             Print("Not enough pivots to place limit orders ");
+        int ifirst_support = searchLess(unique_pivots, ask); // position of first support
+        // so all bellow are also supports for this ask price - array is ascending sorted
+        if(ifirst_support <  1){ // one isnt enough at least 2 need due stop-loss
+             Print("Not enough pivots to place limit orders with a stop");
              return; // this is an erroor something is wrong or or there is no pivots
-        } // +1 due zero based index
-        if(ifirst_support+1 < expertEntries){ // less entries than desired
+        }
+        // first useful pivot index (of stop-loss)
+        // expertnOdersperDay can be bigger than number of pivots so to make sure
+        // nothing goes wrong
+        start_usepivots = MathMax(0, ifirst_support-expertnOdersperDay);
+        end_usepivots =  ifirst_support; // INCLUDED
+        nuse_pivots = 1+end_usepivots-start_usepivots; // number of efective pivots
+        // can be used to place orders
+        if( nuse_pivots < expertnOdersperDay){ // less entries than desired
             Print("Will not place all limit orders ");
         }
-        // everything before are supports
-        sl = upivots[MathMax(0, ifirst_support-expertEntries)]; // and the first support is the SL
+        sl = unique_pivots[start_usepivots]; // and the first support is the SL
         sl = roundTickSize(sl);
         // calculate average price if all orders are placed? and stop-gain ratio
         //double avgprice = 0;
-        //for(int i=MathMax(0, ifirst_support-expertEntries); i<=ifirst_support; i++)
+        //for(int i=MathMax(0, ifirst_support-expertnOdersperDay); i<=ifirst_support; i++)
         //    avgprice += pivots[i];
         //avgprice /= ifirst_support+1
         // for every support bellow ask price (except first) put a buy limit order
-        // with the same target
-        for(int i=MathMax(0, ifirst_support-expertEntries); i<=ifirst_support; i++){ // 3-2=1 <= 3
-            if((tp-upivots[i])/(upivots[i]-sl) < expertRewardRiskRatio) // cant be smaller than RewardRiskRatio
+        // with the same target and sl
+        // the size of the order will be defined by the histogram of counts
+        // i starts with the orders closer to the tp otherwise they will they have preference
+        for(iorders=expertnOdersperDay, i=end_usepivots;
+            i>= start_usepivots+1  && iorders > 0;
+            i--){ // the first is the stop-loss
+            rwr_ratio = (tp-unique_pivots[i])/(unique_pivots[i]-sl);
+            if( rwr_ratio < expertRewardRiskRatio) // cant be smaller than RewardRiskRatio
               continue;
-            PlaceLimitOrder(upivots[i], sl, tp, sign, count_upivots[i]);
+            if(count_unique_pivots[i] >= iorders){ // there will be only one order
+              PlaceLimitOrder(unique_pivots[i], sl, tp, sign, iorders);
+              break;
+            }
+            else{
+              PlaceLimitOrder(unique_pivots[i], sl, tp, sign, count_unique_pivots[i]);
+              iorders -= count_unique_pivots[i];
+            }
         }
         // Finally place the first  sell Now!
         //result = trade.Sell(orderSize, Symbol(), bid, sl, tp);
     }
     else{ // gonna go down
-        int ifirst_resistance = searchGreat(upivots, bid); // position of first pivot bigger than bid price
+        int ifirst_resistance = searchGreat(unique_pivots, bid); // position of first pivot bigger than bid price
         // so everything above including this are resistences
 
-        if(ifirst_resistance <  0){
+        if(ifirst_resistance <  1){ // one isnt enough at least 2 need due stop-loss
              Print("Not enough pivots to place limit orders ");
              return; // this is an erroor something is wrong or or there are no pivots
         }
-        if( MathAbs(size-ifirst_resistance) < expertEntries) {
+        // nothing goes wrong
+        start_usepivots = ifirst_resistance;
+        // last useful pivot index (of stop-loss)
+        // expertnOdersperDay can be bigger than number of pivots avoid shit
+        end_usepivots =  MathMin(nunique_pivots-1, ifirst_resistance+expertnOdersperDay); // INCLUDED
+        nuse_pivots = 1+end_usepivots-start_usepivots; // number of useful pivots
+        if( nuse_pivots < expertnOdersperDay) {
             Print("Will not place all limit orders ");
         }
         // everything including this above are resistences
-        sl = upivots[MathMin(size-1, ifirst_resistance+expertEntries)]; // and the last resistence is the SL
-        // for every resistence above the bid price (except last) put a sell limit order
-        // with the same target
+        sl = unique_pivots[end_usepivots]; // and the last resistence is the SL
         sl = roundTickSize(sl);
-
-        for(int i=ifirst_resistance; i<MathMin(size-1, ifirst_resistance+expertEntries); i++){
-          if((upivots[i]-tp)/(sl-upivots[i]) < expertRewardRiskRatio) // cant be smaller
-            continue;
-          PlaceLimitOrder(upivots[i], sl, tp, sign, count_upivots[i]);
+        // for every resistence above the bid price (except last) put a sell limit order
+        // with the same target and sl
+        // the size of the order will be defined by the histogram of counts
+        // i starts with the orders closer to the tp otherwise they have preference
+        for(iorders=expertnOdersperDay, i=start_usepivots;
+            i<= end_usepivots-1 && iorders > 0;  // the last is the stop loss
+            i++){
+            rwr_ratio = (unique_pivots[i]-tp)/(sl-unique_pivots[i]);
+            if( rwr_ratio < expertRewardRiskRatio) // cant be smaller
+                continue;
+            if(count_unique_pivots[i] >= iorders){ // there will be only one order
+              PlaceLimitOrder(unique_pivots[i], sl, tp, sign, iorders);
+              break;
+            }
+            else{
+              PlaceLimitOrder(unique_pivots[i], sl, tp, sign, count_unique_pivots[i]);
+              iorders -= count_unique_pivots[i];
+            }
         }
         // Finally place the first  sell Now!
         //result = trade.Sell(orderSize, Symbol(), bid, sl, tp);
     }
 
     // just for debugging
-    for(int i=0; i<size; i++)
-        Print(i +" : "+StringFormat("%G", upivots[i]));
+    Print("npivots : "+StringFormat("%d", npivots) + "  nunique_pivots : ", StringFormat("%d", nunique_pivots));
+    for(i=0; i<nunique_pivots; i++)
+        Print(i +" : "+StringFormat("%G - count %d", unique_pivots[i], count_unique_pivots[i]));
 
 }
 

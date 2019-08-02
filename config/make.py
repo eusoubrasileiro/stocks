@@ -3,6 +3,7 @@ import subprocess
 import os, sys, glob
 import shutil
 import platform
+from pathlib import Path
 from argparse import ArgumentParser
 
 mt5advpath = r"/home/andre/.wine/drive_c/Program\ Files/Rico\ MetaTrader\ 5/MQL5/Experts/Advisors/"
@@ -71,8 +72,8 @@ if os.name == 'nt':
         print(symlink, file=sys.stderr)
         subprocess.call(symlink, shell=True)
     if args.cpdll:
-        repopath_dlls = os.path.join(repopath, 'mt5\cpp\*.dll')
-        dllpaths = glob.glob(repopath_dlls, recursive=True) # all dlls
+        repopath_dlls = os.path.join(repopath, 'mt5\cpp')
+        dllpaths = list(Path(repopath_dlls).glob('**\*.dll')) # all dll glob recursive not working
         #print(dllpaths, file=sys.stderr)
         usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
         #print(usermt5path_testeragents,  file=sys.stderr)

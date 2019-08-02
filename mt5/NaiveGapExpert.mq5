@@ -35,16 +35,16 @@ int OnInit(){
     return(INIT_SUCCEEDED);
 }
 
-void PlaceLimitOrder(double entry, double sl, double tp, int sign){ // sign > 0 buy sell otherwise
+void PlaceLimitOrder(double entry, double sl, double tp, int sign, int size){ // sign > 0 buy sell otherwise
     bool result = false;
     entry = roundTickSize(entry); // ask price
     tp = roundTickSize(tp);
     sl = roundTickSize(sl);
 
     if(sign > 0)
-        result = trade.BuyLimit(orderSize, entry, Symbol(), sl, tp);
+        result = trade.BuyLimit(orderSize*size, entry, Symbol(), sl, tp);
     else
-        result = trade.SellLimit(orderSize, entry, Symbol(), sl, tp);
+        result = trade.SellLimit(orderSize*size, entry, Symbol(), sl, tp);
 
     if(!result)
         Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),
@@ -59,7 +59,6 @@ void PlaceOrders(int sign, double tp){
     MqlRates rates[];
     double pivots[];
     double sl;
-    bool result;
 
     switch(typePivots){
         case 1: // classic
@@ -87,12 +86,26 @@ void PlaceOrders(int sign, double tp){
     ask = SymbolInfoDouble(Symbol(),SYMBOL_ASK);
     tp = roundTickSize(tp);
 
+    // there are repeated pivots due multiple days
+    int count_upivots[]; // frequency count like a histogram but for unique values
+    double upivots[]; // unique price values
+    ArrayCopy(upivots, pivots);
+    int nunique = Unique(upivots, size); // get unique price values
+    ArrayResize(count_upivots, nunique);
+    // count unique frequency
+    for(int i=0; i<nunique; i++){
+        count_upivots[i] = 0;
+        for(int j=0; j<size; j++)
+            if(pivots[j] == upivots[i])
+                count_upivots[i] += 1;
+    }
+    size = nunique;
     //+ postive buy order
     if(sign > 0){ // gonna go up
         //Place Buy Limit Orders
         // search all supports bellow the asking price
         // array is ascending sorted so all bellow are also supports for this ask price
-        int ifirst_support = searchLess(pivots, ask); // position of first support
+        int ifirst_support = searchLess(upivots, ask); // position of first support
 
         if(ifirst_support <  0){
              Print("Not enough pivots to place limit orders ");
@@ -102,20 +115,25 @@ void PlaceOrders(int sign, double tp){
             Print("Will not place all limit orders ");
         }
         // everything before are supports
-        sl = pivots[MathMax(0, ifirst_support-expertEntries)]; // and the first support is the SL
+        sl = upivots[MathMax(0, ifirst_support-expertEntries)]; // and the first support is the SL
         sl = roundTickSize(sl);
+        // calculate average price if all orders are placed? and stop-gain ratio
+        //double avgprice = 0;
+        //for(int i=MathMax(0, ifirst_support-expertEntries); i<=ifirst_support; i++)
+        //    avgprice += pivots[i];
+        //avgprice /= ifirst_support+1
         // for every support bellow ask price (except first) put a buy limit order
         // with the same target
         for(int i=MathMax(0, ifirst_support-expertEntries); i<=ifirst_support; i++){ // 3-2=1 <= 3
-            if((ask-pivots[i]) > expertMaxDistantPivot) // cant be too far
+            if((tp-upivots[i])/(upivots[i]-sl) < expertRewardRiskRatio) // cant be smaller than RewardRiskRatio
               continue;
-            PlaceLimitOrder(pivots[i], sl, tp, sign);
+            PlaceLimitOrder(upivots[i], sl, tp, sign, count_upivots[i]);
         }
         // Finally place the first  sell Now!
         //result = trade.Sell(orderSize, Symbol(), bid, sl, tp);
     }
     else{ // gonna go down
-        int ifirst_resistance = searchGreat(pivots, bid); // position of first pivot bigger than bid price
+        int ifirst_resistance = searchGreat(upivots, bid); // position of first pivot bigger than bid price
         // so everything above including this are resistences
 
         if(ifirst_resistance <  0){
@@ -126,15 +144,15 @@ void PlaceOrders(int sign, double tp){
             Print("Will not place all limit orders ");
         }
         // everything including this above are resistences
-        sl = pivots[MathMin(size-1, ifirst_resistance+expertEntries)]; // and the last resistence is the SL
+        sl = upivots[MathMin(size-1, ifirst_resistance+expertEntries)]; // and the last resistence is the SL
         // for every resistence above the bid price (except last) put a sell limit order
         // with the same target
         sl = roundTickSize(sl);
 
-        for(int i=ifirst_resistance; i<MathMin(size, ifirst_resistance+expertEntries); i++){
-          if((pivots[i]-bid) > expertMaxDistantPivot) // cant be too far
+        for(int i=ifirst_resistance; i<MathMin(size-1, ifirst_resistance+expertEntries); i++){
+          if((upivots[i]-tp)/(sl-upivots[i]) < expertRewardRiskRatio) // cant be smaller
             continue;
-          PlaceLimitOrder(pivots[i], sl, tp, sign);
+          PlaceLimitOrder(upivots[i], sl, tp, sign, count_upivots[i]);
         }
         // Finally place the first  sell Now!
         //result = trade.Sell(orderSize, Symbol(), bid, sl, tp);
@@ -142,7 +160,7 @@ void PlaceOrders(int sign, double tp){
 
     // just for debugging
     for(int i=0; i<size; i++)
-        Print(i +" : "+StringFormat("%G", pivots[i]));
+        Print(i +" : "+StringFormat("%G", upivots[i]));
 
 }
 

@@ -23,7 +23,7 @@ input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 3 fibo
 input double expertEndHour = 15.5; // Operational window maximum day hour
 input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
 input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
-input double expertMaxDistantPivot = 1000; // Pending orders can't bet farther than this
+input double expertRewardRiskRatio = 3; // Pending orders can't have rewar-risk smaller than this
 // looking at formulas means all 4/5 pivots calculated will be equal to open price
 // if daily bar ohlc is all equal but depending on the time it's called ohlc for
 // current day not completed ohlc will not be equal
@@ -232,7 +232,7 @@ int fibonacci_pivotPoints(MqlRates &rates[], double &pivots[]){
 int camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
     // S3 and R3 are too low or too high normally never reached I found
     int size = ArraySize(rates);
-    ArrayResize(pivots, size*4);
+    ArrayResize(pivots, size*5);
     double pivot, range;
 
     // for every day in mqlrate calculate the pivot points

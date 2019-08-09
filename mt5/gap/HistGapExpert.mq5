@@ -2,7 +2,6 @@
 #property version   "1.01"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
-////#include <Expert\Trailing\TrailingParabolicSAR.mqh>
 #include "HistGapDefinitions.mqh"
 
 MqlDateTime previousday;
@@ -16,6 +15,9 @@ int OnInit(){
    // trailing.Maximum(0.02);
     positionExpireTime = (int) (expertPositionExpireHours*3600); // hours to seconds
     tickSize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
+    double point = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_CONTRACT_SIZE);
+    point = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE);
+    
     trade.SetExpertMagicNumber(EXPERT_MAGIC);
     trade.SetDeviationInPoints(orderDeviation*tickSize);
     //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
@@ -138,7 +140,7 @@ void PlaceOrders(int sign, double tp){
     }
 
     // just for debugging
-    Print("Percentile " + StringFormat("%G", percentile));
+    Print("Percentile " + StringFormat("%G", perc));
     for(int i=0; i<size; i++)
         Print(i +" : "+StringFormat("%G", pivots[i]));
 

@@ -2,7 +2,6 @@
 #property version   "1.01"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
-//#include <Expert\Trailing\TrailingParabolicSAR.mqh>
 #include "NaiveGapDefinitions.mqh"
 
 MqlDateTime previousday;
@@ -65,16 +64,16 @@ void PlaceOrders(int sign, double tp){
 
     switch(typePivots){
         case 1: // classic
-        CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
+        CopyRates(Symbol(), PERIOD_D1, 1, expertnDaysPivots, rates);
         npivots = classic_pivotPoints(rates, pivots);
         break;
         case 2: // camarilla
-        CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
+        CopyRates(Symbol(), PERIOD_D1, 1, expertnDaysPivots, rates);
         npivots = camarilla_pivotPoints(rates, pivots);
         break;
         default:
         case 3: // fibo
-        CopyRates(Symbol(), PERIOD_D1, expertUseCurrentDay, expertnDaysPivots, rates);
+        CopyRates(Symbol(), PERIOD_D1, 1, expertnDaysPivots, rates);
         npivots = fibonacci_pivotPoints(rates, pivots);
         break;
     }

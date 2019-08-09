@@ -1,4 +1,4 @@
-#define EXPERT_MAGIC 120986  // MagicNumber of the expert
+#define EXPERT_MAGIC 100005  // MagicNumber of the expert
 
 
 #import "cpparm.dll"
@@ -210,7 +210,7 @@ int pivotsHistSMA(double &data[], double binsize, double perc, double &pivots[])
     // window 1 means no smooth at all
 
     ArrayResize(pivots, 5000); // storing selected peaks, if more exception
-    // increase percentile until we have enough pivots    
+    // increase percentile until we have enough pivots
     int i, ipivots; // counter of peaks
     // double perc; // initial or start percentile do define threshold for peaks
     double threshold = percentile(histsma, perc); // will this work when ...

@@ -22,7 +22,6 @@ input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 3 fibo
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
 input int expertnDaysPivots = 6; // Number of previous days to calc. pivots
-input int expertUseCurrentDay = 0; // 0 means use - 1 means don't (CopyRates)
 input double expertRewardRiskRatio = 0.25; // Pending orders can't have rewar-risk smaller than this
 // looking at formulas means all 4/5 pivots calculated will be equal to open price
 // if daily bar ohlc is all equal but depending on the time it's called ohlc for
@@ -212,24 +211,16 @@ int classic_pivotPoints(MqlRates &rates[], double &pivots[]){
     }
 
     ArraySort(pivots);
-    //size = Unique(pivots, size*4);
-    //ArrayResize(pivots, size);
     size = ArraySize(pivots);
     return size;
 }
 
 // R3 = PP + ((High – Low) x 1.000)
-//
 // R2 = PP + ((High – Low) x .618)
-//
 // R1 = PP + ((High – Low) x .382)
-//
 // PP = (H + L + C) / 3
-//
 // S1 = PP – ((High – Low) x .382)
-//
 // S2 = PP – ((High – Low) x .618)
-//
 // S3 = PP – ((High – Low) x 1.000)
 int fibonacci_pivotPoints(MqlRates &rates[], double &pivots[]){
     // S3 and R3 are too low or too high normally never reached I found
@@ -248,8 +239,6 @@ int fibonacci_pivotPoints(MqlRates &rates[], double &pivots[]){
     }
 
     ArraySort(pivots);
-    //size = Unique(pivots, size*4);
-    //ArrayResize(pivots, size);
     size = ArraySize(pivots);
 
     return size;
@@ -278,37 +267,21 @@ int camarilla_pivotPoints(MqlRates &rates[], double &pivots[]){
     }
 
     ArraySort(pivots);
-    //size = Unique(pivots, size*4);
-    //ArrayResize(pivots, size);
     size = ArraySize(pivots);
 
     return size;
 }
 
-
-
-
-
 // Camarilla
 // Define: Range = High - Low
 // Pivot Point (P) = (High + Low + Close) / 3
-//
 // Support 1 (S1) = Close - Range * (1.1 / 12)
-//
 // Support 2 (S2) = Close - Range * (1.1 / 6)
-//
 // Support 3 (S3) = Close - Range * (1.1 / 4)
-//
 // Support 4 (S4) = Close - Range * (1.1 / 2)
-//
 // Support 5 (S5) = Close - (R5 - Close)
-//
 // Resistance 1 (R1) = Close + Range * (1.1 / 12)
-//
 // Resistance 2 (R2) = Close + Range * (1.1 / 6)
-//
 // Resistance 3 (R3) = Close + Range * (1.1 / 4)
-//
 // Resistance 4 (R4) = Close + Range * (1.1 / 2)
-//
 // Resistance 5 (R5) = (High/Low) * Close

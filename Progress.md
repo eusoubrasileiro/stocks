@@ -211,7 +211,7 @@ That is done using `ctypes`
 - [ ] refactor strategyTester old `stester`
 - [ ] console program to make some unit tests `metaEngine.c` ?\
 
-#### Milestone : first real profitable EA on back-test on Metatrader 5
+#### Milestone : First real profitable EA on back-test on Metatrader 5
 July 2019
 
 - [x] Implement `NaiveGapExpert` based on analysis that ~93% of gaps smaller than 230 points close for `WIN@` mini-bovespa (prototype `Gaps Closing Patterns - WIN`) Used 4 pivot points (R1, R2, S1 and S2) formula on each of the last 5 days and placed limit orders on support and resistances closer to the open-price. Limit orders where limited to 2 per gap. Metatrader 5 backtest gave first EA profitable with 8 expected pay-off and sharp of 0.08. Back-tested also with `WIN@D` and `WIN@N` with similar results.     
@@ -220,7 +220,7 @@ July 2019
     - [x] Wrote simple mql5 unit test script for Armadillo C++ library `dll` wrapping
     - [x] Remove support-resistances equal. Used unique function from Armadillo library "cpparm.dll"
     - [x] Fixed wrong usage of `CopyRates` and `CopyOpen` including for previous day pivots calculation
-    1. When using `CopyRates(sname, PERIOD_D1, 0, 5, rates)` for calculation of pivots the actual day index 0 gets included (with ohlc all equal to open-price). Somehow that makes the pivots more closer and make sharp go to 0.10 and the expected pay-off to 9.3 . We can think as we modify the formula of pivots as consequence the stops and limits are placed closer to our entries. We can see on graph better results also after 2017 (where we have a big up trend?). Long trades won goes to 100% 269. Loss trades were 15%.  436 Trades 1245 Deals
+    1. When using `CopyRates(sname, PERIOD_D1, 0, 5, rates)` for calculation of pivots the actual day index 0 gets included (with ohlc all equal to open-price). That makes all pivots calculated to be equal to the reference pivot (l+h+c)/3.
     2. When removing the repeated support-resistances (w. unique) expected pay-off went to 4.5. Loss trades went to 34%. 443 Trades 1122 Deals
     3. When using `CopyRates` just with the last 5 days and unique support-resistances the expected pay-off goes to 7.88 sharp goes to 0.06 and Loss Trades to 43%. Total Trades 335 and 867 Deals. Seams to be accordingly explained above much less entries probably due support-resistances too far-apart.
     - It's expected that once histogram of volume at price are used for defining support-resistance zones better results than those points 1, 2 and 3 above will be reached.
@@ -233,18 +233,25 @@ July 2019
         - Tested on PETR4 entire-history sharp of 0.1
         - Tested on WEGE3 very low beta with Bovespa entire-history nice results
 
- ##### - Discovered parameters optimizer of Metatrader - July 2019
+ #### Milestone : Discovered parameters optimizer of Metatrader - July 2019
 
     - [x] Re-thinking ideas since the beginning I lost huge amount of time wring a back-test engine. That ended-up not being reliable and because it was in Python the backtest was very complicated to be reproduced on MQL5 - MT5. Many failures were due to wrong code porting. Although difficult writing everything on MQL5 the advantage that it can be readily  deployed and all testes are in real operation environment. If anything is wrong it will be thousand times easier to figure out earlier. Due that I am not thinking on using those back-test engines anymore. Moving everything to mql5 that's the way. Finding the optimizer of parameter was the last drop for that decision. A big downside is the machine learning libraries but that apparently can be solved bellow and even Sklearn and my all python codes can be used.
     - On my deception tried to find other brokers and trader software with a Python API. The problem is that they don't cover Brazil and the usable ones (that also include futures) require USA citizenship.  
     - [ ] Try use Sklearn / Pytorch through `Roffild Dll Python Library` on optimization and backtest
+    - [x] Now being able to build on Windows with vsbuildtools. Ready to use pybind11 seams much better than Roffild library.
     - [ ] Re-organize Progress file as back-log lasts first
-    - [ ] Store optimizer results
+    - [ ] Store optimizer results as xml
     - [x] Ported best version of `NaiveGapExpert` above to use property inputs and used the optimizer aiming smaller drawn-down and higher Sharp and Balance. Tested with entire history of PETR4 until 2014 results were impressive. The earlier the history data worse the performance, I bet is due AI being more and more incorporated. Still results were far above the ones above sharp around 0.24 or 0.42.  
-    - [ ] Include size of order based on strength of resistance-support.
+    - [x] Include size of order based on strength of resistance-support.
     - [ ] Test include positions on gaps that are too bigger and will not close?
     - [ ] Remove support-resistances too closer apart from array of pivots
-
+    - [x] Several fixes on NaiveGapExpert plus reward-risk-ratio. Due non unique pivots orders were being placed with stop on the same value. Used unique and count of unique prices to define 'volume' of one order. Created naive histogram function for only sorted arrays using unique values. Added reward-risk-ratio decimal input can be go from 0 or to inf. like 3/1 etc.
+    - [x] Splitted histogram part in another expert. `HistGapExpert`. Operating only when swinging. Controlling now support or resistances too far.
+    - [x] Better make.py. Now copying to correct metatrader expert agents paths all dll's, including blas and lapack armadillo libbrary dependencies.
     - [ ] Use different stop-loss for each limit orders smaller
     - [ ] Just found trading today that resistances older than 5 days was reached. Maybe test using last 1 year of support and resistances and clip histogram by last 5 day min-max? Select wether use pivots or histogram of price based on market trending (swinging around previous prices) or not.
     - [ ] Use different size of positions for different support/resistences?
+    - Backtesting is extremally sensible to the period used for testing. By using the optimizer it seams wise to use the latests years. Data from 4 years ago show results normally much better than recent years. The reasons seams be many but that force us to use more recent data. Since the recent data for some strategies is few (like gap strategies) it's better try backtesting on multiple symbols and analise the grouped the results. Use stocks is imperative since `ticksize` and `tickvalue` are equal. Some type of correction to use same ammount of money everytime will be needed, due the fact that each share have a different price. Let's use last one and half year as a standard. Also use foward option help not overfitting the parameter optimization. Let's use 1/3 as a default value.
+    - [ ] Implement scripts to use strategy tester automation of metatrader. Need to save optimization parameters as `*.set` file.
+    - [ ] Implement money based input for expert when buying stocks.
+    - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.

@@ -98,37 +98,39 @@ if os.name == 'nt':
 
     if args.optim:
         # run optimization on default symbols stocks passed as params (to implement)
+        symbols = ["BBDC4", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WEGE3", "UGPA3"]
         #mt5terminalexe = os.path.join(mt5path, 'terminal64.exe')
         expert = 'NaiveGap'
-        symbol = r'WIN@'
         # copy params set files all to
         paramset_files = list(Path(os.path.join(repopath, r'mt5\params')).glob('**\*.set')) # all *.set files
-        # The Expert Advisor parameters MUST BE at usermt5path\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Profiles\Tester
-        usermt5path_testerparams = os.path.join(usermt5path, "Terminal", usermt5hash, r"MQL5\Profiles\Tester")
-        for paramset_file in paramset_files: # every *.set file
-            shutil.copy(paramset_file, usermt5path_testerparams)
-        defaultOptconfigpath = os.path.join(repopath, r'mt5\config\optconfigDefault.ini')
-        # write a new config file just for executing this symbol
-        config = configparser.ConfigParser()
-        config.read(defaultOptconfigpath)
-        config['Tester']['ExpertParameters'] = 'opt'+expert+'.set' # optmin param set file
-        config['Tester']['Symbol'] = symbol
-        config['Tester']['shutdownterminal'] = '0' # shutdown after (1) or not (0) execution
-        config['Tester']['Report'] ='opt'+expert+'_'+symbol+'_report.xml' # report file
-        # save and execute the created config file
-        execOptconfigpath = os.path.join(repopath, r'mt5\config\optconfig' + symbol + '.ini')
-        with open(execOptconfigpath, 'w') as file:
-            config.write(file)
-        runoptimsymbol = "cd "+ mt5path + " & " + 'terminal64.exe /config:'+execOptconfigpath
-        print(runoptimsymbol, file=sys.stderr)
-        subprocess.call(runoptimsymbol, shell=True)
-        # copy reports back to repo folder
-        # reports file path, 2 reports one for forward and another commom
-        usermt5_optreportpath = os.path.join(usermt5path, "Terminal", usermt5hash)
-        usermt5_optreports = list(Path(usermt5_optreportpath).glob('*.xml')) # all *.xml files
-        repopath_optreport = os.path.join(repopath, r'mt5\optimization')
-        for usermt5_optreport in usermt5_optreports:
-            shutil.copy(usermt5_optreport, repopath_optreport)
+        for symbol in symbols:
+            #symbol = r'WIN@'
+            # The Expert Advisor parameters MUST BE at usermt5path\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Profiles\Tester
+            usermt5path_testerparams = os.path.join(usermt5path, "Terminal", usermt5hash, r"MQL5\Profiles\Tester")
+            for paramset_file in paramset_files: # every *.set file
+                shutil.copy(paramset_file, usermt5path_testerparams)
+            defaultOptconfigpath = os.path.join(repopath, r'mt5\config\optconfigDefault.ini')
+            # write a new config file just for executing this symbol
+            config = configparser.ConfigParser()
+            config.read(defaultOptconfigpath)
+            config['Tester']['ExpertParameters'] = 'opt'+expert+'.set' # optmin param set file
+            config['Tester']['Symbol'] = symbol
+            config['Tester']['shutdownterminal'] = '1' # shutdown after (1) or not (0) execution
+            config['Tester']['Report'] ='opt'+expert+'_'+symbol+'_report.xml' # report file
+            # save and execute the created config file
+            execOptconfigpath = os.path.join(repopath, r'mt5\config\optconfig' + symbol + '.ini')
+            with open(execOptconfigpath, 'w') as file:
+                config.write(file)
+            runoptimsymbol = "cd "+ mt5path + " & " + 'terminal64.exe /config:'+execOptconfigpath
+            print(runoptimsymbol, file=sys.stderr)
+            subprocess.call(runoptimsymbol, shell=True)
+            # copy reports back to repo folder
+            # reports file path, 2 reports one for forward and another commom
+            usermt5_optreportpath = os.path.join(usermt5path, "Terminal", usermt5hash)
+            usermt5_optreports = list(Path(usermt5_optreportpath).glob('*.xml')) # all *.xml files
+            repopath_optreport = os.path.join(repopath, r'mt5\optimization')
+            for usermt5_optreport in usermt5_optreports:
+                shutil.copy(usermt5_optreport, repopath_optreport)
 
 else: ### Ubuntu
     if args.clean:

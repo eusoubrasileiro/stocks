@@ -9,15 +9,15 @@ int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 //+------------------------------------------------------------------+
 //| Inputs                                                           |
 //+------------------------------------------------------------------+
-// input string targetSymbol = "PETR4"; // Symbol for negotiation // use current Symbol
-input double minimumGapSize = 30; // Minimal Gap size to enter (entry condition)
+input double minimumGapSize = 0.06; // Minimal Gap size to enter (entry condition)
 //foresee some profit
-input double maximumGapSize = 300; // Maximum Gap size to enter (entry condition)
+input double maximumGapSize = 0.35; // Maximum Gap size to enter (entry condition)
 //  where we expect it to close
-input double discountGap = 15; // Discount on gap in case it is not reached in full
+input double discountGap = 0.02; // Discount on gap in case it is not reached in full
 // that's applied on take profit discountGap*ticksize'
-input int maxOrderSize = 1; // Number of contracts/stocks to buy for each direction/orderSize
-input double orderDeviation = 5; // Price orderDeviation accepted in tickSizes
+input double orderSize = 100e3; // each order Size in $$ for stocks or future contracts
+// based on tick-value
+input double orderDeviation = 3; // Price orderDeviation accepted in tickSizes
 input int typePivots = 1; // type of pivots 1 classic, 2 camarilla, 3 fibo
 // expert operations end (no further sells or buys) close all positions
 input double expertEndHour = 15.5; // Operational window maximum day hour
@@ -36,6 +36,7 @@ int    hema;
 double lastema=1; // last value of the EMA 1 minute
 double lastemachange=0; // last EMA value when there was a change on stop loss positive
 double tickSize; // will be initiliazed on Expert Init
+double tickValue; // value of minimum variation in price in $$$
 
 // round price value to tick size of symbol
 double roundTickSize(double price){

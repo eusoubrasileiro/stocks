@@ -15,6 +15,7 @@ int OnInit(){
    // trailing.Maximum(0.02);
     positionExpireTime = (int) (expertPositionExpireHours*3600); // hours to seconds
     tickSize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
+    tickValue = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE);
     trade.SetExpertMagicNumber(EXPERT_MAGIC);
     trade.SetDeviationInPoints(orderDeviation*tickSize);
     //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
@@ -40,10 +41,19 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign, int amount){ 
     tp = roundTickSize(tp);
     sl = roundTickSize(sl);
 
-    if(sign > 0)
-        result = trade.BuyLimit(maxOrderSize*amount, entry, Symbol(), sl, tp);
-    else
-        result = trade.SellLimit(maxOrderSize*amount, entry, Symbol(), sl, tp);
+    double bid, ask;
+    bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
+    ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+    
+    if(sign > 0){        
+        // use ask price to calculate max ammount
+        // maxAmount = int(orderSize/ask);
+        result = trade.BuyLimit(int(orderSize/ask)*amount, entry, Symbol(), sl, tp);
+    }
+    else{
+        // use bid price to calculate order size
+        result = trade.SellLimit(int(orderSize/bid)*amount, entry, Symbol(), sl, tp);
+    }
 
     if(!result)
         Print("Buy()/Sell() Limit method failed. Return code=",trade.ResultRetcode(),

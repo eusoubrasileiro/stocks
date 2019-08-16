@@ -164,6 +164,9 @@ else: ### Ubuntu
 # daemon:
 # 	python -m algos.mt5daemons.buybandsd.py
 # Reference https://goo.gl/KaOBG3
+import pandas as pd
+from xml.sax import ContentHandler, parse
+
 class ExcelHandler(ContentHandler):
     def __init__(self):
         self.chars = [  ]
@@ -188,5 +191,6 @@ class ExcelHandler(ContentHandler):
             self.tables.append(self.rows)
 
 def optimizerxml2Pandas(xmlexcelpath):
-  parse(xmlexcelpath, excelHandler)
-  return pd.DataFrame(excelHandler.tables[0][:], columns=excelHandler.tables[0][0])
+    excelHandler = ExcelHandler()
+    parse(xmlexcelpath, excelHandler)
+    return pd.DataFrame(excelHandler.tables[0][:], columns=excelHandler.tables[0][0])

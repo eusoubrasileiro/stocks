@@ -159,38 +159,3 @@ else: ### Ubuntu
     if args.newdata:
         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Files';
                         cp *.mt5bin /home/andre/Projects/stocks/data """, shell=True)
-
-
-# daemon:
-# 	python -m algos.mt5daemons.buybandsd.py
-# Reference https://goo.gl/KaOBG3
-import pandas as pd
-from xml.sax import ContentHandler, parse
-
-class ExcelHandler(ContentHandler):
-    def __init__(self):
-        self.chars = [  ]
-        self.cells = [  ]
-        self.rows = [  ]
-        self.tables = [  ]
-    def characters(self, content):
-        self.chars.append(content)
-    def startElement(self, name, atts):
-        if name=="Cell":
-            self.chars = [  ]
-        elif name=="Row":
-            self.cells=[  ]
-        elif name=="Table":
-            self.rows = [  ]
-    def endElement(self, name):
-        if name=="Cell":
-            self.cells.append(''.join(self.chars))
-        elif name=="Row":
-            self.rows.append(self.cells)
-        elif name=="Table":
-            self.tables.append(self.rows)
-
-def optimizerxml2Pandas(xmlexcelpath):
-    excelHandler = ExcelHandler()
-    parse(xmlexcelpath, excelHandler)
-    return pd.DataFrame(excelHandler.tables[0][:], columns=excelHandler.tables[0][0])

@@ -255,3 +255,4 @@ July 2019
     - [x] Implement scripts to use strategy tester automation of metatrader. Need to save optimization parameters as `*.set` file. Implemented on `make.py -optim`.
     - [x] Implement money based input for expert when buying stocks. `OrderSize` changed to money value in R$ in `NaiveGapExpert`
     - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.
+    - [ ] Use ARIMA `statsmodel` package to predict price every two hours per day.  

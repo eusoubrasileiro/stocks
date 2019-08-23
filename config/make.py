@@ -28,6 +28,7 @@ args = parser.parse_args()
 if os.name == 'nt':
     # getting which machine we are
     if platform.uname()[5] == 'Intel64 Family 6 Model 158 Stepping 9, GenuineIntel': # HOME
+        mt5path = r"D:\MetaTrader 5"
         # repository and libraries paths
         repopath = r"C:\Users\andre\Projects\stocks"
         armadilloroot  = r"C:\Users\andre\Projects\armadillo-code-9.600.x" # c++ library
@@ -35,7 +36,7 @@ if os.name == 'nt':
         usermt5hash = "8B052D0699A0083067EBF3A36123603B" # represents the local MetaTrader 5 installation
         usermt5path = r"C:\Users\andre\AppData\Roaming\MetaQuotes"
         # command to create build env using vsbuildtools default installation paths
-        vsbuildenvcmd = "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\"" + amd64
+        vsbuildenvcmd = r"\"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat\"" + 'amd64'
         # mt5path = r"D:\MetaTrader 5"
     else: # WORK
         mt5path = r"D:\MetaTrader 5"
@@ -115,13 +116,14 @@ if os.name == 'nt':
             config.read(defaultOptconfigpath)
             config['Tester']['ExpertParameters'] = 'opt'+expert+'.set' # optmin param set file
             config['Tester']['Symbol'] = symbol
+            config['Tester']['Optimization'] = '2' # 1- complete slow  / 2- genetic 
             config['Tester']['shutdownterminal'] = '1' # shutdown after (1) or not (0) execution
             config['Tester']['Report'] ='opt'+expert+'_'+symbol+'_report.xml' # report file
             # save and execute the created config file
             execOptconfigpath = os.path.join(repopath, r'mt5\config\optconfig' + symbol + '.ini')
             with open(execOptconfigpath, 'w') as file:
                 config.write(file)
-            runoptimsymbol = "cd "+ mt5path + " & " + 'terminal64.exe /config:'+execOptconfigpath
+            runoptimsymbol = "cd "+ mt5path + " & " + r" D: " + " & " +"terminal64.exe /config:"+execOptconfigpath
             print(runoptimsymbol, file=sys.stderr)
             subprocess.call(runoptimsymbol, shell=True)
             # copy reports back to repo folder

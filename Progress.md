@@ -235,12 +235,12 @@ July 2019
 
  #### Milestone : Discovered parameters optimizer of Metatrader - July 2019
 
-    - [x] Re-thinking ideas since the beginning I lost huge amount of time wring a back-test engine. That ended-up not being reliable and because it was in Python the backtest was very complicated to be reproduced on MQL5 - MT5. Many failures were due to wrong code porting. Although difficult writing everything on MQL5 the advantage that it can be readily  deployed and all testes are in real operation environment. If anything is wrong it will be thousand times easier to figure out earlier. Due that I am not thinking on using those back-test engines anymore. Moving everything to mql5 that's the way. Finding the optimizer of parameter was the last drop for that decision. A big downside is the machine learning libraries but that apparently can be solved bellow and even Sklearn and my all python codes can be used.
+    - [x] Re-thinking ideas since the beginning I lost huge amount of time writting a back-test engine. That ended-up not being reliable and because it was in Python the backtest was very complicated to be reproduced on MQL5 - MT5. Many failures were due to wrong code porting. Although difficult writing everything on MQL5 the advantage that it can be readily  deployed and all testes are in real operation environment. If anything is wrong it will be thousand times easier to figure out earlier. Due that I am not thinking on using those back-test engines anymore. Moving everything to mql5 that's the way. Finding the optimizer of parameter was the last drop for that decision. A big downside is the machine learning libraries but that apparently can be solved bellow and even Sklearn and my all python codes can be used.
     - On my deception tried to find other brokers and trader software with a Python API. The problem is that they don't cover Brazil and the usable ones (that also include futures) require USA citizenship.  
     - [ ] Try use Sklearn / Pytorch through `Roffild Dll Python Library` on optimization and backtest
     - [x] Now being able to build on Windows with vsbuildtools. Ready to use pybind11 seams much better than Roffild library.
     - [ ] Re-organize Progress file as back-log lasts first
-    - [ ] Store optimizer results as xml
+    - [x] Store optimizer results as xml
     - [x] Ported best version of `NaiveGapExpert` above to use property inputs and used the optimizer aiming smaller drawn-down and higher Sharp and Balance. Tested with entire history of PETR4 until 2014 results were impressive. The earlier the history data worse the performance, I bet is due AI being more and more incorporated. Still results were far above the ones above sharp around 0.24 or 0.42.  
     - [x] Include size of order based on strength of resistance-support.
     - [ ] Test include positions on gaps that are too bigger and will not close?
@@ -250,8 +250,8 @@ July 2019
     - [x] Better make.py. Now copying to correct metatrader expert agents paths all dll's, including blas and lapack armadillo libbrary dependencies.
     - [ ] Use different stop-loss for each limit orders smaller
     - [ ] Just found trading today that resistances older than 5 days was reached. Maybe test using last 1 year of support and resistances and clip histogram by last 5 day min-max? Select wether use pivots or histogram of price based on market trending (swinging around previous prices) or not.
-    - [ ] Use different size of positions for different support/resistences?
+    - [x] Use different size of positions for different support/resistences?
     - Backtesting is extremally sensible to the period used for testing. By using the optimizer it seams wise to use the latests years. Data from 4 years ago show results normally much better than recent years. The reasons seams be many but that force us to use more recent data. Since the recent data for some strategies is few (like gap strategies) it's better try backtesting on multiple symbols and analise the grouped the results. Use stocks is imperative since `ticksize` and `tickvalue` are equal. Some type of correction to use same ammount of money everytime will be needed, due the fact that each share have a different price. Let's use last one and half year as a standard. Also use foward option help not overfitting the parameter optimization. Let's use 1/3 as a default value.
-    - [ ] Implement scripts to use strategy tester automation of metatrader. Need to save optimization parameters as `*.set` file.
-    - [ ] Implement money based input for expert when buying stocks.
+    - [x] Implement scripts to use strategy tester automation of metatrader. Need to save optimization parameters as `*.set` file. Implemented on `make.py -optim`.
+    - [x] Implement money based input for expert when buying stocks. `OrderSize` changed to money value in R$ in `NaiveGapExpert`
     - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.

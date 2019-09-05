@@ -48,11 +48,14 @@ if os.name == 'nt':
         usermt5path = r"D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes"
         ### Using vs build tools
         vsbuildenvcmd = os.path.join(repopath, r'config\vsbuildtools.bat')
+        pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Continuum\anaconda3"
+        pybindroot = r"D:\Users\andre.ferreira\Projects\pybind11-master"
 
     if args.cppbuild:
+        # ARMADILLO DLL
         armadilloincludes = os.path.join(armadilloroot, "include")
         armadillolibblas64 = os.path.join(armadilloroot, r"examples\lib_win64\blas_win64_MT.lib")
-        cpppath = os.path.join(repopath, r"mt5\cpp")
+        cpppath = os.path.join(repopath, r"mt5\cpp\arm")
         ## cl /LD /EHsc /Gz /Fe"cpparm" /std:c++17 armcpp.cpp /I
         ## /DBUILDING_DLL /LINK D:\Users\andre.ferreira\Projects\armadillo-code-9.600.x\examples\lib_win64\blas_win64_MT.lib
         ## /Fe"cpparm" output name dll (could also be a path)
@@ -66,6 +69,17 @@ if os.name == 'nt':
                     vsbuildenvcmd +" && "+
                 r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++latest /DBUILDING_DLL /O2 armcpp.cpp"+
                 " -I "+ armadilloincludes +" /link " + armadillolibblas64)
+        print(compile, file=sys.stderr)
+        subprocess.call(compile, shell=True)
+        # PYTHON DLL
+        pythonincludes = os.path.join(pythonpath, "include")
+        pythonlibs = os.path.join(pythonpath, r"libs\python37.lib")
+        pybindincludes = os.path.join(pybindroot, "include")
+        cpppath = os.path.join(repopath, r"mt5\cpp\pythondll")
+        compile = ("cd "+ cpppath + " & " +
+                    vsbuildenvcmd +" && "+
+                r"cl.exe /DEBUG:FASTLINK /LD /EHsc /Gz /Fepythondll /std:c++latest /DBUILDING_DLL /O2  pythondll.cpp"+
+                " -I "+ pythonincludes + " -I " + pybindincludes +" /link " + pythonlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
 
@@ -82,6 +96,8 @@ if os.name == 'nt':
     if args.cpdll:
         repopath_dlls = os.path.join(repopath, 'mt5\cpp')
         dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll glob recursive not working
+        # must also copy python_code.py
+        dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
         #print(dllpaths, file=sys.stderr)
         usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
         #print(usermt5path_testeragents,  file=sys.stderr)
@@ -89,13 +105,24 @@ if os.name == 'nt':
         testeragents= glob.glob(os.path.join(usermt5path_testeragents, 'Agent-127.0.0.1*'))
         for testeragent in testeragents: # for all tester agents copy all dlls
             testeragentpath = os.path.join(usermt5path_testeragents, testeragent, r'MQL5\Libraries')
+            #print(testeragentpath,  file=sys.stderr)
             for dll in dllpaths: # every dll
+                #print(dll,  file=sys.stderr)
                 shutil.copy(dll, testeragentpath)
+            # create a junction for the Python Anaconda3 installation
+            # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  testeragentpath
+            # print(symlink, file=sys.stderr)
+            # subprocess.call(symlink, shell=True)
         # copy to terminal tester optimization path for command line execution
         # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Libraries
-        usermt5path_termlibraries = os.path.join(usermt5path, "Terminal", usermt5hash, r'\MQL5\Libraries')
+        usermt5path_termlibraries = os.path.join(usermt5path, "Terminal", usermt5hash, r'MQL5\Libraries')
+        #print(usermt5path_termlibraries,  file=sys.stderr)
         for dll in dllpaths: # every dll
             shutil.copy(dll, usermt5path_termlibraries)
+        # create a junction for the Python Anaconda3 installation
+        # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  usermt5path_termlibraries
+        # print(symlink, file=sys.stderr)
+        # subprocess.call(symlink, shell=True)
 
     if args.optim:
         # run optimization on default symbols stocks passed as params (to implement)
@@ -116,7 +143,7 @@ if os.name == 'nt':
             config.read(defaultOptconfigpath)
             config['Tester']['ExpertParameters'] = 'opt'+expert+'.set' # optmin param set file
             config['Tester']['Symbol'] = symbol
-            config['Tester']['Optimization'] = '2' # 1- complete slow  / 2- genetic 
+            config['Tester']['Optimization'] = '2' # 1- complete slow  / 2- genetic
             config['Tester']['shutdownterminal'] = '1' # shutdown after (1) or not (0) execution
             config['Tester']['Report'] ='opt'+expert+'_'+symbol+'_report.xml' # report file
             # save and execute the created config file

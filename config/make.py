@@ -48,11 +48,15 @@ if os.name == 'nt':
         usermt5path = r"D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes"
         ### Using vs build tools
         vsbuildenvcmd = os.path.join(repopath, r'config\vsbuildtools.bat')
-        pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Continuum\anaconda3"
+        #pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Continuum\anaconda3"
+        # better use this one? same of vstudio?
+        pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Programs\Python\Python37"
         pybindroot = r"D:\Users\andre.ferreira\Projects\pybind11-master"
 
     if args.cppbuild:
+        ######################################
         # ARMADILLO DLL
+        ######################################
         armadilloincludes = os.path.join(armadilloroot, "include")
         armadillolibblas64 = os.path.join(armadilloroot, r"examples\lib_win64\blas_win64_MT.lib")
         cpppath = os.path.join(repopath, r"mt5\cpp\arm")
@@ -67,18 +71,20 @@ if os.name == 'nt':
         ## Windows & is the equivalent of ; on linux
         compile = ("cd "+ cpppath + " & " +
                     vsbuildenvcmd +" && "+
-                r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++latest /DBUILDING_DLL /O2 armcpp.cpp"+
+                r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++17 /DBUILDING_DLL /O2 armcpp.cpp"+
                 " -I "+ armadilloincludes +" /link " + armadillolibblas64)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
+        ######################################
         # PYTHON DLL
+        ######################################
         pythonincludes = os.path.join(pythonpath, "include")
-        pythonlibs = os.path.join(pythonpath, r"libs\python37.lib")
+        pythonlibs = os.path.join(pythonpath, r"libs\python37.lib") # never use _d debug
         pybindincludes = os.path.join(pybindroot, "include")
-        cpppath = os.path.join(repopath, r"mt5\cpp\pythondll")
+        cpppath = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll")
         compile = ("cd "+ cpppath + " & " +
                     vsbuildenvcmd +" && "+
-                r"cl.exe /DEBUG:FASTLINK /LD /EHsc /Gz /Fepythondll /std:c++latest /DBUILDING_DLL /O2  pythondll.cpp"+
+                r"cl.exe /LD /EHsc /Gz /Fepythondlib /std:c++17 /DBUILDING_DLL /O2  pythondll.cpp"+
                 " -I "+ pythonincludes + " -I " + pybindincludes +" /link " + pythonlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
@@ -95,7 +101,7 @@ if os.name == 'nt':
 
     if args.cpdll:
         repopath_dlls = os.path.join(repopath, 'mt5\cpp')
-        dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll glob recursive not working
+        dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll's # (glob recursive not working)
         #print(dllpaths, file=sys.stderr)
         usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
         #print(usermt5path_testeragents,  file=sys.stderr)
@@ -117,13 +123,15 @@ if os.name == 'nt':
         #print(usermt5path_termlibraries,  file=sys.stderr)
         for dll in dllpaths: # every dll
             shutil.copy(dll, usermt5path_termlibraries)
-        # create a junction for the Python Anaconda3 installation
+        # create a junction for the Python Anaconda3 installation?
         # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  usermt5path_termlibraries
         # print(symlink, file=sys.stderr)
         # subprocess.call(symlink, shell=True)
-
-    # must also copy python_code.py  to root D:\Metatrader 5\ path 
-    #dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
+        # must also copy python_code.py  to root D:\Metatrader 5\ path
+        # must run mt5 with python37 envs variables set on "cmd"
+        pythoncode_path = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll\python_code.py")
+        shutil.copy(pythoncode_path, mt5path)
+        #dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
 
     if args.optim:
         # run optimization on default symbols stocks passed as params (to implement)

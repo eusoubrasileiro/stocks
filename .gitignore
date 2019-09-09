@@ -21,3 +21,8 @@
 *.obj
 *.exp
 *.dll
+*.ini
+*.sln
+*.vcxproj*
+*.txt
+*.vs

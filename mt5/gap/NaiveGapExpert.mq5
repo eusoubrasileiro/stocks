@@ -16,6 +16,7 @@ int OnInit(){
     positionExpireTime = (int) (expertPositionExpireHours*3600); // hours to seconds
     tickSize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
     tickValue = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE);
+    minVolume = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN); // minimal volume for a deal
     trade.SetExpertMagicNumber(EXPERT_MAGIC);
     trade.SetDeviationInPoints(orderDeviation*tickSize);
     //--- what function is to be used for trading: true - OrderSendAsync(), false - OrderSend()
@@ -48,11 +49,14 @@ void PlaceLimitOrder(double entry, double sl, double tp, int sign, int amount){ 
     if(sign > 0){        
         // use ask price to calculate max ammount
         // maxAmount = int(orderSize/ask);
-        result = trade.BuyLimit(int(orderSize/ask)*amount, entry, Symbol(), sl, tp);
+        // convert to 100's
+        result = trade.BuyLimit(roundVolume(int(orderSize/ask)*amount), 
+                    entry, Symbol(), sl, tp);
     }
     else{
         // use bid price to calculate order size
-        result = trade.SellLimit(int(orderSize/bid)*amount, entry, Symbol(), sl, tp);
+        result = trade.SellLimit(roundVolume(int(orderSize/ask)*amount), 
+                    entry, Symbol(), sl, tp);
     }
 
     if(!result)

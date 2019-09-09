@@ -1,9 +1,9 @@
 #define EXPERT_MAGIC 120986  // MagicNumber of the expert
 
-#import "cpparm.dll"
+#import "pythondlib.dll"
 int Unique(double &arr[], int n);
 // bins specify center of bins
-int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
+//int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);
 #import
 
 //+------------------------------------------------------------------+
@@ -37,10 +37,15 @@ double lastema=1; // last value of the EMA 1 minute
 double lastemachange=0; // last EMA value when there was a change on stop loss positive
 double tickSize; // will be initiliazed on Expert Init
 double tickValue; // value of minimum variation in price in $$$
+double minVolume;
 
 // round price value to tick size of symbol
 double roundTickSize(double price){
     return MathFloor(price/tickSize)*tickSize;
+}
+// round price minimum volume of symbol 100's stocks 1 for future contracts
+double roundVolume(double vol){
+    return int(vol/minVolume)*minVolume;
 }
 
 //--- object for performing trade operations - Trade Class

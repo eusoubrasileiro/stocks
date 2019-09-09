@@ -96,8 +96,6 @@ if os.name == 'nt':
     if args.cpdll:
         repopath_dlls = os.path.join(repopath, 'mt5\cpp')
         dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll glob recursive not working
-        # must also copy python_code.py
-        dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
         #print(dllpaths, file=sys.stderr)
         usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
         #print(usermt5path_testeragents,  file=sys.stderr)
@@ -123,6 +121,9 @@ if os.name == 'nt':
         # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  usermt5path_termlibraries
         # print(symlink, file=sys.stderr)
         # subprocess.call(symlink, shell=True)
+
+    # must also copy python_code.py  to root D:\Metatrader 5\ path 
+    #dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
 
     if args.optim:
         # run optimization on default symbols stocks passed as params (to implement)

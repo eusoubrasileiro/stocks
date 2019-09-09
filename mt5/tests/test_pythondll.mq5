@@ -3,7 +3,7 @@
 #property script_show_inputs
 //--- input parameters
 
-#import "pythondll.dll"
+#import "pythondlib.dll"
 int Unique(double &arr[], int n);
 #import
 

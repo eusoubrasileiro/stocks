@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29215.179
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vspythondll", "vspythondll.vcxproj", "{726129F3-8D75-4A47-96D6-0C2D9FE045C7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pythondlib", "vspythondll.vcxproj", "{726129F3-8D75-4A47-96D6-0C2D9FE045C7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_vspythondll", "..\test_vspythondll\test_vspythondll.vcxproj", "{69388BCC-98F0-4681-A84D-73C2B0F5A47F}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -18,8 +18,8 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Debug|x64.ActiveCfg = Debug|x64
 		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Debug|x64.Build.0 = Debug|x64
-		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Release|x64.ActiveCfg = Debug|x64
-		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Release|x64.Build.0 = Debug|x64
+		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Release|x64.ActiveCfg = Release|x64
+		{726129F3-8D75-4A47-96D6-0C2D9FE045C7}.Release|x64.Build.0 = Release|x64
 		{69388BCC-98F0-4681-A84D-73C2B0F5A47F}.Debug|x64.ActiveCfg = Debug|x64
 		{69388BCC-98F0-4681-A84D-73C2B0F5A47F}.Debug|x64.Build.0 = Debug|x64
 		{69388BCC-98F0-4681-A84D-73C2B0F5A47F}.Release|x64.ActiveCfg = Release|x64

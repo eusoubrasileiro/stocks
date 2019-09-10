@@ -1,6 +1,6 @@
 #define EXPERT_MAGIC 120986  // MagicNumber of the expert
 
-#import "pythondlib.dll"
+#import "cpparm.dll"
 int Unique(double &arr[], int n);
 // bins specify center of bins
 //int  Histsma(double &data[], int n,  double &bins[], int nb, int nwindow);

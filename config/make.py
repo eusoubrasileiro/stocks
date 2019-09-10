@@ -36,8 +36,10 @@ if os.name == 'nt':
         usermt5hash = "8B052D0699A0083067EBF3A36123603B" # represents the local MetaTrader 5 installation
         usermt5path = r"C:\Users\andre\AppData\Roaming\MetaQuotes"
         # command to create build env using vsbuildtools default installation paths
-        vsbuildenvcmd = r"\"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat\"" + 'amd64'
-        # mt5path = r"D:\MetaTrader 5"
+        vsbuildenvcmd = "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" " + ' amd64'
+        pythonpath = r"C:\Users\andre\AppData\Local\Programs\Python\Python37"
+        # better use this one? same of vstudio?
+        pybindroot = r"C:\Users\andre\Projects\pybind11-master"
     else: # WORK
         mt5path = r"D:\MetaTrader 5"
         # repository and libraries paths

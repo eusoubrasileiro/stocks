@@ -1,6 +1,5 @@
 #include <Expert\ExpertTrailing.mqh>
 #include <Trade\PositionInfo.mqh>
-#include "Util.mqh"
 
 
 class CTrailingMA : public CExpertTrailing

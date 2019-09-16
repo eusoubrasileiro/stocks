@@ -19,29 +19,76 @@ input double targetprofit = 15; // target profit per order
 
 bool                     Expert_EveryTick       = false;
 int                      Expert_MagicNumber     = 2525;
-int                      nbands                 = 3; //number of bollinger bands
-int                      buffersize             = 60*5; // indicators buffer needed
+int                      Expert_NBands          = 3; //number of bollinger bands
+int                      Expert_Window          = 21; // indicators buffer needed
+// number of samples needed/used for training 5*days?
+const int                Expert_BufferSize      = 60*7*5; // indicators buffer needed
 
 
 class CExpertXBands : public CExpertX
 {
+    int m_nbands; // number of bands
+    int m_window; //
+    int m_signals[][Expert_BufferSize]; // store buy|sell|hold signals for each bband
+    // 1|2|0 = buy|sell|hold
+    CIndicators *m_bands; // collection of bbands indicators
 
   public:
-                     CExpertXBands(void){};
+                     CExpertXBands(void){
+                        m_bands = new CIndicators;
+                        // use all those series
+                        m_used_series = USE_SERIES_OPEN|USE_SERIES_CLOSE|USE_SERIES_HIGH|USE_SERIES_LOW;
+                     };
                     ~CExpertXBands(void){};
+
   //CIndicators m_indicators;
 
-  bool CreateCiBands(int nbands, int window, int buffersize){
+  void CreateBBands(int nbands, int window){
+    // Call only after init indicators
+    m_nbands = nbands;
+    m_window = window;
+    m_buffersize = buffersize;
+    ArrayResize(m_signals, m_nbands);
+
+    // call only after refresh / resize all internal series buffers to BufferSize
+    m_open.BufferSize(Expert_BufferSize);
+    m_close.BufferSize(Expert_BufferSize);
+    m_high.BufferSize(Expert_BufferSize);
+    m_low.BufferSize(Expert_BufferSize);
+
     double inc=0.5;
-    for(int i=0; i<nbands; i++){
-        CiBands band = new CiBand;
-        band.Create(m_symbol.Name(), PERIOD_M1, window*inc, 2.5, PRICE_TYPICAL); 
+    for(int i=0; i<nbands; i++){ // create multiple increasing bollinger bands
+        CiBands band = new CiBands;
+        band.Create(m_symbol.Name(), PERIOD_M1, window*inc, 0, 2.5, PRICE_TYPICAL);
         band.BufferResize(buffersize);
-        bands.Add(m_band);
+        m_indicators.Add(band); // needed to be refreshed by CExpert
+        m_bands.Add(band);
         inc += 0.5;
-      }
     }
+  }
+
+  void calculateRawSignals(){
+    for(int i=0; i<m_nbands; i++)
+       for(int j=0;j<Expert_BufferSize;j++){
+        //    Based on a bollinger band defined by upper-band and lower-band
+        //    return signal:
+        //        buy 1 : crossing down-outside it's buy
+        //        sell 2 : crossing up-outside it's sell
+        //        hold : nothing usefull happend
+        // remember order is reversed yonger firs older later
+        if( m_high.At(j) >= m_bands.At(i).Upper(j))
+            m_signals[i][j] = 2; // sell
+        else 
+        if( m_low.At(j) <= m_bands.At(i).Lower(j))
+            m_signals[i][j] = 1; // buy
+        else
+            m_signals[i][j] = 0; // nothing
+       }
+    }
+  }
+
   protected:
+
 
 
 };

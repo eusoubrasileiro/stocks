@@ -1,154 +1,125 @@
-#include "BbandsDefinitions.mqh"
+#include <Indicators\Indicator.mqh>
 
-void WriteSymbolFile(string symbol, MqlRates &arr[]){
-    ResetLastError();
-    StringAdd(symbol,"RTM1.mt5bin");
-    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON);
-    if(handle!=INVALID_HANDLE){
-        FileWriteArray(handle, arr, 0, WHOLE_ARRAY);
-        FileClose(handle);
-    }
-    else
-    Print("Failed to open the file, error ",GetLastError());
-}
+class RawSignalBand : public CIndicator, iOpen 
+  {
+protected:
+   int               m_ma_period;
+   double            m_deviation;
+   int               m_applied;
 
-void SavePriceData(){
-    //---- download the minimal data for training and prediction based on current time
-    // asks much more than needed to workaround unsolvable minute data lost
-    MqlRates mqlrates[]; 
-    datetime timenow = TimeCurrent();
-    int nsymbols = ArraySize(symbols);
-    int copied=-1;
-    int totalcopied=0;
+public:
+                     CiBands(void);
+                    ~CiBands(void);
+   //--- method of creation
+   bool              Create(const string symbol,const ENUM_TIMEFRAMES period,
+                            const int ma_period,const int ma_shift,
+                            const double deviation,const int applied);
+   //--- methods of access to indicator data
+   int            Main(const int index) const;
+   //--- method of identifying
+   virtual int       Type(void) const { return(IND_BANDS); }
 
-    for(int i=0; i<nsymbols; i++){
-        for(int try=0; try<3; try++){ // number of 3 trials before giving up
-            // -1 if it has not complet it yet
-            copied = CopyRates(symbols[i], PERIOD_M1, 0,  ntrainingbars, mqlrates);
-            if(MathAbs(copied) < ntrainingbars)  //  sleep time (2 seconds) for downloading the data
-                Sleep(2000);
-        }
-        if(copied == -1){
-            Print("Failed to get history data for the symbol ", symbols[i]);
-            continue;
-        }
-        WriteSymbolFile(symbols[i], mqlrates);
-        totalcopied += copied;
-    }
-    Print("percent price data saved: ",  string((float) totalcopied/(ntrainingbars*nsymbols)));
-}
-
-
-long readPredictions(void){
-    // read 12 bytes predictions file {datetime:long, direction:int}
-    string fname = "predictions.bin";
-    //FILE_COMMON location of the file in a shared folder for all client terminals \Terminal\Common\Files
-    ///home/andre/.wine/drive_c/users/andre/Application Data/MetaQuotes/Terminal/Common/Files
-    long nread = 0;
-    while(true){ // try inf
-      // int handle=FileOpen(fname, FILE_READ|FILE_BIN|FILE_COMMON);
-      nread =  FileLoad(fname, read_predictions, FILE_COMMON);
-      if(nread == -1){
-        Sleep(1000); // wait a bit
-        continue;
-      }
-      else {
-        Print("read ", nread, " predictions");
-        if(nread > 0)
-          Print("last: prediction datetime: ", read_predictions[nread-1].time, " direction: ", read_predictions[nread-1].direction);        
-        break;
-      }
-    }
-    return nread;
-}
-
-
-bool isInPredictions(prediction &value, prediction &array[]){
-  // check wether the value is in the array
-  uint n = ArraySize(array);
-  for(uint j=0; j<n; j++)
-    if(value.direction == array[j].direction && value.time == array[j].time)
-      return true;
-  return false;
-}
-
-int newPredictions(prediction &newpredictions[]){
-  // compare read_predictions with executed_predictions
-  // return number of new orders 'toexecute_predictions'
-  uint nread = ArraySize(read_predictions);
-  ArrayResize(newpredictions, nread); // maximum is the number read
-  int nnew = 0;
-  for(uint i=0; i<nread; i++){
-    // check if it has already been executed
-    if(!isInPredictions(read_predictions[i], sent_predictions)){
-      newpredictions[nnew] = read_predictions[i];
-      nnew++; // new prediction
-    }
+protected:
+   //--- methods of tuning
+   bool              Initialize(const string symbol,const ENUM_TIMEFRAMES period,
+                                const int ma_period,const int ma_shift,
+                                const double deviation,const int applied);
+  };
+//+------------------------------------------------------------------+
+//| Constructor                                                      |
+//+------------------------------------------------------------------+
+CiBands::CiBands(void) : m_ma_period(-1),
+                         m_deviation(EMPTY_VALUE),
+                         m_applied(-1)
+  {
   }
-  return int(nnew);
-}
+//+------------------------------------------------------------------+
+//| Destructor                                                       |
+//+------------------------------------------------------------------+
+CiBands::~CiBands(void)
+  {
+  }
+//+------------------------------------------------------------------+
+//| Create indicator "Bollinger Bands"                               |
+//+------------------------------------------------------------------+
+bool CiBands::Create(const string symbol,const ENUM_TIMEFRAMES period,
+                     const int ma_period,
+                     const double deviation,const int applied)
+  {
+//--- check history
+   if(!SetSymbolPeriod(symbol,period))
+      return(false);
+//--- create
+   m_handle=iBands(symbol,period,ma_period,0,deviation,applied);
+//--- check result
+   if(m_handle==INVALID_HANDLE)
+      return(false);
+//--- indicator successfully created
+   if(!Initialize(symbol,period,ma_period,ma_shift,deviation,applied))
+     {
+      //--- initialization failed
+      IndicatorRelease(m_handle);
+      m_handle=INVALID_HANDLE;
+      return(false);
+     }
+//--- ok
+   return(true);
+  }
+//+------------------------------------------------------------------+
+//| Initialize indicator with the special parameters                 |
+//+------------------------------------------------------------------+
+bool CiBands::Initialize(const string symbol,const ENUM_TIMEFRAMES period,
+                         const int ma_period,
+                         const double deviation,const int applied)
+  {
+   if(CreateBuffers(symbol,period,3))
+     {
+      //--- string of status of drawing
+      m_name  ="RawSignalBands";
+      m_status="("+symbol+","+PeriodDescription()+","+
+               IntegerToString(ma_period)+","+IntegerToString(0)+","+
+               DoubleToString(deviation)+","+PriceDescription(applied)+") H="+IntegerToString(m_handle);
+      //--- save settings
+      m_ma_period=ma_period;
+      m_deviation=deviation;
+      m_applied  =applied;
+      //--- create buffers
+      ((CIndicatorBuffer*)At(0)).Name("BASE_LINE");
+      ((CIndicatorBuffer*)At(0)).Offset(0);
+      ((CIndicatorBuffer*)At(1)).Name("UPPER_BAND");
+      ((CIndicatorBuffer*)At(1)).Offset(0);
+      ((CIndicatorBuffer*)At(2)).Name("LOWER_BAND");
+      ((CIndicatorBuffer*)At(2)).Offset(0);
+      //--- ok
+      return(true);
+     }
+//--- error
+   return(false);
+  }
 
-datetime dayEnd(datetime timenow){
-    // set end of THIS day for operations, 15 minutes before closing the stock market
-    // http://www.b3.com.br/en_us/solutions/platforms/puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
-    datetime day0hour;
-    MqlDateTime mqltime;
-    TimeToStruct(timenow, mqltime);
-    // calculate begin of the day
-    day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return day0hour+endhour*3600+endminute*60;
-}
-
-datetime dayBegin(datetime timenow){
-    datetime day0hour;
-    MqlDateTime mqltime;
-    TimeToStruct(timenow, mqltime);
-    // no orders on the first 30 minutes
-    day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-    return day0hour+starthour*3600+startminute*60;
-}
-
-//  number of orders oppend on the last n minutes defined on Definitons.mqh
-int nlastDeals(){
-    int lastnopen=0; // number of orders openned on the last n minutes
-    //--- request trade history
-    datetime now = TimeCurrent();
-    // on the last 15 minutes count the openned orders
-    HistorySelect(now-60*perdt,now);
-    ulong ticket;
-    long entry;
-    uint  total=HistoryDealsTotal(); // total deals on the last n minutes
-    //--- for all deals
-   for(uint i=0;i<total;i++){
-      //--- try to get deals ticket
-      ticket=HistoryDealGetTicket(i);
-      if(ticket>0){ // get the deal entry property
-         entry =HistoryDealGetInteger(ticket, DEAL_ENTRY);
-         if(entry==DEAL_ENTRY_IN) // a buy or a sell (entry not closing/exiting)
-            lastnopen++;
-      }
-    }
-    return lastnopen;
-}
-
-int ndealsDay(){
-    int open=0; // number of orders openned
-    //--- request trade history
-    datetime now = TimeCurrent();
-    // on the last 15 minutes count the openned orders
-    HistorySelect(dayBegin(now), now);
-    ulong ticket;
-    long entry;
-    uint  total=HistoryDealsTotal(); // total deals
-    //--- for all deals
-   for(uint i=0;i<total;i++){
-      //--- try to get deals ticket
-      ticket=HistoryDealGetTicket(i);
-      if(ticket>0){ // get the deal entry property
-         entry =HistoryDealGetInteger(ticket,DEAL_ENTRY);
-         if(entry==DEAL_ENTRY_IN) // a buy or a sell (entry not closing/exiting)
-            open++;
-      }
-    }
-    return open;
-}
+//+------------------------------------------------------------------+
+//| Access to Upper buffer of "Bollinger Bands"                      |
+//+------------------------------------------------------------------+
+double CiBands::Main(const int index) const
+  {
+   CIndicatorBuffer *upbuffer=At(1);
+   CIndicatorBuffer *lwbuffer=At(2);
+//--- check
+   if(upbuffer==NULL||lwbuffer==NULL)
+      return(EMPTY_VALUE);
+      
+   if()
+   return(buffer.At(index));
+  }
+//+------------------------------------------------------------------+
+//| Access to Lower buffer of "Bollinger Bands"                      |
+//+------------------------------------------------------------------+
+double CiBands::Lower(const int index) const
+  {
+   
+//--- check
+   if(buffer==NULL)
+      return(EMPTY_VALUE);
+//---
+   return(buffer.At(index));
+  }

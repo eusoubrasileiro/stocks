@@ -5,35 +5,16 @@ import sys
 from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
 import talib as ta
-from matplotlib import pyplot as plt
-
-debug=True
-quantile_transformer = preprocessing.QuantileTransformer(
-    output_distribution='normal', random_state=0)
-
-def viewBands(bars, window=21, nbands=3, lastn=-500):
-    price = bars.OHLC.values
-    plt.figure(figsize=(15,7))
-    plt.subplot(2, 1, 1)
-    plt.plot(price[lastn:], 'k-')
-    for i in range(nbands):
-        # plot bands
-        plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-        plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-    plt.subplot(2, 1, 2)
-    for i in range(nbands):
-        plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
-        plt.ylabel('signal-code')
-    plt.legend()
-
+from .bbands3 import xyTrainingPairs, standardizeFeatures, lastSignal, barsFeatured, \
+            getTrainingVectors, getForecastVector, fitPredict, sumdPred, sumyProb
 
 @jit(nopython=True,  parallel=True)
-def bollingerSignal(price, uband, lband):
+def fastbollingerSignal(price, uband, lband):
     """
     Based on a bollinger band defined by upper-band and lower-band
     return signal:
-        buy 1 : crossing down-outside it's buy
-        sell 2 : crossing up-outside it's sell
+        buy   1 : crossing down-outside it's buy
+        sell -1 : crossing up-outside it's sell
         hold : nothing usefull happend
     """
     n = len(price)
@@ -42,13 +23,13 @@ def bollingerSignal(price, uband, lband):
         if price[i] <= lband[i]: # crossing  down
             signal[i] = 1
         elif price[i] >= uband[i]: # crossing  up
-            signal[i] = 2
+            signal[i] = -1
         else:
             signal[i] = 0
     return signal
 
 @jit(nopython=True) # 1000x faster than using pandas for loop
-def traverseBuyBand(bandsg, yband, ask, bid, day, amount, targetprofit, stoploss):
+def traverseBuyBand(bandsg, high, low, day, amount, targetprofit, stoploss):
     """
     buy at ask = High at minute time-frame (being pessimistic)
     sell at bid = Low at minute time-frame
@@ -58,150 +39,108 @@ def traverseBuyBand(bandsg, yband, ask, bid, day, amount, targetprofit, stoploss
     amount - tick value * quantity bought in $$
     """
     buyprice = 0
-    history = -1 # nothing, buy = 1, sell = 2
+    history = 0 # nothing, buy = 1, sell = -1
     buyindex = 0
     previous_day = 0
+    ybandsg = np.empty(bandsg.size)
+    ybandsg.fill(np.nan)
     for i in range(bandsg.size):
         if day[i] != previous_day: # a new day reset everything
             if history == 1:
                 # the previous batch o/f signals will be saved with Nan don't want to train with that
-                yband[buyindex] = np.nan
+                ybandsg[buyindex] = np.nan
             buyprice = 0
-            history = -1 # nothing, buy = 1, sell = 2
+            history = 0 # nothing, buy = 1, sell = -1
             buyindex = 0
             previous_day = day[i]
         if int(bandsg[i]) == 1:
-            if history == -1:
-                buyprice = ask[i]
+            if history == 0:
+                buyprice = high[i]
                 buyindex = i
-            else: # another buy in sequence -> cancel the first
+                ybandsg[i] = 1 #  save this buy
+            else: # another buy in sequence -> cancel the first (
                 # the previous batch of signals will be saved with this class (hold)
-                yband[buyindex] = 0 # reclassify the previous buy as hold
+                ybandsg[buyindex] = 0 # reclassify the previous buy as hold
                 # new buy signal
-                buyprice = ask[i]
+                buyprice = high[i]
                 buyindex = i
+                #print('y: ', 0)
             history=1
+            # net mode
+        elif int(bandsg[i]) == -1: # a sell, cancel the first buy
+            ybandsg[buyindex] = 0 # reclassify the previous buy as hold
+            #print('y: ', 0)
+            history=0
         elif history == 1:
-            profit = (bid[i]-buyprice)*tickvalue # current profit
+            profit = (low[i]-buyprice)*amount # current profit
+            #print('profit: ', profit)
             if profit >= targetprofit:
-                # yband[buyindex] = 1 # a real (buy) index class nothing to do
-                history = -1
-            if profit <= (-stoploss): # reclassify the previous buy as hold
-                yband[buyindex] = 0  # not a good deal, was better not to entry
-                history = -1
+                # ybandsg[buyindex] = 1 # a real (buy) index class nothing to do
+                history = 0
+                #print('y: ', 1)
+            elif profit <= (-stoploss): # reclassify the previous buy as hold
+                ybandsg[buyindex] = 0  # not a good deal, was better not to entry
+                history = 0
+                #print('y: ', 0)
     # reached the end of data but did not close one buy previouly open
     if history == 1: # don't know about the future cannot train with this guy
-        yband[buyindex] = np.nan # set it to be ignored
-    return yband
-
+        ybandsg[buyindex] = np.nan # set it to be ignored
+    return ybandsg # will only have 0 (false positive) or 1's
 
 @jit(nopython=True) # 1000x faster than using pandas for loop
-def traverseSellBand(bandsg, yband, ask, bid, day, amount, targetprofit, stoploss):
+def traverseSellBand(bandsg, high, low, day, amount, targetprofit, stoploss):
     """
     same as traverseSellBand but for sell positions
-    buy at ask = High at minute time-frame (being pessimistic)
-    sell at bid = Low at minute time-frame
-    classes are [0, 1] = [hold, buy]
+    buy at high = High at minute time-frame (being pessimistic)
+    sell at low = Low at minute time-frame
+    classes are [0, -1] = [hold, sell]
     stoploss - to not loose much money (positive)
     targetprofit - profit to close open position
     amount - tick value * quantity bought in $$
     """
     sellprice = 0
-    history = -1 # nothing, buy = 1, sell = 2
-    buyindex = 0
+    history = 0 # nothing, buy = 1, sell = -1
+    sellindex = 0
     previous_day = 0
+    ybandsg = np.empty(bandsg.size)
+    ybandsg.fill(np.nan)
     for i in range(bandsg.size):
         if day[i] != previous_day: # a new day reset everything
-            if history == 2:
+            if history == -1: # was selling when day ended
                 # the previous batch o/f signals will be saved with Nan don't want to train with that
-                yband[sellindex] = np.nan
+                ybandsg[sellindex] = np.nan
             sellprice = 0
-            history = -1 # nothing, buy = 1, sell = 2
+            history = 0 # nothing, buy = 1, sell = 2
             sellindex = 0
             previous_day = day[i]
-        if int(bandsg[i]) == 2:
-            if history == -1:
-                sellprice = bid[i]
+        if int(bandsg[i]) == -1:
+            if history == 0:
+                sellprice = low[i]
                 sellindex = i
+                ybandsg[i] = -1
             else: # another sell in sequence -> cancel the first
                 # the previous batch of signals will be saved with this class (hold)
-                yband[sellindex] = 0 # reclassify the previous buy as hold
+                ybandsg[sellindex] = 0 # reclassify the previous sell as hold
                 # new buy signal
-                sellprice = bid[i]
+                sellprice = low[i]
                 sellindex = i
-            history = 2
-        elif history == 2:
-            profit = (sellprice-ask[i])*amount # current profit
+            history = -1
+        elif int(bandsg[i]) == 1: # a buy
+            ybandsg[sellindex] = 0 # reclassify the previous sell as hold
+            history = 0
+        elif history == -1:
+            profit = (sellprice-high[i])*amount # current profit
             if profit >= targetprofit:
-                # yband[sellindex] = 2 # a real (sell) index class nothing to do
-                history = -1
-            if profit <= (-stoploss): # reclassify the previous buy as hold
-                yband[sellindex] = 0  # not a good deal, was better not to entry
-                history = -1
+                # ybandsg[sellindex] = -1 # a real (sell) index class nothing to do
+                history = 0
+            elif profit <= (-stoploss): # reclassify the previous buy as hold
+                ybandsg[sellindex] = 0  # not a good deal, was better not to entry
+                history = 0
     # reached the end of data but did not close one buy previouly open
-    if history == 2: # don't know about the future cannot train with this guy
-        yband[sellindex] = np.nan # set it to be ignored
-    return yband
+    if history == -1: # don't know about the future cannot train with this guy
+        ybandsg[sellindex] = np.nan # set it to be ignored
+    return ybandsg
 
-@jit(nopython=True)
-def xyTrainingPairs(df, batchn, nsignal_features=8, nbands=6):
-    """
-    assembly the TRAINING vectors X and y
-
-    default signal features number is 8:
-        based on 6 y columns plus the 6+2 of the original data-frame  (above)
-    """
-    X = np.zeros((len(df), nsignal_features*batchn))*np.nan # signal training vector 8xwindow
-    y = np.zeros(len(df))*np.nan
-    time = np.zeros(len(df))*np.nan # let it be float after we convert back to int
-    # prange break this here, cannot use this way
-    # still breaking somehow parallel doesnt like np.isnan
-    for i in range(batchn, df.shape[0]):
-        for j in range(nbands): # firs columns are y's each band look at the ys' target class
-            if df[i , j] == df[i , j]: # if y' is not nan than we have a training pair X, y
-                # X feature vector is the last window (signals + askv and bidv 8 dimension)
-                X[i, :] = df[i-batchn:i, -nsignal_features:].flatten()
-                y[i] = df[i, j]
-                time[i] = i # index that represent date-time from the original data-frame
-    notnan = ~np.isnan(y)
-    return X[notnan], y[notnan], time[notnan]
-
-
-def xyTrainingIndex(bars):
-    # %%time
-    # ys = bars.iloc[:, iyband].values
-    # iXy = np.argwhere(~np.isnan(ys))
-    # y = np.zeros(iXy.shape[0])
-    # y = ys[iXy[:, 0], iXy[:, 1]]
-    pass
-
-def standardizeFeatures(obars, nbands):
-    """"
-    standardize features for signal vector
-    return index of feature columns
-    """
-    bars = obars.copy()
-    nindfeatures = 3*nbands*7 # number of indicator features
-    # columns corresponding to the indicator features
-    fi = bars.columns.get_loc('demaO0') # first column corresponding to a indicator feature
-    nind = fi+nindfeatures # last column of the indicator features
-    # standardize
-    bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].fillna(0) #  quantile Transform dont like nans
-    # bars.iloc[:, fi:nind] = bars.iloc[:, fi:nind].apply(lambda x: x.clip(*x.quantile([0.001, 0.999]).values), axis=0)
-    # # signal vector needed columns lets not normalize than
-    ibandsgs = [ bars.columns.get_loc('bandsg'+str(j)) for j in range(nbands) ]
-    # # can only have values 0, 1, 2 turn it in normalized floats
-    # bars.iloc[:, ibandsgs] = ((bars.iloc[:, ibandsgs] - bars.iloc[:, ibandsgs].mean())/
-    #                          bars.iloc[:, ibandsgs].std()) # normalize variance=1 mean=0
-    id = bars.columns.get_loc('dated')
-    # bars.iloc[:, list(range(fi,nind))] = quantile_transformer.fit_transform(
-    #     bars.iloc[:, list(range(fi,nind))].values)
-    # bars.iloc[:, id] = ((bars.iloc[:, id] - bars.iloc[:, id].mean())/
-    #                          bars.iloc[:, id].std()) # normalize variance=1 mean=0
-    # dimension of training signal features len first returned list
-    #features = nindfeatures+1+nbands
-    # return index of feature columns
-    return [*ibandsgs, *list(range(fi,nind)), id], bars
 
 def rawSignals(obars, window=21, nbands=3, inc=0.5, save=True):
     """
@@ -215,27 +154,35 @@ def rawSignals(obars, window=21, nbands=3, inc=0.5, save=True):
     price = bars.OHLC.values
     for i in range(nbands):
         upband, sma, lwband =  ta.BBANDS(price, window*inc)
-        if save:
+        if save: # for plotting stuff
             bars['bandlw'+str(i)] = lwband
             bars['bandup'+str(i)] = upband
         bars['bandsg'+str(i)] = 0 # signal for this band
-        signals = bollingerSignal(price, upband, lwband)
+        signals = fastbollingerSignal(price, upband, lwband)
         bars.loc[:, 'bandsg'+str(i)] = signals.astype(int) # signal for this band
         inc += 0.5
     bars.dropna(inplace=True)
     return bars
 
-def lastSignal(bars, nbands=3):
-    """
-    Latest signal - not standardized - used for predicting future.
-    That is for each band.
-    """
-    return bars.loc[:, ['bandsg'+str(i) for i in range(nbands)]].tail(1).values
 
-def targetFromSignals(obars, window=21, nbands=3):
+@jit(nopython=True)
+def mergebandsignals(ybandsell, ybandbuy):
+    ybandsg = np.empty(ybandbuy.size)
+    ybandsg.fill(np.nan)
+    #ybandsg = ybandbuy + ybandsell
+    for i in range(ybandsell.size):
+        if np.isnan(ybandsell[i]) or ybandsell[i] == 0:  # no signal of sell
+            ybandsg[i] = ybandbuy[i]
+        elif ybandbuy[i] == 1: # special case when buy and sell at same time
+            ybandsg[i] = 0 # we dont want that
+        else:
+            ybandsg[i] = ybandsell[i]
+    return ybandsg
+
+def targetFromSignals(obars, nbands=3, amount=1, targetprofit=15., stoploss=45.):
     """
     Create target class by analysing raw bollinger band signals
-    those that went true receive 1 buy or 2 sell
+    those that went true receive 1 buy or -1 sell
     those that wen bad receive 0 hold
     A target class exist for each band.
     An essemble of bands together and summed are a better classifier.
@@ -243,143 +190,39 @@ def targetFromSignals(obars, window=21, nbands=3):
     A day integer identifier column name 'date' must exist prior call.
     That is used to hold positions from passing to another day.
     """
+    # bandsg, yband, ask, bid, day, amount, targetprofit, stoploss
     bars = obars.copy()
     for j in range(nbands): # for each band traverse it
-        bars['y'+str(j)] = np.nan
         ibandsg = bars.columns.get_loc('bandsg'+str(j))
-        # being pessimistic ... is this right?
-        # should i buy at what price? I dont know maybe the typical one is more realistic.
-        # but setting the worst case garantees profit in the worst scenario!!
-        # better.
-        # So i Buy at the highest price and sell at the lowest one.
-        yband = traverseBand(bars.iloc[:, ibandsg].values.astype(int),
-                                        bars['y'+str(j)].values,
-                                        bars.H.values, bars.L.values, bars.date.values)
-        bars['y'+str(j)]  = yband
+        # being pessimistic ... right
+        ybandsell = traverseSellBand(bars.iloc[:, ibandsg].values.astype(int),
+                                        bars.H.values, bars.L.values, bars.date.values,
+                                        amount, targetprofit, stoploss)
+        ybandbuy = traverseBuyBand(bars.iloc[:, ibandsg].values.astype(int),
+                                        bars.H.values, bars.L.values, bars.date.values,
+                                        amount, targetprofit, stoploss)
+        bars['y'+str(j)] = mergebandsignals(ybandsell, ybandbuy)
 
     return bars
-
-def barsFeatured(obars, window=21, nbands=3, inc=0.5):
-    """
-    Create feature columns and return a new dataframe
-    """
-
-    bars = obars.copy() # avoid warning
-    # needed to reset orders by day
-    days = bars.index.to_period('D').asi8
-    bars['date'] = days # # integer day from year 1 day 1 gregorian day
-    # 7*60 is one day I cannot rely on overalapping days without adding more info
-    ## Now assembly X and Y TRAINING vectors
-    # **window*nsignal features = X second dimension**
-    # ## Signal Features
-    bars.RV = np.log(bars.RV+5)
-    bars.TV = np.log(bars.TV+5) # to avoid division by zero/inf etc
-    # tecnical indicators features
-    for column in ['O', 'H', 'L', 'C', 'RV', 'TV', 'OHLC']: # ignore date/dated
-        for i in range(nbands):      # 1e-8 to avoid creating nans
-            ema =  ta.EMA(bars[column].values.astype(np.float64), window*inc)
-            sfx = str(column)+str(i)  # name suffix
-            # remove nbands emas
-            bars['dema'+sfx] = bars[column] - ema
-            bars.loc[:, 'demav'+sfx] = np.nan
-            # return of the differences to the ema (know to have good response for prediction)
-            bars.loc[1:, 'demav'+sfx] = bars['dema'+sfx].values[:-1]/(1e-8+bars['dema'+sfx].values[1:])
-            macd, sg, ht = ta.MACD(bars[column].values.astype(np.float64),
-                                   int(window*inc*0.5), int(window*0.75*inc), int(0.25*inc*window))
-            #dow.loc[:, 'macd'+sfx] = macd
-            bars.loc[:, 'dmacdv'+sfx] = np.nan
-            bars.loc[1:, 'dmacdv'+sfx] = macd[:-1]/(1e-8+macd[1:])
-            inc += 0.5
-    # day information signal [0, 1]
-    # i think can be faster
-    bars['dated'] = 0
-    for i, vars in enumerate(bars.groupby(bars.date)):
-        day, group = vars
-        bars.loc[group.index, 'dated'] = 1 if i%2==0 else 0 # odd or even day change
-    bars.dropna(inplace=True)
-    return bars
-
-
-def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
-    """
-    receives a standardized dataframe with all feature columns
-    """
-    # y target class column index
-    iybands = [ bars.columns.get_loc('y'+str(j)) for j in range(nbands)]
-    # assembly training pairs
-    X, y, time = xyTrainingPairs(bars.iloc[:, [*iybands, *isgfeatures]].values, batchn, len(isgfeatures), nbands)
-    time = time.astype(int)
-    y = y.astype(int)
-    return X, y, time
-
-def getForecastVector(bars, isgfeatures, window=21, nbands=3, batchn=180):
-    """
-    receives a standardized dataframe with all feature columns
-    """
-    # create prediction vector X
-    Xforecast = bars.iloc[-batchn:, isgfeatures]
-    Xforecast = Xforecast.values.flatten()
-    return Xforecast
 
 # window=21; nbands=3 # number of bbands
 # MAIN function
-def getTrainingForecastVectors(obars, window=21, nbands=3, batchn=180):
+def getTrainingForecastVectors(obars, window=21, nbands=3,
+        amount=1, targetprofit=15., stoploss=45., batchn=180):
     """
     return Xpredict, Xtrain, ytrain
 
     if Xpredict has signal all zero return None
     """
-    bars, signal = rawSignals(obars, window, nbands)
+    bars = rawSignals(obars, window, nbands)
+    signal = lastSignal(bars, nbands)
     if np.all(signal == 0): # no signal in any band no training
       return signal, None, None, None
-    bars = barsFeatured(obars)
-    bars = barsTargetFromSignals(bars, window, nbands) # needs day identifier integer
+    bars = barsFeatured(bars)
+    bars = targetFromSignals(bars, nbands,
+            amount, targetprofit, stoploss) # needs day identifier integer
     isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
-    Xforecast, X, y = getTrainingForecastVectorsn(bars, isgfeatures, nbands, batchn)
+    X, y = getTrainingVectors(bars, isgfeatures, nbands, batchn)
+    Xforecast = getForecastVectors(bars, isgfeatures, nbands, batchn)
 
     return signal, Xforecast, X, y
-
-
-def fitPredict(X, y, Xp, njobs=None):
-    if njobs is None:
-        trees = ExtraTreesClassifier(n_estimators=120, verbose=0)#, max_features=300)
-    else:
-        trees = ExtraTreesClassifier(n_estimators=120, verbose=0, n_jobs=njobs)
-    ypred = None
-    try:
-        # if don't have 3-classes for training cannot train model
-        if len(np.unique(y)) == 3:
-            trees.fit(X, y)
-            ypred = trees.predict_proba(Xp.reshape(1, -1))
-    except Exception as e:
-        print(e, file=sys.stderr)
-        if debug:
-            raise(e)
-    return ypred
-
-def sumdPred(y):
-    """
-    summarize predictions target class for all bands
-    turn classes 0, 1, 2 in
-    -1, 0, 1 (sell, hold, buy)
-    works for data-frame/array
-    """
-    y = y.copy()
-    y[y == 2] = -1
-    # since cannot go up and down at same time
-    y = y.sum(axis=1) # sum prediction of each band
-    y[ y < 0] = -1
-    y[ y > 0] = +1
-    return y
-
-def sumyProb(y):
-    """
-    get class by max probability then
-    turn classes 0, 1, 2 in
-    -1, 0, 1 (sell, hold, buy)
-    works for 3 column array
-    """
-    y = y.copy()
-    y = np.argmax(y, axis=-1) # get class by max probability
-    y[ y == 2] = -1
-    return y

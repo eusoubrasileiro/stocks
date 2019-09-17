@@ -11,22 +11,6 @@ debug=True
 quantile_transformer = preprocessing.QuantileTransformer(
     output_distribution='normal', random_state=0)
 
-def viewBands(bars, window=21, nbands=3, lastn=-500):
-    price = bars.OHLC.values
-    plt.figure(figsize=(15,7))
-    plt.subplot(2, 1, 1)
-    plt.plot(price[lastn:], 'k-')
-    for i in range(nbands):
-        # plot bands
-        plt.plot(bars['bandup'+str(i)].values[lastn:], 'b--', lw=0.3)
-        plt.plot(bars['bandlw'+str(i)].values[lastn:], 'b--', lw=0.3)
-    plt.subplot(2, 1, 2)
-    for i in range(nbands):
-        plt.plot(bars['bandsg'+str(i)].values[lastn:], '+', label='band '+str(i))
-        plt.ylabel('signal-code')
-    plt.legend()
-
-
 @jit(nopython=True,  parallel=True)
 def bollingerSignal(price, pricem1, uband, ubandm1, lband, lbandm1):
     """

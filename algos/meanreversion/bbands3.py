@@ -83,7 +83,7 @@ def xyTrainingPairs(df, batchn, nsignal_features=8, nbands=6):
     """
     assembly the TRAINING vectors X and y
 
-    default signal features number is 8:
+    original idea : default signal features number were 8 (actually is 96)
         based on 6 y columns plus the 6+2 of the original data-frame  (above)
     """
     X = np.zeros((len(df), nsignal_features*batchn))*np.nan # signal training vector 8xwindow
@@ -235,7 +235,7 @@ def barsFeatured(obars, window=21, nbands=3, inc=0.5):
     return bars
 
 
-def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
+def getTrainingVectors(bars, isgfeatures, nbands=3, batchn=180):
     """
     receives a standardized dataframe with all feature columns
     """
@@ -247,7 +247,7 @@ def getTrainingVectors(bars, isgfeatures, window=21, nbands=3, batchn=180):
     y = y.astype(int)
     return X, y, time
 
-def getForecastVector(bars, isgfeatures, window=21, nbands=3, batchn=180):
+def getForecastVector(bars, isgfeatures,nbands=3, batchn=180):
     """
     receives a standardized dataframe with all feature columns
     """

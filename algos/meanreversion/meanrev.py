@@ -204,9 +204,10 @@ def targetFromSignals(obars, nbands=3, amount=1, targetprofit=15., stoploss=45.)
         bars['y'+str(j)] = mergebandsignals(ybandsell, ybandbuy)
 
     return bars
-
-# window=21; nbands=3 # number of bbands
-# MAIN function
+    
+######################################################################
+###################### MAIN function #################################
+######################################################################
 def getTrainingForecastVectors(obars, window=21, nbands=3,
         amount=1, targetprofit=15., stoploss=45., batchn=180):
     """
@@ -217,12 +218,12 @@ def getTrainingForecastVectors(obars, window=21, nbands=3,
     bars = rawSignals(obars, window, nbands)
     signal = lastSignal(bars, nbands)
     if np.all(signal == 0): # no signal in any band no training
-      return signal, None, None, None
-    bars = barsFeatured(bars)
+        return signal, None, None, None
+    bars = barsFeatured(bars, window, nbands)
     bars = targetFromSignals(bars, nbands,
             amount, targetprofit, stoploss) # needs day identifier integer
     isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
-    X, y = getTrainingVectors(bars, isgfeatures, nbands, batchn)
-    Xforecast = getForecastVectors(bars, isgfeatures, nbands, batchn)
+    X, y, time = getTrainingVectors(bars, isgfeatures, nbands, batchn)
+    Xforecast = getForecastVector(bars, isgfeatures, nbands, batchn)
 
     return signal, Xforecast, X, y

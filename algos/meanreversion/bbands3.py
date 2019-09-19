@@ -110,12 +110,12 @@ def xyTrainingIndex(bars):
     # y = ys[iXy[:, 0], iXy[:, 1]]
     pass
 
-def standardizeFeatures(obars, nbands):
+def getIndexFeatures(bars, nbands):
     """"
     standardize features for signal vector
     return index of feature columns
     """
-    bars = obars.copy()
+    #bars = obars.copy()
     nindfeatures = 3*nbands*7 # number of indicator features
     # columns corresponding to the indicator features
     fi = bars.columns.get_loc('demaO0') # first column corresponding to a indicator feature
@@ -136,7 +136,7 @@ def standardizeFeatures(obars, nbands):
     # dimension of training signal features len first returned list
     #features = nindfeatures+1+nbands
     # return index of feature columns
-    return [*ibandsgs, *list(range(fi,nind)), id], bars
+    return [*ibandsgs, *list(range(fi,nind)), id]
 
 def rawSignals(obars, window=21, nbands=3, inc=0.5, save=True):
     """
@@ -268,7 +268,7 @@ def getTrainingForecastVectors(obars, window=21, nbands=3, batchn=180):
       return signal, None, None, None
     bars = barsFeatured(obars)
     bars = barsTargetFromSignals(bars, window, nbands) # needs day identifier integer
-    isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
+    isgfeatures = getIndexFeatures(bars, nbands); # signal features standardized
     Xforecast, X, y = getTrainingForecastVectorsn(bars, isgfeatures, nbands, batchn)
 
     return signal, Xforecast, X, y

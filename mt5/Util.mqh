@@ -3,6 +3,11 @@
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
 
+#import "cpparm.dll"
+int Unique(double &arr[],int n);
+// bins specify center of bins
+int  Histsma(double &data[],int n,double &bins[],int nb,int nwindow);
+#import
 
 // custom Expert class with additional functionalities
 // - Day Trade
@@ -63,6 +68,14 @@ class CExpertX : public CExpert
       // close whatever position is open NET_MODE
       m_trade.PositionClose(m_symbol.Name());
       return true;
+  }
+  
+  bool isInsideDay(){
+    // check inside daytrade allowed period
+    datetime now = TimeCurrent();
+    if(now >= dayEnd(now))
+        return false;
+    return true;
   }
 
 
@@ -144,3 +157,31 @@ double percentile(double &data[], double perc){
     int n = MathMax(MathRound(perc * asize + 0.5), 2);
     return sorted[n-2];
 }
+
+
+// Buffer single is an array when new data is added 
+// it deletes the oldest bigger than buffer size
+// like a Queue or FIFO 
+// note that set as series is just a flag 
+// we manually add samples contrary to C/C++ convention to
+// fulfill that flag
+class CSingleBuffer : public CDoubleBuffer{
+
+public:
+    CSingleBuffer(void){};
+    
+    bool Add(const double element)
+    {      
+      if(m_data_total >= m_data_max){ // m_data @@ is set as series         
+      // copy data overwriting the older ones  
+        ArrayCopy(m_data, m_data, 1, 0, m_data_total-1);
+        //--- add to begin (set as series is just a flag)
+        m_data[0] = element; 
+      }
+      else //--- add from end to begin (set as series is just a flag)
+        m_data[m_data_max-1-m_data_total++]=element;
+      m_sort_mode=-1;    
+      return(true);
+    }
+    
+};

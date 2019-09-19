@@ -5,7 +5,7 @@ import sys
 from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
 import talib as ta
-from .bbands3 import xyTrainingPairs, standardizeFeatures, lastSignal, barsFeatured, \
+from .bbands3 import xyTrainingPairs, getIndexFeatures, lastSignal, barsFeatured, \
             getTrainingVectors, getForecastVector, fitPredict, sumdPred, sumyProb
 
 @jit(nopython=True,  parallel=True)
@@ -204,7 +204,7 @@ def targetFromSignals(obars, nbands=3, amount=1, targetprofit=15., stoploss=45.)
         bars['y'+str(j)] = mergebandsignals(ybandsell, ybandbuy)
 
     return bars
-    
+
 ######################################################################
 ###################### MAIN function #################################
 ######################################################################
@@ -222,7 +222,7 @@ def getTrainingForecastVectors(obars, window=21, nbands=3,
     bars = barsFeatured(bars, window, nbands)
     bars = targetFromSignals(bars, nbands,
             amount, targetprofit, stoploss) # needs day identifier integer
-    isgfeatures, bars = standardizeFeatures(bars, nbands); # signal features standardized
+    isgfeatures = getIndexFeatures(bars, nbands); # signal features standardized
     X, y, time = getTrainingVectors(bars, isgfeatures, nbands, batchn)
     Xforecast = getForecastVector(bars, isgfeatures, nbands, batchn)
 

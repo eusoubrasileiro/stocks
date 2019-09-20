@@ -1,8 +1,20 @@
 #include "..\Util.mqh"
 #include <Indicators\Indicator.mqh>
+#include <Arrays\List.mqh>
 
 // number of samples needed/used for training 5*days?
 const int                Expert_BufferSize      = 60*7*5; // indicators buffer needed
+
+
+class XyPair : CObject
+{ // single element needed for training
+public:   
+    XyPair(void){};
+    ~XyPair(void);
+        
+    double m_X[];
+    double m_y;
+};
 
 class CExpertXBands : public CExpertX
 {
@@ -18,14 +30,7 @@ class CExpertXBands : public CExpertX
     int m_ntraining;
     int m_nsignal_features;
     int m_xtrain_dim; // dimension of x train vector
-
-    struct {
-        double m_X[];
-        double m_y;
-    }
-
-    CSingleBuffer m_ytrain[];
-    CSingleBuffer m_ypredict[];
+    CList m_xypairs;
 
   public:
 
@@ -50,11 +55,11 @@ class CExpertXBands : public CExpertX
     m_nsignal_features = m_nbands*6;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
-    ArrayResize(m_Xtrain, m_nbands); // one for each band
+    //ArrayResize(m_Xtrain, m_nbands); // one for each band
 
     // group of samples and signal vectors to train the model
-    ArrayResize(m_raw_signal, m_nbands); // one for each band
-    ArrayResize(m_Xtrain, )
+    //ArrayResize(m_raw_signal, m_nbands); // one for each band
+    //ArrayResize(m_Xtrain, )
     CreateBBands();
     CreateOtherFeatureIndicators();
 
@@ -187,115 +192,115 @@ void CExpertXBands::CreateOtherFeatureIndicators(){
     }
 
 
-    @jit(nopython=True) # 1000x faster than using pandas for loop
-    def traverseBuyBand(bandsg, high, low, day, amount, targetprofit, stoploss):
-        """
-        buy at ask = High at minute time-frame (being pessimistic)
-        sell at bid = Low at minute time-frame
-        classes are [0, 1] = [hold, buy]
-        stoploss - to not loose much money (positive)
-        targetprofit - profit to close open position
-        amount - tick value * quantity bought in $$
-        """
-        buyprice = 0
-        history = 0 # nothing, buy = 1, sell = -1
-        buyindex = 0
-        previous_day = 0
-        ybandsg = np.empty(bandsg.size)
-        ybandsg.fill(np.nan)
-        for i in range(bandsg.size):
-            if day[i] != previous_day: # a new day reset everything
-                if history == 1:
-                    # the previous batch o/f signals will be saved with Nan don't want to train with that
-                    ybandsg[buyindex] = np.nan
-                buyprice = 0
-                history = 0 # nothing, buy = 1, sell = -1
-                buyindex = 0
-                previous_day = day[i]
-            if int(bandsg[i]) == 1:
-                if history == 0:
-                    buyprice = high[i]
-                    buyindex = i
-                    ybandsg[i] = 1 #  save this buy
-                else: # another buy in sequence -> cancel the first (
-                    # the previous batch of signals will be saved with this class (hold)
-                    ybandsg[buyindex] = 0 # reclassify the previous buy as hold
-                    # new buy signal
-                    buyprice = high[i]
-                    buyindex = i
-                    #print('y: ', 0)
-                history=1
-                # net mode
-            elif int(bandsg[i]) == -1: # a sell, cancel the first buy
-                ybandsg[buyindex] = 0 # reclassify the previous buy as hold
-                #print('y: ', 0)
-                history=0
-            elif history == 1:
-                profit = (low[i]-buyprice)*amount # current profit
-                #print('profit: ', profit)
-                if profit >= targetprofit:
-                    # ybandsg[buyindex] = 1 # a real (buy) index class nothing to do
-                    history = 0
-                    #print('y: ', 1)
-                elif profit <= (-stoploss): # reclassify the previous buy as hold
-                    ybandsg[buyindex] = 0  # not a good deal, was better not to entry
-                    history = 0
-                    #print('y: ', 0)
-        # reached the end of data but did not close one buy previouly open
-        if history == 1: # don't know about the future cannot train with this guy
-            ybandsg[buyindex] = np.nan # set it to be ignored
-        return ybandsg # will only have 0 (false positive) or 1's
-
-    @jit(nopython=True) # 1000x faster than using pandas for loop
-    def traverseSellBand(bandsg, high, low, day, amount, targetprofit, stoploss):
-        """
-        same as traverseSellBand but for sell positions
-        buy at high = High at minute time-frame (being pessimistic)
-        sell at low = Low at minute time-frame
-        classes are [0, -1] = [hold, sell]
-        stoploss - to not loose much money (positive)
-        targetprofit - profit to close open position
-        amount - tick value * quantity bought in $$
-        """
-        sellprice = 0
-        history = 0 # nothing, buy = 1, sell = -1
-        sellindex = 0
-        previous_day = 0
-        ybandsg = np.empty(bandsg.size)
-        ybandsg.fill(np.nan)
-        for i in range(bandsg.size):
-            if day[i] != previous_day: # a new day reset everything
-                if history == -1: # was selling when day ended
-                    # the previous batch o/f signals will be saved with Nan don't want to train with that
-                    ybandsg[sellindex] = np.nan
-                sellprice = 0
-                history = 0 # nothing, buy = 1, sell = 2
-                sellindex = 0
-                previous_day = day[i]
-            if int(bandsg[i]) == -1:
-                if history == 0:
-                    sellprice = low[i]
-                    sellindex = i
-                    ybandsg[i] = -1
-                else: # another sell in sequence -> cancel the first
-                    # the previous batch of signals will be saved with this class (hold)
-                    ybandsg[sellindex] = 0 # reclassify the previous sell as hold
-                    # new buy signal
-                    sellprice = low[i]
-                    sellindex = i
-                history = -1
-            elif int(bandsg[i]) == 1: # a buy
-                ybandsg[sellindex] = 0 # reclassify the previous sell as hold
-                history = 0
-            elif history == -1:
-                profit = (sellprice-high[i])*amount # current profit
-                if profit >= targetprofit:
-                    # ybandsg[sellindex] = -1 # a real (sell) index class nothing to do
-                    history = 0
-                elif profit <= (-stoploss): # reclassify the previous buy as hold
-                    ybandsg[sellindex] = 0  # not a good deal, was better not to entry
-                    history = 0
-        # reached the end of data but did not close one buy previouly open
-        if history == -1: # don't know about the future cannot train with this guy
-            ybandsg[sellindex] = np.nan # set it to be ignored
-        return ybandsg
+    // @jit(nopython=True) # 1000x faster than using pandas for loop
+    // def traverseBuyBand(bandsg, high, low, day, amount, targetprofit, stoploss):
+    //     """
+    //     buy at ask = High at minute time-frame (being pessimistic)
+    //     sell at bid = Low at minute time-frame
+    //     classes are [0, 1] = [hold, buy]
+    //     stoploss - to not loose much money (positive)
+    //     targetprofit - profit to close open position
+    //     amount - tick value * quantity bought in $$
+    //     """
+    //     buyprice = 0
+    //     history = 0 # nothing, buy = 1, sell = -1
+    //     buyindex = 0
+    //     previous_day = 0
+    //     ybandsg = np.empty(bandsg.size)
+    //     ybandsg.fill(np.nan)
+    //     for i in range(bandsg.size):
+    //         if day[i] != previous_day: # a new day reset everything
+    //             if history == 1:
+    //                 # the previous batch o/f signals will be saved with Nan don't want to train with that
+    //                 ybandsg[buyindex] = np.nan
+    //             buyprice = 0
+    //             history = 0 # nothing, buy = 1, sell = -1
+    //             buyindex = 0
+    //             previous_day = day[i]
+    //         if int(bandsg[i]) == 1:
+    //             if history == 0:
+    //                 buyprice = high[i]
+    //                 buyindex = i
+    //                 ybandsg[i] = 1 #  save this buy
+    //             else: # another buy in sequence -> cancel the first (
+    //                 # the previous batch of signals will be saved with this class (hold)
+    //                 ybandsg[buyindex] = 0 # reclassify the previous buy as hold
+    //                 # new buy signal
+    //                 buyprice = high[i]
+    //                 buyindex = i
+    //                 #print('y: ', 0)
+    //             history=1
+    //             # net mode
+    //         elif int(bandsg[i]) == -1: # a sell, cancel the first buy
+    //             ybandsg[buyindex] = 0 # reclassify the previous buy as hold
+    //             #print('y: ', 0)
+    //             history=0
+    //         elif history == 1:
+    //             profit = (low[i]-buyprice)*amount # current profit
+    //             #print('profit: ', profit)
+    //             if profit >= targetprofit:
+    //                 # ybandsg[buyindex] = 1 # a real (buy) index class nothing to do
+    //                 history = 0
+    //                 #print('y: ', 1)
+    //             elif profit <= (-stoploss): # reclassify the previous buy as hold
+    //                 ybandsg[buyindex] = 0  # not a good deal, was better not to entry
+    //                 history = 0
+    //                 #print('y: ', 0)
+    //     # reached the end of data but did not close one buy previouly open
+    //     if history == 1: # don't know about the future cannot train with this guy
+    //         ybandsg[buyindex] = np.nan # set it to be ignored
+    //     return ybandsg # will only have 0 (false positive) or 1's
+    //
+    // @jit(nopython=True) # 1000x faster than using pandas for loop
+    // def traverseSellBand(bandsg, high, low, day, amount, targetprofit, stoploss):
+    //     """
+    //     same as traverseSellBand but for sell positions
+    //     buy at high = High at minute time-frame (being pessimistic)
+    //     sell at low = Low at minute time-frame
+    //     classes are [0, -1] = [hold, sell]
+    //     stoploss - to not loose much money (positive)
+    //     targetprofit - profit to close open position
+    //     amount - tick value * quantity bought in $$
+    //     """
+    //     sellprice = 0
+    //     history = 0 # nothing, buy = 1, sell = -1
+    //     sellindex = 0
+    //     previous_day = 0
+    //     ybandsg = np.empty(bandsg.size)
+    //     ybandsg.fill(np.nan)
+    //     for i in range(bandsg.size):
+    //         if day[i] != previous_day: # a new day reset everything
+    //             if history == -1: # was selling when day ended
+    //                 # the previous batch o/f signals will be saved with Nan don't want to train with that
+    //                 ybandsg[sellindex] = np.nan
+    //             sellprice = 0
+    //             history = 0 # nothing, buy = 1, sell = 2
+    //             sellindex = 0
+    //             previous_day = day[i]
+    //         if int(bandsg[i]) == -1:
+    //             if history == 0:
+    //                 sellprice = low[i]
+    //                 sellindex = i
+    //                 ybandsg[i] = -1
+    //             else: # another sell in sequence -> cancel the first
+    //                 # the previous batch of signals will be saved with this class (hold)
+    //                 ybandsg[sellindex] = 0 # reclassify the previous sell as hold
+    //                 # new buy signal
+    //                 sellprice = low[i]
+    //                 sellindex = i
+    //             history = -1
+    //         elif int(bandsg[i]) == 1: # a buy
+    //             ybandsg[sellindex] = 0 # reclassify the previous sell as hold
+    //             history = 0
+    //         elif history == -1:
+    //             profit = (sellprice-high[i])*amount # current profit
+    //             if profit >= targetprofit:
+    //                 # ybandsg[sellindex] = -1 # a real (sell) index class nothing to do
+    //                 history = 0
+    //             elif profit <= (-stoploss): # reclassify the previous buy as hold
+    //                 ybandsg[sellindex] = 0  # not a good deal, was better not to entry
+    //                 history = 0
+    //     # reached the end of data but did not close one buy previouly open
+    //     if history == -1: # don't know about the future cannot train with this guy
+    //         ybandsg[sellindex] = np.nan # set it to be ignored
+    //     return ybandsg

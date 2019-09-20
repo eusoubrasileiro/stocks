@@ -53,23 +53,23 @@ class CExpertX : public CExpert
   }
 
  bool CloseOpenPositionsbyTime(){
-     // Refresh() and SelectPosition() MUST have been called prior to this 
-     // NET MODE only ONE buy or ONE sell at once   
+     // Refresh() and SelectPosition() MUST have been called prior to this
+     // NET MODE only ONE buy or ONE sell at once
      datetime timenow= TimeCurrent();
-     datetime dayend = dayEnd(timenow);            
-     datetime positiontime  = m_position.Time(); 
+     datetime dayend = dayEnd(timenow);
+     datetime positiontime  = m_position.Time();
      //--- if the MagicNumber matches MagicNumber of the position
      // Magic check inside CTrade PositionClose
      //if(PositionGetInteger(POSITION_MAGIC) != m_magic)
      //   return false;
-     if(positiontime +  m_positionExpireTime > timenow 
+     if(positiontime +  m_positionExpireTime > timenow
                 && timenow < dayend )
           return false;
       // close whatever position is open NET_MODE
       m_trade.PositionClose(m_symbol.Name());
       return true;
   }
-  
+
   bool isInsideDay(){
     // check inside daytrade allowed period
     datetime now = TimeCurrent();
@@ -159,29 +159,52 @@ double percentile(double &data[], double perc){
 }
 
 
-// Buffer single is an array when new data is added 
+// Buffer single is an array when new data is added
 // it deletes the oldest bigger than buffer size
-// like a Queue or FIFO 
-// note that set as series is just a flag 
+// like a Queue or FIFO
+// note that set as series is just a flag
 // we manually add samples contrary to C/C++ convention to
 // fulfill that flag
-class CSingleBuffer : public CDoubleBuffer{
-
+class CSingleBuffer : protected CArrayDouble{
+    // cannot use any other method since they
+    // are not suited for series index convention
 public:
     CSingleBuffer(void){};
-    
+
     bool Add(const double element)
-    {      
-      if(m_data_total >= m_data_max){ // m_data @@ is set as series         
-      // copy data overwriting the older ones  
+    {
+      if(m_data_total >= m_data_max){ // m_data @@ is set as series
+      // copy data overwriting the older ones
         ArrayCopy(m_data, m_data, 1, 0, m_data_total-1);
         //--- add to begin (set as series is just a flag)
-        m_data[0] = element; 
+        m_data[0] = element;
       }
       else //--- add from end to begin (set as series is just a flag)
         m_data[m_data_max-1-m_data_total++]=element;
-      m_sort_mode=-1;    
+      m_sort_mode=-1;
       return(true);
     }
-    
+
+  bool CSingleBuffer::Resize(const int size)
+  {
+   int new_size;
+//--- check
+   if(size<0)
+      return(false);
+//--- resize array
+   new_size=m_step_resize*(1+size/m_step_resize);
+   if(m_data_max!=new_size)
+     {
+      if((m_data_max=ArrayResize(m_data,new_size))==-1)
+        {
+         m_data_max=ArraySize(m_data);
+         return(false);
+        }
+     }
+   if(m_data_total>size)
+      m_data_total=size;
+//--- result
+   return(m_data_max==new_size);
+  }
+
 };

@@ -15,8 +15,7 @@ input double expertDayEndHour = 15.5; // Operational window maximum day hour
 input int expertnOdersperDay = 100; // Number of orders placed per day
 input double expertPositionExpireHours = 1.5; // Time to expire a position (close it)
 input int  trailingEmaWindow = 5; //  EMA Trailing Stop Window in M1
-input double stoploss = 60; // stop loss for each order
-input double targetprofit = 15; // target profit per order
+
 
 bool                     Expert_EveryTick       = false;
 int                      Expert_MagicNumber     = 2525;
@@ -24,6 +23,9 @@ input int                      Expert_NBands          = 3; //number of bollinger
 input int                      Expert_Window          = 21; // indicators buffer needed
 input int                  Expert_Batch_Size          = 60; // "memory" of patterns for training sklearn model
 input int                   Expert_NTraining          = 60; // minimum number of samples for training
+input double                Expert_OrderSize          = 100e3;  // tick value * quantity bought in $$  
+input double                Expert_StopLoss           = 60; // stop loss for each order
+input double              Expert_TargetProfit         = 15; // target profit per order
 
 
 CExpertXBands Expertx = new CExpertXBands;
@@ -118,4 +120,3 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
     //+------------------------------------------------------------------+
     void OnTesterDeinit(){
     }
-�

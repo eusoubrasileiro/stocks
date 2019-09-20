@@ -244,7 +244,9 @@ July 2019
     - Optimization can be done thorugh make.py script for multiple symbols and it stores optimizer results as xml on 'mt5\optimization'    
     - Testes with entire history from 2014 results are in general good to impressive. The earlier the history data worse the performance, I bet is due AI being more and more incorporated.
     - Backtesting is extremally sensible to the period used for testing. By using the optimizer it seams wise to use the latests years. Data from 4 years ago show results normally much better than recent years. The reasons seams be many but that force us to use more recent data. Since the recent data for some strategies is few (like gap strategies) it's better try backtesting on multiple symbols and analise the grouped the results? Use stocks is imperative since `ticksize` and `tickvalue` are equal. Some type of correction to use same ammount of money everytime will be needed, due the fact that each share have a different price. Let's use last one and half year as a standard. Also use foward option help not overfitting the parameter optimization. Let's use 1/3 as a default value.
-    - [ ] Try use Sklearn for mean regression algo based on Gustavo's robot
+    - [ ] Try use Sklearn for mean regression algo based on Gustavo's robot.
+      - [ ] Working on simplified version using bollinger bands.
+      - [ ] Next step create band-signals considering increasing orders at every other band break-out
     - [ ] Re-organize Progress file as back-log lasts first          
     - [x] Implement money based input for expert when buying stocks. `OrderSize` changed to money value in R$ in `NaiveGapExpert`
     - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.

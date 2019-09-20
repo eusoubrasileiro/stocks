@@ -85,15 +85,19 @@ class CExpertX : public CExpert
       // set end of THIS day for operations, based on _expertDayEndHour
       // http://www.b3.com.br/en_us/solutions/platforms/
       //puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
-      datetime day0hour;
-      MqlDateTime mqltime;
-      TimeToStruct(timenow, mqltime);
-      // calculate begin of the day
-      day0hour = timenow - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
-      return day0hour+int(m_expertDayEndHour*3600);
+      return GetDayZeroHour(timenow)+int(m_expertDayEndHour*3600);
   }
 
 };
+
+// calculate begin of the day Zero Hour
+// TODO OPTIMIZE it to make use of the 8 bytes
+// UNIX timestamp in seconds since 1970 only 8 bytes
+datetime GetDayZeroHour(datetime time){ // can be a unique day identifier
+    MqlDateTime mqltime;
+    TimeToStruct(time, mqltime);
+    return time - (mqltime.hour*3600+mqltime.min*60+mqltime.sec);
+}
 
 // utils for sorted arrays
 int searchGreat(double &arr[], double value){
@@ -157,54 +161,3 @@ double percentile(double &data[], double perc){
     int n = MathMax(MathRound(perc * asize + 0.5), 2);
     return sorted[n-2];
 }
-
-
-// Buffer single is an array when new data is added
-// it deletes the oldest bigger than buffer size
-// like a Queue or FIFO
-// note that set as series is just a flag
-// we manually add samples contrary to C/C++ convention to
-// fulfill that flag
-class CSingleBuffer : protected CArrayDouble{
-    // cannot use any other method since they
-    // are not suited for series index convention
-public:
-    CSingleBuffer(void){};
-
-    bool Add(const double element)
-    {
-      if(m_data_total >= m_data_max){ // m_data @@ is set as series
-      // copy data overwriting the older ones
-        ArrayCopy(m_data, m_data, 1, 0, m_data_total-1);
-        //--- add to begin (set as series is just a flag)
-        m_data[0] = element;
-      }
-      else //--- add from end to begin (set as series is just a flag)
-        m_data[m_data_max-1-m_data_total++]=element;
-      m_sort_mode=-1;
-      return(true);
-    }
-
-  bool CSingleBuffer::Resize(const int size)
-  {
-   int new_size;
-//--- check
-   if(size<0)
-      return(false);
-//--- resize array
-   new_size=m_step_resize*(1+size/m_step_resize);
-   if(m_data_max!=new_size)
-     {
-      if((m_data_max=ArrayResize(m_data,new_size))==-1)
-        {
-         m_data_max=ArraySize(m_data);
-         return(false);
-        }
-     }
-   if(m_data_total>size)
-      m_data_total=size;
-//--- result
-   return(m_data_max==new_size);
-  }
-
-};

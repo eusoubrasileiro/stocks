@@ -46,7 +46,7 @@ void CExpertBands::CreateOtherFeatureIndicators(){
                 params[0].type = TYPE_INT;
                 params[0].integer_value = type_volume[j];
                 // indicator
-                m_oindfeatures.Create(m_symbol.Name(), m_period, IND_VOLUMES, 4, params);
+                m_oindfeatures.Create(m_symbol.Name(), m_period, IND_VOLUMES, 1, params);
             }
         }
 
@@ -83,6 +83,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
       datetime previous_day = 0;
       datetime time, day = 0;
       double profit = 0;
+      double quantity = 0; // number of contracts or stocks shares 
       // net mode ONLY
       // net mode ONLY
       for(int i=bandsg_raw.Size()-1; i>=0; i--){ // from past to present
@@ -118,6 +119,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   entryprice = m_high.GetData(i);
                   xypairs.Add(new XyPair(1, time, i)); //  save this buy
               }
+              quantity = roundVolume(m_ordersize/entryprice);
               history=1;
           }
           else
@@ -136,11 +138,12 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   entryprice = m_low.GetData(i);
                   xypairs.Add(new XyPair(-1, time, i)); //  save this buy
               }
+              quantity = roundVolume(m_ordersize/entryprice);
               history=-1;
           }
           else // signal 0 history 1
           if(history == 1){ // equivalent to + && bandsg_raw[i] == 0
-              profit = (m_low.GetData(i)-entryprice)*m_amount;// # current profit
+              profit = (m_low.GetData(i)-entryprice)*quantity;// # current profit
               if(profit >= m_targetprofit){
                   // xypairs.Last().y = 0 // a real (buy) index class nothing to do
                   history = 0;
@@ -153,7 +156,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
           }
           else // signal 0 history -1
           if(history == -1){ // equivalent to + && bandsg_raw[i] == 0
-              profit = (entryprice-m_high.GetData(i))*m_amount;// # current profit
+              profit = (entryprice-m_high.GetData(i))*quantity;// # current profit
               if(profit >= m_targetprofit){
                   // xypairs.Last().y = 0 // a real (sell) index class nothing to do
                   history = 0;
@@ -189,12 +192,35 @@ void CExpertBands::CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs)
 bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
 {
   if(xypair.isready) // no need to assembly
+    return false; // did not suceed
+  
+  // find xypair.time current position on all buffers (have same size)
+  // problem with CTimeBuffer not allowing to use the Search method of CLong Class
+  // will have to create my own buffer for time
+  int bufidx = ((CTimeBuffer *) m_time.At(0)).Search(xypair.time);
+  
+  // not found -1 :
+  // cannot assembly X feature train with such an old signal not in buffer anymore
+  // such should be removed ...
+  if(bufidx == -1) 
     return false;
+  
+  // not enough : bands raw signal, features in time 
+  // cannot create a X feature vector
+  // check in the first band because at least this must exist
+  if(bufidx < m_batch_size) 
+    return false;
+  
+  if(ArraySize(xypair.X) == 0)
+    xypair.Resize(m_xtrain_dim);    
+  
+
   int xifeature = 0;
   // something like
   // double[Expert_BufferSize][nsignal_features] would be awesome
   // easier to copy to X also to create cross-features
   // using a constant on the second dimension is possible
+  
   for(int timeidx=0; timeidx<m_batch_size; timeidx++){ // from present to past
     // features from band signals
     for(int i=0; i<m_nbands; i++, xifeature++){
@@ -209,5 +235,6 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
     for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
         xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
   }
-  return true;
+  xypair.isready = true;
+  return true; // suceeded
 }

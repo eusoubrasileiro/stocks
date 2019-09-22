@@ -1,6 +1,7 @@
 #include "..\Util.mqh"
 #include "..\Buffers.mqh"
 #include "..\XyVectors.mqh"
+#include "BbandsPython.mqh"
 
 // number of samples needed/used for training 5*days?
 const int                Expert_BufferSize      = 60*7*5; // indicators buffer needed
@@ -10,9 +11,10 @@ class CExpertBands : public CExpertX
 {
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
-    double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
+    double m_bbwindow_inc;   // are multiples of m_bbwindow_inc    
     // store buy|sell|hold signals for each bband
     CBuffer<int> m_raw_signal[];
+    int m_last_raw_signal[]; // last raw signal in all m_nbands 
     //CBuffer<datetime> m_raw_signal_time[];
     // 1|-1|0 = buy|sell|hold
     CIndicators m_bands; // collection of bbands indicators
@@ -25,9 +27,14 @@ class CExpertBands : public CExpertX
     //double m_buffXfeatures[][Expert_MaxFeatures];
     // profit or stop loss calculation
     double m_ordersize;
-    double m_amount; // tick value * quantity bought in $$ per order
     double m_stoploss; // stop loss value in $$$ per order
     double m_targetprofit; //targetprofit in $$$ per order
+    // python sklearn model
+    sklearnModel m_model;
+    unsigned int m_model_refresh; // how frequent to update the model
+    // (in number of new training samples)
+    unsigned long m_xypair_count; // counter to help train/re-train model
+    unsigned long m_model_last_training; // referenced on m_xypair_count's
 
   public:
 
@@ -37,27 +44,28 @@ class CExpertBands : public CExpertX
       m_bbwindow_inc = 0.5;
       // use all those series
       m_used_series = USE_SERIES_OPEN|USE_SERIES_CLOSE|USE_SERIES_HIGH|USE_SERIES_LOW|USE_SERIES_TIME;
+      m_model = new sklearnModel;
+      m_xypair_count = 0;
+      m_model_last_training =0;
    };
 
   void CExpertBands::Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
-        double ordersize, double stoploss, double targetprofit){
+        double ordersize, double stoploss, double targetprofit,
+        int model_refresh=15){
       // Call only after init indicators
     m_nbands = nbands;
     m_bbwindow = bbwindow;
-    // order size is in $$
-    // m_order_size is in contracts
+    // ordersize is in $$
     // need a conversion here TickValue for stocks
     m_ordersize = ordersize;
-    m_amount = m_symbol.TickValue()*m_ordersize;
     m_stoploss = stoploss; // value in $$$
     m_targetprofit = targetprofit;
 
     m_batch_size = batch_size;
-
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of other indicators are m_nbands*2*(EMA+MACD+VOLUME)= m_nbands*2*3
-    // m_nbands*6 so far + 6 band signals
+    // m_nbands*6 so far + m_nbands  band signals
     m_nsignal_features = m_nbands*6 + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
@@ -66,14 +74,18 @@ class CExpertBands : public CExpertX
     m_xypairs = new CObjectBuffer<XyPair>;
     m_xypairs.Resize(m_ntraining);
     // resize x feature vector inside it
-    for(int i=0; i<m_ntraining; i++)
-        m_xypairs[i].Resize(m_xtrain_dim);
+    // but they do not exist yet cant resize something that doesnt exist
+    // only the space available for them are there
+    //for(int i=0; i<m_ntraining; i++)
+    //    m_xypairs[i].Resize(m_xtrain_dim);
+    m_model_refresh = model_refresh;
 
     ArrayResize(m_raw_signal, m_nbands); // one for each band
+    ArrayResize(m_last_raw_signal, m_nbands);    
     //ArrayResize(m_raw_signal_time, m_nbands); // one for each band
     CreateBBands();
     CreateOtherFeatureIndicators();
-
+    
   }
 
   bool CExpertBands::Refresh(void)
@@ -81,34 +93,51 @@ class CExpertBands : public CExpertX
     // also updates m_bands
     if(!CExpert::Refresh())
         return (false);
-
     // features indicators
     m_oindfeatures.Refresh();
-
    // called after CExpert garantees not called twice
    // due TimeframesFlags(time)
    // also garantees indicators refreshed
     RefreshRawBandSignals();
-
-    // Has an entry signal in any band?
-    if(hasEntrySignalBands())
-    {
-
-    }
-    else
-    {
-
-
-    }
-
-    CreateYTargetClasses();
-
-
-//--- ok
    return(true);
   }
 
-  ~CExpertBands(){};
+  void CExpertBands::OnTimer(){
+    // has an entry signal in any band? on the last raw signal
+    if(lastRawSignal())
+    {
+        int m_xypair_count_old = m_xypairs.Size();
+        // only when a new entry signal recalc classes
+        // only when needed
+        CreateYTargetClasses();
+        CreateXFeatureVectors(m_xypairs);
+        // add number of xypairs added (cannot decrease)
+        m_xypair_count += (m_xypairs.Size()-m_xypair_count_old);
+        // update/train model if needed/possible
+        if(m_xypairs.Size() > m_ntraining){
+          // first time training
+          if(!m_model.isready){
+           // time to train the model for the first time
+           m_model.isready = true;
+          }
+          else // time to update the model?
+          if((m_xypair_count - m_model_last_training) >= m_model_refresh){
+          // if diference in training samples to the last training is bigger than
+          // refresh criteria - time to train again
+          }
+          // record when last training happened
+          m_model_last_training = m_xypair_count;
+        }
+        // Call Python if model is already trainned
+        if(m_model.isready){
+          // x forecast vector
+          
+          // y_pred = pythonpredictsklearn(X, m_model.pystrmodel, m_model.pystr_size)
+        }
+    }
+  }
+
+  ~CExpertBands(){}; // dont care for now memory leak
 
   protected:
 
@@ -117,13 +146,20 @@ class CExpertBands : public CExpertX
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
   void CreateOtherFeatureIndicators();
-
-  bool hasEntrySignalBands(){
-      // verify an entry signal in any band
-      for(int i=0; i<m_nbands; i++)
-          if(m_raw_signal[i].GetData(0) != 0)
-              return true; // last index is (0) in GetData
-      return false;
+  
+  // return true if has any entry signal 
+  // verify an entry signal in any band
+  // only call when there's at least one signal
+  // stored in the buffer of raw signal bands
+  bool lastRawSignal(){    
+    bool result = false;
+    // if(m_raw_signal) will not check null (not now)
+    for(int i=0; i<m_nbands; i++){
+        m_last_raw_signal[i] = m_raw_signal[i].GetData(0);
+        if(m_last_raw_signal[i] != 0)
+            result = true;
+    }
+    return result;
   }
 
   void CreateBBands(){
@@ -139,6 +175,10 @@ class CExpertBands : public CExpertX
       m_high.BufferResize(Expert_BufferSize);
       m_low.BufferResize(Expert_BufferSize);
       m_time.BufferResize(Expert_BufferSize);
+      // just to set the sort flat to Sorted = true
+      // methods that change that flag are not used by CTimeBuffer
+      ((CTimeBuffer *) m_time.At(0)).Sort(); 
+      
 
       double inc=m_bbwindow_inc;
       for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
@@ -159,7 +199,7 @@ class CExpertBands : public CExpertX
         //        buy   1 : crossing down-outside it's buy
         //        sell -1 : crossing up-outside it's sell
         //        hold  0 : nothing usefull happend
-        // remember order is reversed yonger firs older later
+        // remember order is reversed yonger first older later
         if( m_low.GetData(0) >= ((CiBands*) m_bands.At(i)).Upper(0))
             m_raw_signal[i].Add(-1);
         else

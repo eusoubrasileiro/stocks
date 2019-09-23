@@ -161,3 +161,11 @@ double percentile(double &data[], double perc){
     int n = MathMax(MathRound(perc * asize + 0.5), 2);
     return sorted[n-2];
 }
+
+bool IsEqualMqldt(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
+{
+     if(mqldt_a.year==mqldt_b.year && mqldt_a.mon==mqldt_b.mon && mqldt_a.day==mqldt_b.day &&
+            mqldt_a.hour==mqldt_b.hour && mqldt_a.min==mqldt_b.min && mqldt_a.sec==mqldt_b.sec)
+           return true;
+    return false;
+}

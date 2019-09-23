@@ -1,5 +1,5 @@
 #property copyright "Andre L. Ferreira"
-#property version   "0.01"
+#property version   "00.01"
 
 #include "..\TrailingMA.mqh"
 #include "..\Util.mqh"
@@ -64,21 +64,7 @@ int OnInit(){
 
 
 void OnTimer() {
-    MqlRates ratesnow[1], pday[1]; // previous day close and open today
-    MqlDateTime todaynow;
-    //--- updated quotes and indicators
-    if(!cExpert.Refresh())
-        return; // no work without correct data
-
-    if(cExpert.isInsideDay()){
-      cExpert.OnTimer();
-    }
-    // in case did not reach the take profit close it by the day end
-    // check to see if we should close any position
-    if(cExpert.SelectPosition()){ // if any open position
-        cExpert.CloseOpenPositionsbyTime();
-        cExpert.CheckTrailingStop();
-    }
+    cExpert.OnTimer();
 }
 
 // Useless stuff

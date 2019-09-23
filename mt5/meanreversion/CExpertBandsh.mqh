@@ -11,10 +11,13 @@ class CExpertBands : public CExpertX
 {
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
-    double m_bbwindow_inc;   // are multiples of m_bbwindow_inc    
+    double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
     // store buy|sell|hold signals for each bband
     CBuffer<int> m_raw_signal[];
-    int m_last_raw_signal[]; // last raw signal in all m_nbands 
+    MqlDateTime m_mqldt_now;
+    MqlDateTime m_last_time; // last time after refresh
+    CMqlDateTimeBuffer m_mqltime; // time buffer
+    int m_last_raw_signal[]; // last raw signal in all m_nbands
     //CBuffer<datetime> m_raw_signal_time[];
     // 1|-1|0 = buy|sell|hold
     CIndicators m_bands; // collection of bbands indicators
@@ -24,6 +27,7 @@ class CExpertBands : public CExpertX
     int m_nsignal_features;
     int m_xtrain_dim; // dimension of x train vector
     CObjectBuffer<XyPair> m_xypairs;
+    //CBuffer<double*> m_X;
     //double m_buffXfeatures[][Expert_MaxFeatures];
     // profit or stop loss calculation
     double m_ordersize;
@@ -33,6 +37,7 @@ class CExpertBands : public CExpertX
     sklearnModel m_model;
     unsigned int m_model_refresh; // how frequent to update the model
     // (in number of new training samples)
+    // helpers to count training samples
     unsigned long m_xypair_count; // counter to help train/re-train model
     unsigned long m_model_last_training; // referenced on m_xypair_count's
 
@@ -43,7 +48,7 @@ class CExpertBands : public CExpertX
       m_oindfeatures = new CIndicators;
       m_bbwindow_inc = 0.5;
       // use all those series
-      m_used_series = USE_SERIES_OPEN|USE_SERIES_CLOSE|USE_SERIES_HIGH|USE_SERIES_LOW|USE_SERIES_TIME;
+      m_used_series = USE_SERIES_OPEN|USE_SERIES_CLOSE|USE_SERIES_HIGH|USE_SERIES_LOW;
       m_model = new sklearnModel;
       m_xypair_count = 0;
       m_model_last_training =0;
@@ -81,15 +86,21 @@ class CExpertBands : public CExpertX
     m_model_refresh = model_refresh;
 
     ArrayResize(m_raw_signal, m_nbands); // one for each band
-    ArrayResize(m_last_raw_signal, m_nbands);    
+    ArrayResize(m_last_raw_signal, m_nbands);
     //ArrayResize(m_raw_signal_time, m_nbands); // one for each band
     CreateBBands();
     CreateOtherFeatureIndicators();
-    
+
   }
 
   bool CExpertBands::Refresh(void)
   {
+    TimeCurrent(m_mqldt_now);
+    if(IsEqualMqldt(m_last_time, m_mqldt_now))
+        return false;
+    // insert current time in the time buffer
+    TimeCurrent(m_last_time);
+    m_mqltime.Add(m_last_time);
     // also updates m_bands
     if(!CExpert::Refresh())
         return (false);
@@ -99,10 +110,14 @@ class CExpertBands : public CExpertX
    // due TimeframesFlags(time)
    // also garantees indicators refreshed
     RefreshRawBandSignals();
-   return(true);
+    return(true);
   }
 
   void CExpertBands::OnTimer(){
+    //--- updated quotes and indicators
+    if(!Refresh() && !isInsideDay())
+        return; // no work without correct data
+
     // has an entry signal in any band? on the last raw signal
     if(lastRawSignal())
     {
@@ -114,7 +129,7 @@ class CExpertBands : public CExpertX
         // add number of xypairs added (cannot decrease)
         m_xypair_count += (m_xypairs.Size()-m_xypair_count_old);
         // update/train model if needed/possible
-        if(m_xypairs.Size() > m_ntraining){
+        if(m_xypairs.Size() >= m_ntraining){
           // first time training
           if(!m_model.isready){
            // time to train the model for the first time
@@ -131,13 +146,23 @@ class CExpertBands : public CExpertX
         // Call Python if model is already trainned
         if(m_model.isready){
           // x forecast vector
-          
+          XyPair Xforecast = new XyPair;
+          Xforecast.time = m_last_time;
+          CreateXFeatureVector(Xforecast);
           // y_pred = pythonpredictsklearn(X, m_model.pystrmodel, m_model.pystr_size)
         }
     }
+
+    // in case did not reach the take profit close it by the day end
+    // check to see if we should close any position
+    if(SelectPosition()){ // if any open position
+        CloseOpenPositionsbyTime();
+        CheckTrailingStop();
+    }
+
   }
 
-  ~CExpertBands(){}; // dont care for now memory leak
+  ~CExpertBands(){}; // dont care for now memory leaks on expert execution
 
   protected:
 
@@ -146,12 +171,12 @@ class CExpertBands : public CExpertX
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
   void CreateOtherFeatureIndicators();
-  
-  // return true if has any entry signal 
+
+  // return true if has any entry signal
   // verify an entry signal in any band
   // only call when there's at least one signal
   // stored in the buffer of raw signal bands
-  bool lastRawSignal(){    
+  bool lastRawSignal(){
     bool result = false;
     // if(m_raw_signal) will not check null (not now)
     for(int i=0; i<m_nbands; i++){
@@ -174,11 +199,7 @@ class CExpertBands : public CExpertX
       m_close.BufferResize(Expert_BufferSize);
       m_high.BufferResize(Expert_BufferSize);
       m_low.BufferResize(Expert_BufferSize);
-      m_time.BufferResize(Expert_BufferSize);
-      // just to set the sort flat to Sorted = true
-      // methods that change that flag are not used by CTimeBuffer
-      ((CTimeBuffer *) m_time.At(0)).Sort(); 
-      
+      m_mqltime.Resize(Expert_BufferSize); // time is allawys sorted
 
       double inc=m_bbwindow_inc;
       for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
@@ -210,5 +231,15 @@ class CExpertBands : public CExpertX
         //m_raw_signal_time[i].Add(m_time.GetData(0))
     }
   }
+
+
+  // Global Buffer Size (all buffers MUST have same size)
+  // that's why they all use same ResizeBuffer code
+  // Real Buffer Size since Expert_BufferSize is just
+  // an initilization parameter and Resize functions make
+  // buffer a little bigger
+  int BufferSize(){ return m_mqltime.BufferSize();}
+  int BufferTotal(){ return m_raw_signal[0].Size(); }
+
 
 };

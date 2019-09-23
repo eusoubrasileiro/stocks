@@ -80,15 +80,14 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
       // amount - tick value * quantity bought in $$
       double entryprice = 0;
       int history = 0; // nothing, buy = 1, sell = -1
-      datetime previous_day = 0;
-      datetime time, day = 0;
+      int day, previous_day = 0;
+      MqlDateTime time;
       double profit = 0;
-      double quantity = 0; // number of contracts or stocks shares 
-      // net mode ONLY
+      double quantity = 0; // number of contracts or stocks shares
       // net mode ONLY
       for(int i=bandsg_raw.Size()-1; i>=0; i--){ // from past to present
-          time = m_time.GetData(i);
-          day = GetDayZeroHour(time); // unique day identifier
+          time = m_mqltime.GetData(i);
+          day = time.day_of_year; // unique day identifier
           if(day != previous_day){ // a new day reset everything
               if(history == 1 || history == -1){
                   // the previous batch o/f signals will not be saved. I don't want to train with that
@@ -107,7 +106,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
           if(bandsg_raw.GetData(i) == 1){
               if(history == 0){
                   entryprice = m_high.GetData(i);
-                  xypairs.Add(new XyPair(1, time, i)); //  save this buy
+                  xypairs.Add(new XyPair(1, time)); //  save this buy
               }
               else{ // another buy in sequence
                   // or after a sell in the same minute
@@ -117,7 +116,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   // maybe we can have profit here
                   // in a fast movement
                   entryprice = m_high.GetData(i);
-                  xypairs.Add(new XyPair(1, time, i)); //  save this buy
+                  xypairs.Add(new XyPair(1, time)); //  save this buy
               }
               quantity = roundVolume(m_ordersize/entryprice);
               history=1;
@@ -126,7 +125,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
           if(bandsg_raw.GetData(i) == -1){
               if(history == 0){
                   entryprice = m_low.GetData(i);
-                  xypairs.Add(new XyPair(-1, time, i)); //  save this sell
+                  xypairs.Add(new XyPair(-1, time)); //  save this sell
               }
               else{ // another sell in sequence
                    // or after a buy  in the same minute
@@ -136,7 +135,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   // maybe we can have profit here
                   // in a fast movement
                   entryprice = m_low.GetData(i);
-                  xypairs.Add(new XyPair(-1, time, i)); //  save this buy
+                  xypairs.Add(new XyPair(-1, time)); //  save this buy
               }
               quantity = roundVolume(m_ordersize/entryprice);
               history=-1;
@@ -193,35 +192,40 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
 {
   if(xypair.isready) // no need to assembly
     return false; // did not suceed
-  
+
   // find xypair.time current position on all buffers (have same size)
-  // problem with CTimeBuffer not allowing to use the Search method of CLong Class
-  // will have to create my own buffer for time
-  int bufidx = ((CTimeBuffer *) m_time.At(0)).Search(xypair.time);
-  
+  // time is allways sorted
+  int bufi = m_mqltime.QuickSearch(xypair.time);
+
+ // buffer size 1000
+ // bufi 980 faltam mais 20 mais velhas
+
   // not found -1 :
   // cannot assembly X feature train with such an old signal not in buffer anymore
   // such should be removed ...
-  if(bufidx == -1) 
+  if(bufi < 0){ // this should never happen?
+    Print("this should never happen"); 
     return false;
-  
-  // not enough : bands raw signal, features in time 
+  }
+  // convert to as series index Convention
+  bufi = BufferSize()-1-bufi;
+  // not enough : bands raw signal, features in time
+  // to form a batch and so 
   // cannot create a X feature vector
-  // check in the first band because at least this must exist
-  if(bufidx < m_batch_size) 
+  int batch_end_idx = bufi+m_batch_size;
+  if( batch_end_idx > BufferTotal())
     return false;
-  
-  if(ArraySize(xypair.X) == 0)
-    xypair.Resize(m_xtrain_dim);    
-  
+
+  if(ArraySize(xypair.X) < m_xtrain_dim)
+    xypair.Resize(m_xtrain_dim);
 
   int xifeature = 0;
   // something like
   // double[Expert_BufferSize][nsignal_features] would be awesome
   // easier to copy to X also to create cross-features
   // using a constant on the second dimension is possible
-  
-  for(int timeidx=0; timeidx<m_batch_size; timeidx++){ // from present to past
+
+  for(int timeidx=bufi; timeidx<batch_end_idx; timeidx++){ // from present to past
     // features from band signals
     for(int i=0; i<m_nbands; i++, xifeature++){
       xypair.X[xifeature] = m_raw_signal[i].GetData(timeidx);

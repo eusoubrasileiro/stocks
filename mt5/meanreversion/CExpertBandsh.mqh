@@ -133,6 +133,11 @@ class CExpertBands : public CExpertX
           // first time training
           if(!m_model.isready){
            // time to train the model for the first time
+              PythonTrainModel();
+
+
+           }
+
            m_model.isready = true;
           }
           else // time to update the model?
@@ -171,6 +176,8 @@ class CExpertBands : public CExpertX
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
   void CreateOtherFeatureIndicators();
+
+  bool PythonTrainModel();
 
   // return true if has any entry signal
   // verify an entry signal in any band

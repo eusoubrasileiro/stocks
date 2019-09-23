@@ -46,6 +46,35 @@ int Unique(double arr[], int n) {
 	return buf.shape[0]; // return unique size
 }
 
+int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim, 
+						char *model, int pystr_size){
+	py::buffer_info buf;
+	double* dptr;
+	int* iptr;
+	// create python array and copy c array data to it
+	// X feature vector
+	py::array_t<double> pyX = py::array_t<double>(ntraining * xtrain_dim);
+	buf = pyX.request();
+	dptr = (double*) buf.ptr;
+	std::memcpy(dptr, X, ntraining * xtrain_dim * sizeof(double));
+	pyX.resize({ ntraining, xtrain_dim });
+	// y target class vector
+	py::array_t<int> pyY = py::array_t<int>(ntraining);
+	buf = pyY.request();
+	iptr = (int*) buf.ptr;
+	std::memcpy(iptr, y, ntraining * sizeof(int));
+
+	// call python code 
+	std::string strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();	
+	unsigned int size = strpyModel.length();
+	if (strpyModel.length() > pystr_size)
+		return 0;
+	std::memcpy(model, strpyModel.data(), strpyModel.length() * sizeof(char));
+
+	return strpyModel.length();// return size of model can be 0 on failure
+}
+
+
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,

@@ -22,6 +22,8 @@
 extern "C"
 {
 	int DLL_EXPORT Unique(double arr[], int n);
+	int DLL_EXPORT pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
+		char* model, int pystr_size);
 }
 
 

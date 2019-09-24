@@ -1,5 +1,6 @@
 #include "CExpertBandsh.mqh"
 
+
 void CExpertBands::CreateOtherFeatureIndicators(){
         MqlParam params[8];
         double inc = m_bbwindow_inc;
@@ -208,12 +209,11 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
     return false;
   }
   // convert to as series index Convention
-  bufi = BufferSize()-1-bufi;
+  // 
   // not enough : bands raw signal, features in time
   // to form a batch and so 
-  // cannot create a X feature vector
-  int batch_end_idx = bufi+m_batch_size;
-  if( batch_end_idx > BufferTotal())
+  // cannot create a X feature vector  
+  if( bufi - m_batch_size < 0)
     return false;
 
   if(ArraySize(xypair.X) < m_xtrain_dim)
@@ -224,7 +224,8 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
   // double[Expert_BufferSize][nsignal_features] would be awesome
   // easier to copy to X also to create cross-features
   // using a constant on the second dimension is possible
-
+  bufi = BufferTotal()-1-bufi;
+  int batch_end_idx = bufi+m_batch_size;
   for(int timeidx=bufi; timeidx<batch_end_idx; timeidx++){ // from present to past
     // features from band signals
     for(int i=0; i<m_nbands; i++, xifeature++){
@@ -241,4 +242,28 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
   }
   xypair.isready = true;
   return true; // suceeded
+}
+
+
+bool CExpertBands::PythonTrainModel(){
+  // create input params for Python function
+  double X[]; // 2D strided array less code to call python
+  int y[];
+  XyPair xypair;
+  ArrayResize(X, m_ntraining*m_xtrain_dim);
+  ArrayResize(y, m_ntraining);
+  for(int i=0; i<m_ntraining;i++){ // get the most recent
+    // X order doesnt matter pattern identification
+     xypair = m_xypairs.GetData(i);
+     ArrayCopy(X, xypair.X, i*m_xtrain_dim, 0, m_xtrain_dim);
+     y[i] = xypair.y;
+   }
+   int result = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, m_model.pystrmodel, m_model.pystr_size);
+   if(result > 0)
+    return true;
+    
+   ArrayFree(X);
+   ArrayFree(y);
+
+   return false;
 }

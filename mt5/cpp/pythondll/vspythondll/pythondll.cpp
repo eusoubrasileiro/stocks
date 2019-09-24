@@ -3,7 +3,6 @@
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
-
 #include <iostream>
 
 #ifdef DEBUG
@@ -64,6 +63,10 @@ int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 	iptr = (int*) buf.ptr;
 	std::memcpy(iptr, y, ntraining * sizeof(int));
 
+#ifdef DEBUG
+	debugfile << "X: " << X[10] << " " << X[100] << " " << X[1000] << std::endl;
+	debugfile << "y: " << y[0] << " " << y[5] << " " << y[10] << std::endl;
+#endif 
 	// call python code 
 	std::string strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();	
 	unsigned int size = strpyModel.length();

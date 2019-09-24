@@ -132,13 +132,8 @@ class CExpertBands : public CExpertX
         if(m_xypairs.Size() >= m_ntraining){
           // first time training
           if(!m_model.isready){
-           // time to train the model for the first time
-              PythonTrainModel();
-
-
-           }
-
-           m_model.isready = true;
+           // time to train the model for the first time           
+           m_model.isready = PythonTrainModel();
           }
           else // time to update the model?
           if((m_xypair_count - m_model_last_training) >= m_model_refresh){

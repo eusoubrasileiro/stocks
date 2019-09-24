@@ -14,11 +14,10 @@ and libs and everything else from python37 installation path bellow
 packages must be installed with pip (same cmd sequence)
 must use Release to debug and config to build Release with debug info.
 
-set PYTHONHOME=D:\Users\andre.ferreira\AppData\Local\Programs\Python\Python37
+set PYTHONHOME=%USERPROFILE%\AppData\Local\Programs\Python\Python37
 set PYTHONPATH=%PYTHONHOME%\DLLs;%PYTHONHOME%\Lib;%PYTHONHOME%\Lib\site-packages;
 set Path=%Path%;%PYTHONHOME%;%PYTHONHOME%\DLLs;%PYTHONHOME%\Lib;%PYTHONHOME%\Lib\site-packages;%PYTHONHOME%\Scripts;%PYTHONHOME%;
 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe"
-
 
 ### TA_Lib
 

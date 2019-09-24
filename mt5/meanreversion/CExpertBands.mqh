@@ -183,36 +183,30 @@ void CExpertBands::CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs)
   for(int i=0; i<xypairs.Size(); i++){
     // no need to assembly any other if this is already ready
     // olders will also be ready
-    if(!CreateXFeatureVector(xypairs.GetData(i)))
-        break;
+    if(!CreateXFeatureVector(xypairs.GetData(i)))   
+        xypairs.RemoveData(i);     
   }
 
 }
 
 bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
 {
-  if(xypair.isready) // no need to assembly
-    return false; // did not suceed
+  if(xypair.isready) // no need to assembly 
+    return true;  
 
   // find xypair.time current position on all buffers (have same size)
   // time is allways sorted
   int bufi = m_mqltime.QuickSearch(xypair.time);
 
- // buffer size 1000
- // bufi 980 faltam mais 20 mais velhas
-
-  // not found -1 :
   // cannot assembly X feature train with such an old signal not in buffer anymore
   // such should be removed ...
-  if(bufi < 0){ // this should never happen?
-    Print("this should never happen");
+  if(bufi < 0){ // not found -1 : this should never happen?
+    Print("ERROR: This should never happen!");
     return false;
   }
-  // convert to as series index Convention
-  //
-  // not enough : bands raw signal, features in time
-  // to form a batch and so
-  // cannot create a X feature vector
+  // not enough : bands raw signal, features in time to form a batch
+  // cannot create a X feature vector and will never will 
+  // remove it
   if( bufi - m_batch_size < 0)
     return false;
 
@@ -259,7 +253,6 @@ bool CExpertBands::PythonTrainModel(){
      y[i] = xypair.y;
    }
    int result = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, m_model.pystrmodel, m_model.pystr_size);
-
    ArrayFree(X);
    ArrayFree(y);
 

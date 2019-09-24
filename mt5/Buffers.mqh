@@ -127,14 +127,15 @@ public:
           m_data_total--;
         }
     }
-
-    // Get Data At index position using Array As Series Convention
-    // youngest sample is at (0)
-    Type *GetData(const int index) const
+    
+    void Remove(const int index) 
     {
-       return(m_data[m_data_total-1-index]);
+        delete m_data[index];
+        ShiftLeftBuffer(index);
+        m_data[m_data_total-1] = NULL;
+        m_data_total--;        
     }
-
+    
     Type *Last() // last added
     {
        return GetData(0);
@@ -163,14 +164,28 @@ public:
     }
 
     int BufferSize(){ return m_data_max; }
+    
+    // following use 
+    // using Array As Series Convention
+    // youngest sample is at (0) 
+    // Remove data at index position using Array As Series Convention  
+    void RemoveData(const int index){
+        Remove(m_data_total-1-index);
+    }
+
+    // Get Data At index position using Array As Series Convention      
+    Type *GetData(const int index) const
+    {
+       return(m_data[m_data_total-1-index]);
+    }
 
 
 protected:
     // called only when buffer full
     // Move all pointers to the left
     // create space in the end for new data
-    void ShiftLeftBuffer(){
-        for(int i=0; i<m_data_total-1; i++){
+    void ShiftLeftBuffer(int start=0){
+        for(int i=start; i<m_data_total-1; i++){
             m_data[i] = m_data[i+1];
         }
     }

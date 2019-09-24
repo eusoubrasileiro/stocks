@@ -1,6 +1,5 @@
 #include <iostream>
 #include <windows.h>
-#include <iostream>
 
 typedef int(__stdcall* funcUnique)(double*, int);
 typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);

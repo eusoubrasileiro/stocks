@@ -205,14 +205,14 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
   // cannot assembly X feature train with such an old signal not in buffer anymore
   // such should be removed ...
   if(bufi < 0){ // this should never happen?
-    Print("this should never happen"); 
+    Print("this should never happen");
     return false;
   }
   // convert to as series index Convention
-  // 
+  //
   // not enough : bands raw signal, features in time
-  // to form a batch and so 
-  // cannot create a X feature vector  
+  // to form a batch and so
+  // cannot create a X feature vector
   if( bufi - m_batch_size < 0)
     return false;
 
@@ -259,11 +259,14 @@ bool CExpertBands::PythonTrainModel(){
      y[i] = xypair.y;
    }
    int result = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, m_model.pystrmodel, m_model.pystr_size);
-   if(result > 0)
-    return true;
-    
+
    ArrayFree(X);
    ArrayFree(y);
+
+   if(result > 0)
+    return true;
+
+
 
    return false;
 }

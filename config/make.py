@@ -14,6 +14,8 @@ parser.add_argument("-meta5", dest="meta5", default=False, action="store_true",
                     help="link all *.mql and *.mqh files to MetaTrader 5 Advisors Path")
 parser.add_argument("-cppbuild", dest="cppbuild", default=False, action="store_true",
                     help="build cpp library as a dll for mt5 using mingw32-w64 or cl on windows")
+parser.add_argument("-cppdebug", dest="cppdebug", default=False, action="store_true",
+                    help="build cpp's library with DEBUG preprocessor slows it down")
 parser.add_argument("-clean", dest="clean", default=False, action="store_true",
                     help="clean all symlinks")
 parser.add_argument("-newdata", dest="newdata", default=False, action="store_true",
@@ -80,13 +82,16 @@ if os.name == 'nt':
         ######################################
         # PYTHON DLL
         ######################################
+        cppdebug = ""
+        if args.cppdebug:
+            cppdebug = " /DDEBUG "
         pythonincludes = os.path.join(pythonpath, "include")
         pythonlibs = os.path.join(pythonpath, r"libs\python37.lib") # never use _d debug
         pybindincludes = os.path.join(pybindroot, "include")
         cpppath = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll")
         compile = ("cd "+ cpppath + " & " +
                     vsbuildenvcmd +" && "+
-                r"cl.exe /LD /EHsc /Gz /Fepythondlib /std:c++17 /DBUILDING_DLL /O2  pythondll.cpp"+
+                r"cl.exe /LD /EHsc /Gz /Fepythondlib /std:c++17 /DBUILDING_DLL "+ cppdebug + " /O2  pythondll.cpp"+
                 " -I "+ pythonincludes + " -I " + pybindincludes +" /link " + pythonlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)

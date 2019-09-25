@@ -41,7 +41,7 @@ int Unique(double arr[], int n) {
 	return buf.shape[0]; // return unique size
 }
 
-int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim, 
+int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 						char *model, int pystr_size){
 	py::buffer_info buf;
 	double* dptr;
@@ -59,17 +59,20 @@ int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 	iptr = (int*) buf.ptr;
 	std::memcpy(iptr, y, ntraining * sizeof(int));
 
-	if (ntraining > 2) {
-		debugfile << "X: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
-		debugfile << "y: " << y[0] << " " << y[1] << " " << y[2] << std::endl;
-	}
-
 	std::string strpyModel;
 
 	try {
-		// call python code 
+		// call python code
 		strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();
 		unsigned int size = strpyModel.length();
+#ifdef DEBUG
+		if (ntraining > 2) {
+			debugfile << "X: " << X[0] << " " << X[1] << " " << X[2] << std::endl;
+			debugfile << "y: " << y[0] << " " << y[1] << " " << y[2] << std::endl;
+			debugfile << "strsize: " << pystr_size << std::endl;
+			debugfile << "model size: " << size << std::endl;
+		}
+#endif
 		if (strpyModel.length() > pystr_size)
 			return 0;
 		std::memcpy(model, strpyModel.data(), strpyModel.length() * sizeof(char));
@@ -98,7 +101,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 {
     switch (ul_reason_for_call)
     {
-			
+
     case DLL_PROCESS_ATTACH:
 			debugfile << "PROCESS_ATTACH" << std::endl;
 			debugfile << "python_started: " + BoolToString(Py_IsInitialized()) << std::endl;
@@ -136,10 +139,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		//	debugfile << "python_started: " + BoolToString(Py_IsInitialized()) << std::endl;
 		//}
 		// Rofdl did finalize the interpreter after every dll unload
-		// Numpy array poses a problem since it's data structures 
-		// are not fully unloaded and them breaks the interpreter when imported again 
+		// Numpy array poses a problem since it's data structures
+		// are not fully unloaded and them breaks the interpreter when imported again
 		// with a subsequent call to PyInitialize
-		// so better not unload if you want to use numpy 
+		// so better not unload if you want to use numpy
 			debugfile << "PROCESS_DETACH" << std::endl;
 			debugfile << "python_started: " + BoolToString(Py_IsInitialized()) << std::endl;
 		// Solved many booms $&##��*�@!(@ on metatrader 5

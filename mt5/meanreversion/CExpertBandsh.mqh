@@ -139,6 +139,7 @@ class CExpertBands : public CExpertX
           if((m_xypair_count - m_model_last_training) >= m_model_refresh){
           // if diference in training samples to the last training is bigger than
           // refresh criteria - time to train again
+            m_model.isready = PythonTrainModel();
           }
           // record when last training happened
           m_model_last_training = m_xypair_count;

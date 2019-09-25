@@ -233,6 +233,14 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
         xypair.X[xifeature] = ((CiMACD*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
     for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
         xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+    
+    // some indicators might contain EMPTY_VALUE == DBL_MAX values 
+    // verified volumes with EMPTY VALUES but I suppose that also might happen
+    // with others in this case better drop the training sample?
+    // sklearn throws an exception because of that
+    // anyhow that's not a problem for the code since the python exception
+    // is catched behind the scenes and a valid model will only be available
+    // once correct samples are available
   }
   xypair.isready = true;
   return true; // suceeded
@@ -252,11 +260,12 @@ bool CExpertBands::PythonTrainModel(){
      ArrayCopy(X, xypair.X, i*m_xtrain_dim, 0, m_xtrain_dim);
      y[i] = xypair.y;
    }
-   int result = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, m_model.pystrmodel, m_model.pystr_size);
+   m_model.pystr_size = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, 
+                  m_model.pystrmodel, m_model.MaxSize());
    ArrayFree(X);
    ArrayFree(y);
 
-   if(result > 0)
+   if(m_model.pystr_size > 0)
     return true;
 
 

@@ -109,7 +109,14 @@ if os.name == 'nt':
     if args.cpdll:
         repopath_dlls = os.path.join(repopath, 'mt5\cpp')
         dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll's # (glob recursive not working)
-        #print(dllpaths, file=sys.stderr)
+        # for repeated files get the created most recently
+        times = [ os.path.getctime(dll) for dll in dllpaths ]
+        dllnames = [os.path.basename(dll) for dll in dllpaths ]
+        df = pd.DataFrame(zip(dllnames, times, dllpaths), columns=['names', 'time', 'path'])
+        df = df[df['time'] == df.groupby(['names'])['time'].transform(min)] # dont understand
+        # transform(min) for me should be max - but works
+        dllpaths = df.path.values
+        print(dllpaths, file=sys.stderr)
         usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
         #print(usermt5path_testeragents,  file=sys.stderr)
         # search and get all local tester agents paths

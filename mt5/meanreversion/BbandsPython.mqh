@@ -14,6 +14,7 @@ public:
   void sklearnModel(void){
     isready = false;
   }
+  int MaxSize(){ return ArraySize(pystrmodel); } // max size
   //void ~sklearnModel(){ ArrayFree(pystrmodel); }
 };
 

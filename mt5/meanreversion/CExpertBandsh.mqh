@@ -71,8 +71,8 @@ class CExpertBands : public CExpertX
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of other indicators are m_nbands*2*(EMA+MACD+VOLUME)= m_nbands*2*3
     // m_nbands*6 so far + m_nbands  band signals
-    //m_nsignal_features = m_nbands*6 + m_nbands;
-    m_nsignal_features = m_nbands + m_nbands;
+    m_nsignal_features = m_nbands*6 + m_nbands;
+    //m_nsignal_features = m_nbands + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
     // group of samples and signal vectors to train the model

@@ -1,5 +1,5 @@
 #property copyright "Andre L. Ferreira"
-#property version   "00.01"
+#property version   "1.01"
 
 #include "..\TrailingMA.mqh"
 #include "..\Util.mqh"
@@ -7,13 +7,20 @@
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
-input int                      Expert_NBands          = 3; //number of bollinger bands
-input int                      Expert_Window          = 21; // indicators buffer needed
-input int                  Expert_Batch_Size          = 2; // "memory" of patterns for training sklearn model
-input int                   Expert_NTraining          = 60; // minimum number of samples for training
-input double                Expert_OrderSize          = 100e3;  // tick value * quantity bought in $$
-input double                Expert_StopLoss           = 200; // stop loss for each order
-input double              Expert_TargetProfit         = 15; // target profit per order
+//number of bollinger bands
+input int                      Expert_NBands          = 3; 
+// reference window for bbands
+input int                      Expert_Window          = 21;
+// "memory" of patterns for training sklearn model 
+input int                  Expert_Batch_Size          = 2; 
+// minimum number of samples for training
+input int                   Expert_NTraining          = 60; 
+// orderSize in $$$
+input double                Expert_OrderSize          = 100e3;  
+// stop loss for each order $$$
+input double                Expert_StopLoss           = 200; 
+// target profit per order $$$
+input double              Expert_TargetProfit         = 15; 
 
 const bool                     Expert_EveryTick       = false;
 const int                      Expert_MagicNumber     = 2525;

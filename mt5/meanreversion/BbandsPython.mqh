@@ -9,8 +9,8 @@ class sklearnModel
 {
 public:
   // dont know the size of a sklearn extra trees
-  // serialized so put something big here 500Kb
-  char pymodel[1024*5000];
+  // serialized so put something big here 5MB
+  char pymodel[1024*1024*5];
   // size of python model in bytes after created
   int  pymodel_size;
   bool isready; // is ready to be used

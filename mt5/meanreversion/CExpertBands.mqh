@@ -242,14 +242,12 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
     }
     // features from other indicators
     int indfeatcount=0;
-    for(; indfeatcount<m_nbands; indfeatcount++, xifeature++) // EMA's
+    for(; indfeatcount<m_nbands*2; indfeatcount++, xifeature++) // EMA's
       xypair.X[xifeature] = ((CiMA*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    //for(; indfeatcount<m_nbands*2; indfeatcount++, xifeature++) // EMA's
-    //  xypair.X[xifeature] = ((CiMA*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    //for(; indfeatcount<m_nbands*4; indfeatcount++, xifeature++) // MACD's
-    //    xypair.X[xifeature] = ((CiMACD*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    //for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
-    //    xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+    for(; indfeatcount<m_nbands*4; indfeatcount++, xifeature++) // MACD's
+        xypair.X[xifeature] = ((CiMACD*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+    for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
+        xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
 
     // some indicators might contain EMPTY_VALUE == DBL_MAX values
     // verified volumes with EMPTY VALUES but I suppose that also might happen
@@ -279,6 +277,7 @@ bool CExpertBands::PythonTrainModel(){
    }
    m_model.pymodel_size = pyTrainModel(X, y, m_ntraining, m_xtrain_dim,
                   m_model.pymodel, m_model.MaxSize());
+  //Print(")
   ArrayFree(X);
   ArrayFree(y);
   return (m_model.pymodel_size > 0);

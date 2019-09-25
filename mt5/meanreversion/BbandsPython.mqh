@@ -1,22 +1,23 @@
 #import "pythondlib.dll"
-    int pyTrainModel(double &X[], int &y[], int ntraining, int xtrain_dim,
-          char &model[], int pystr_size);
+int  pyTrainModel(double &X[], int &y[], int ntraining, int xtrain_dim,
+    char& model[], int pymodel_size_max);
+int pyPredictwModel(double &X[], int xtrain_dim, 
+    char &model[], int pymodel_size);
 #import
 
 class sklearnModel
 {
 public:
-  //dont know the size of a sklearn extra trees
+  // dont know the size of a sklearn extra trees
   // serialized so put something big here 500Kb
-  char pystrmodel[1024*5000];
-  int  pystr_size; // size of above that is really the model
+  char pymodel[1024*5000];
+  // size of python model in bytes after created
+  int  pymodel_size;
   bool isready; // is ready to be used
   void sklearnModel(void){
     isready = false;
+    pymodel_size = 0;
   }
-  int MaxSize(){ return ArraySize(pystrmodel); } // max size
-  //void ~sklearnModel(){ ArrayFree(pystrmodel); }
+  // max size of a sklearn model in bytes
+  int MaxSize(){ return ArraySize(pymodel); }
 };
-
-
-

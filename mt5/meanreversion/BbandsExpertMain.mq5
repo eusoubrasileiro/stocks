@@ -9,10 +9,10 @@
 //Inputs
 input int                      Expert_NBands          = 3; //number of bollinger bands
 input int                      Expert_Window          = 21; // indicators buffer needed
-input int                  Expert_Batch_Size          = 60; // "memory" of patterns for training sklearn model
+input int                  Expert_Batch_Size          = 2; // "memory" of patterns for training sklearn model
 input int                   Expert_NTraining          = 60; // minimum number of samples for training
 input double                Expert_OrderSize          = 100e3;  // tick value * quantity bought in $$
-input double                Expert_StopLoss           = 60; // stop loss for each order
+input double                Expert_StopLoss           = 200; // stop loss for each order
 input double              Expert_TargetProfit         = 15; // target profit per order
 
 const bool                     Expert_EveryTick       = false;

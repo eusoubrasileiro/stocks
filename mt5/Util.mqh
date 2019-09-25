@@ -169,3 +169,12 @@ bool IsEqualMqldt(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
            return true;
     return false;
 }
+
+bool IsEqualMqldt_M1(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
+{
+     if(mqldt_a.year==mqldt_b.year && mqldt_a.mon==mqldt_b.mon && mqldt_a.day==mqldt_b.day &&
+            mqldt_a.hour==mqldt_b.hour && mqldt_a.min==mqldt_b.min)
+           return true;
+    return false;
+}
+

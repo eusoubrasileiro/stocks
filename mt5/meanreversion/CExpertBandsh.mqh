@@ -71,7 +71,8 @@ class CExpertBands : public CExpertX
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of other indicators are m_nbands*2*(EMA+MACD+VOLUME)= m_nbands*2*3
     // m_nbands*6 so far + m_nbands  band signals
-    m_nsignal_features = m_nbands*6 + m_nbands;
+    //m_nsignal_features = m_nbands*6 + m_nbands;
+    m_nsignal_features = m_nbands + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
     // group of samples and signal vectors to train the model
@@ -96,16 +97,17 @@ class CExpertBands : public CExpertX
   bool CExpertBands::Refresh(void)
   {
     TimeCurrent(m_mqldt_now);
-    if(IsEqualMqldt(m_last_time, m_mqldt_now))
+    if(IsEqualMqldt_M1(m_last_time, m_mqldt_now))
         return false;
-    // insert current time in the time buffer
-    TimeCurrent(m_last_time);
-    m_mqltime.Add(m_last_time);
     // also updates m_bands
     if(!CExpert::Refresh())
         return (false);
     // features indicators
     m_oindfeatures.Refresh();
+    // insert current time in the time buffer
+    // must be here so all buffers are aligned
+    TimeCurrent(m_last_time);
+    m_mqltime.Add(m_last_time);
    // called after CExpert garantees not called twice
    // due TimeframesFlags(time)
    // also garantees indicators refreshed
@@ -115,7 +117,7 @@ class CExpertBands : public CExpertX
 
   void CExpertBands::OnTimer(){
     //--- updated quotes and indicators
-    if(!Refresh() && !isInsideDay())
+    if(!Refresh() || !isInsideDay())
         return; // no work without correct data
 
     // has an entry signal in any band? on the last raw signal
@@ -133,7 +135,7 @@ class CExpertBands : public CExpertX
           // first time training
           if(!m_model.isready){
            // time to train the model for the first time           
-           m_model.isready = PythonTrainModel();
+            m_model.isready = PythonTrainModel();
           }
           else // time to update the model?
           if((m_xypair_count - m_model_last_training) >= m_model_refresh){
@@ -150,7 +152,9 @@ class CExpertBands : public CExpertX
           XyPair Xforecast = new XyPair;
           Xforecast.time = m_last_time;
           CreateXFeatureVector(Xforecast);
-          // y_pred = pythonpredictsklearn(X, m_model.pystrmodel, m_model.pystr_size)
+          int y_pred = PythonPredict(Xforecast);          
+          if(y_pred == 1 || y_pred == -1)
+              BuySell(y_pred);          
         }
     }
 
@@ -168,12 +172,15 @@ class CExpertBands : public CExpertX
   protected:
 
   void CreateYTargetClasses();
-  void BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuffer<XyPair> &xypairs);
+  void BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, 
+        CObjectBuffer<XyPair> &xypairs, int band_number);
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
   void CreateOtherFeatureIndicators();
+  void BuySell(int sign); 
 
   bool PythonTrainModel();
+  int  PythonPredict(XyPair &xypair);
 
   // return true if has any entry signal
   // verify an entry signal in any band
@@ -230,8 +237,7 @@ class CExpertBands : public CExpertX
         if( m_high.GetData(0) <= ((CiBands*) m_bands.At(i)).Lower(0))
             m_raw_signal[i].Add(1); // buy
         else
-            m_raw_signal[i].Add(0); // nothing
-        //m_raw_signal_time[i].Add(m_time.GetData(0))
+            m_raw_signal[i].Add(0); // nothing        
     }
   }
 

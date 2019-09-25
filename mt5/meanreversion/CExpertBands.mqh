@@ -67,11 +67,12 @@ void CExpertBands::CreateOtherFeatureIndicators(){
 // That is used to blocking positions from passing to another day.
 void CExpertBands::CreateYTargetClasses(){
     for(int i=0; i<m_nbands; i++){
-      BandCreateYTargetClasses(m_raw_signal[i], m_xypairs);
+      BandCreateYTargetClasses(m_raw_signal[i], m_xypairs, i);
     }
 }
 
-void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuffer<XyPair> &xypairs)
+void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, 
+        CObjectBuffer<XyPair> &xypairs, int band_number)
 {
       // buy at ask = High at minute time-frame (being pessimistic)
       // sell at bid = Low at minute time-frame
@@ -85,8 +86,22 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
       MqlDateTime time;
       double profit = 0;
       double quantity = 0; // number of contracts or stocks shares
+      // Starts from the past (begin of buffer of signals)
+      int i=bandsg_raw.Size()-1;
+      // OR
+      // For not adding again the same signal
+      // Starts where it stop the last time 
+      if(xypairs.Size() > 0){ 
+        int last_buff_index = m_mqltime.QuickSearch(xypairs.GetData(0).time);
+        if(last_buff_index < 0){
+            Print("This was not implemented and should not happen!");
+            return;
+        }
+        i = bandsg_raw.Size()-1-last_buff_index; // convert to as series index
+        i++; // next signal after this!
+      }
       // net mode ONLY
-      for(int i=bandsg_raw.Size()-1; i>=0; i--){ // from past to present
+      for(; i>=0; i--){ // from past to present
           time = m_mqltime.GetData(i);
           day = time.day_of_year; // unique day identifier
           if(day != previous_day){ // a new day reset everything
@@ -107,7 +122,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
           if(bandsg_raw.GetData(i) == 1){
               if(history == 0){
                   entryprice = m_high.GetData(i);
-                  xypairs.Add(new XyPair(1, time)); //  save this buy
+                  xypairs.Add(new XyPair(1, time, band_number)); //  save this buy
               }
               else{ // another buy in sequence
                   // or after a sell in the same minute
@@ -117,7 +132,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   // maybe we can have profit here
                   // in a fast movement
                   entryprice = m_high.GetData(i);
-                  xypairs.Add(new XyPair(1, time)); //  save this buy
+                  xypairs.Add(new XyPair(1, time, band_number)); //  save this buy
               }
               quantity = roundVolume(m_ordersize/entryprice);
               history=1;
@@ -126,7 +141,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
           if(bandsg_raw.GetData(i) == -1){
               if(history == 0){
                   entryprice = m_low.GetData(i);
-                  xypairs.Add(new XyPair(-1, time)); //  save this sell
+                  xypairs.Add(new XyPair(-1, time, band_number)); //  save this sell
               }
               else{ // another sell in sequence
                    // or after a buy  in the same minute
@@ -136,7 +151,7 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, CObjectBuf
                   // maybe we can have profit here
                   // in a fast movement
                   entryprice = m_low.GetData(i);
-                  xypairs.Add(new XyPair(-1, time)); //  save this buy
+                  xypairs.Add(new XyPair(-1, time, band_number)); //  save this buy
               }
               quantity = roundVolume(m_ordersize/entryprice);
               history=-1;
@@ -183,16 +198,16 @@ void CExpertBands::CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs)
   for(int i=0; i<xypairs.Size(); i++){
     // no need to assembly any other if this is already ready
     // olders will also be ready
-    if(!CreateXFeatureVector(xypairs.GetData(i)))   
-        xypairs.RemoveData(i);     
+    if(!CreateXFeatureVector(xypairs.GetData(i)))
+        xypairs.RemoveData(i);
   }
 
 }
 
 bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
 {
-  if(xypair.isready) // no need to assembly 
-    return true;  
+  if(xypair.isready) // no need to assembly
+    return true;
 
   // find xypair.time current position on all buffers (have same size)
   // time is allways sorted
@@ -205,7 +220,7 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
     return false;
   }
   // not enough : bands raw signal, features in time to form a batch
-  // cannot create a X feature vector and will never will 
+  // cannot create a X feature vector and will never will
   // remove it
   if( bufi - m_batch_size < 0)
     return false;
@@ -227,14 +242,16 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
     }
     // features from other indicators
     int indfeatcount=0;
-    for(; indfeatcount<m_nbands*2; indfeatcount++, xifeature++) // EMA's
+    for(; indfeatcount<m_nbands; indfeatcount++, xifeature++) // EMA's
       xypair.X[xifeature] = ((CiMA*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    for(; indfeatcount<m_nbands*4; indfeatcount++, xifeature++) // MACD's
-        xypair.X[xifeature] = ((CiMACD*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
-        xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
-    
-    // some indicators might contain EMPTY_VALUE == DBL_MAX values 
+    //for(; indfeatcount<m_nbands*2; indfeatcount++, xifeature++) // EMA's
+    //  xypair.X[xifeature] = ((CiMA*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+    //for(; indfeatcount<m_nbands*4; indfeatcount++, xifeature++) // MACD's
+    //    xypair.X[xifeature] = ((CiMACD*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+    //for(; indfeatcount<m_nbands*6; indfeatcount++, xifeature++) // Volume's
+    //    xypair.X[xifeature] = ((CiVolumes*) m_oindfeatures.At(indfeatcount)).Main(timeidx);
+
+    // some indicators might contain EMPTY_VALUE == DBL_MAX values
     // verified volumes with EMPTY VALUES but I suppose that also might happen
     // with others in this case better drop the training sample?
     // sklearn throws an exception because of that
@@ -249,7 +266,7 @@ bool CExpertBands::CreateXFeatureVector(XyPair &xypair)
 
 bool CExpertBands::PythonTrainModel(){
   // create input params for Python function
-  double X[]; // 2D strided array less code to call python
+  double X[]; // 2D as 1D strided array less code to call python
   int y[];
   XyPair xypair;
   ArrayResize(X, m_ntraining*m_xtrain_dim);
@@ -260,15 +277,39 @@ bool CExpertBands::PythonTrainModel(){
      ArrayCopy(X, xypair.X, i*m_xtrain_dim, 0, m_xtrain_dim);
      y[i] = xypair.y;
    }
-   m_model.pystr_size = pyTrainModel(X, y, m_ntraining, m_xtrain_dim, 
-                  m_model.pystrmodel, m_model.MaxSize());
-   ArrayFree(X);
-   ArrayFree(y);
+   m_model.pymodel_size = pyTrainModel(X, y, m_ntraining, m_xtrain_dim,
+                  m_model.pymodel, m_model.MaxSize());
+  ArrayFree(X);
+  ArrayFree(y);
+  return (m_model.pymodel_size > 0);
+}
 
-   if(m_model.pystr_size > 0)
-    return true;
+int CExpertBands::PythonPredict(XyPair &xypair){
+  if(!m_model.isready || !xypair.isready)
+    return -5;
+  // create input params for Python function
+  double X[]; // 2D as 1D strided array less code to call python
+  ArrayResize(X, m_xtrain_dim);
+  ArrayCopy(X, xypair.X, 0, 0, m_xtrain_dim);
+  int y_pred = pyPredictwModel(X, m_xtrain_dim,
+                  m_model.pymodel, m_model.pymodel_size);
+  ArrayFree(X);
+  return y_pred;
+}
 
-
-
-   return false;
+void CExpertBands::BuySell(int sign){
+    double amount, sl, tp;
+    if(sign == 1){
+        amount = roundVolume(m_ordersize/m_symbol.Ask());
+        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_stoploss)/amount);
+        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_targetprofit)/amount);
+        m_trade.Buy(amount, NULL, 0, sl, tp);
+    }   
+    else
+    if(sign == -1){
+        amount = roundVolume(m_ordersize/m_symbol.Ask());
+        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_stoploss)/amount);
+        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_stoploss)/amount);
+        m_trade.Sell(amount, NULL, 0, sl, tp);
+    }
 }

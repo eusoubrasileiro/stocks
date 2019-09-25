@@ -16,14 +16,16 @@
 #ifdef BUILDING_DLL
 #define DLL_EXPORT __declspec(dllexport)
 #else
-#define DLL_EXPORT __declspec(dllimport)  
+#define DLL_EXPORT __declspec(dllimport)
 #endif
 
 extern "C"
 {
 	int DLL_EXPORT Unique(double arr[], int n);
 	int DLL_EXPORT pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
-		char* model, int pystr_size);
+		char* model, int pymodel_size_max);
+	int DLL_EXPORT pyPredictwModel(double X[], int xtrain_dim,
+		char* model, int pymodel_size);
 }
 
 

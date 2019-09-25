@@ -71,7 +71,7 @@ void CExpertBands::CreateYTargetClasses(){
     }
 }
 
-void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, 
+void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
         CObjectBuffer<XyPair> &xypairs, int band_number)
 {
       // buy at ask = High at minute time-frame (being pessimistic)
@@ -90,8 +90,8 @@ void CExpertBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
       int i=bandsg_raw.Size()-1;
       // OR
       // For not adding again the same signal
-      // Starts where it stop the last time 
-      if(xypairs.Size() > 0){ 
+      // Starts where it stop the last time
+      if(xypairs.Size() > 0){
         int last_buff_index = m_mqltime.QuickSearch(xypairs.GetData(0).time);
         if(last_buff_index < 0){
             Print("This was not implemented and should not happen!");
@@ -300,15 +300,15 @@ void CExpertBands::BuySell(int sign){
     double amount, sl, tp;
     if(sign == 1){
         amount = roundVolume(m_ordersize/m_symbol.Ask());
-        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_stoploss)/amount);
-        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_targetprofit)/amount);
+        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_run_stoploss)/amount);
+        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_run_targetprofit)/amount);
         m_trade.Buy(amount, NULL, 0, sl, tp);
-    }   
+    }
     else
     if(sign == -1){
         amount = roundVolume(m_ordersize/m_symbol.Ask());
-        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_stoploss)/amount);
-        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_stoploss)/amount);
+        sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())+m_run_stoploss)/amount);
+        tp = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_run_targetprofit)/amount);
         m_trade.Sell(amount, NULL, 0, sl, tp);
     }
 }

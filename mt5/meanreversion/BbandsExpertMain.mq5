@@ -8,19 +8,24 @@
 
 //Inputs
 //number of bollinger bands
-input int                      Expert_NBands          = 3; 
+input int                      Expert_NBands          = 6;
 // reference window for bbands
 input int                      Expert_Window          = 21;
-// "memory" of patterns for training sklearn model 
-input int                  Expert_Batch_Size          = 2; 
+// "memory" of patterns for training sklearn model
+input int                  Expert_Batch_Size          = 15;
 // minimum number of samples for training
-input int                   Expert_NTraining          = 60; 
+input int                   Expert_NTraining          = 60;
 // orderSize in $$$
-input double                Expert_OrderSize          = 100e3;  
+input double                Expert_OrderSize          = 25e3;
 // stop loss for each order $$$
-input double                Expert_StopLoss           = 200; 
+input double                Expert_Train_StopLoss     = 100;
 // target profit per order $$$
-input double              Expert_TargetProfit         = 15; 
+input double              Expert_Train_TargetProfit   = 15;
+// stop loss for each order $$$
+input double              Expert_Run_TargetProfit     = 15;
+// target profit per order $$$
+input double              Expert_Run_StopLoss        = 15;
+
 
 const bool                     Expert_EveryTick       = false;
 const int                      Expert_MagicNumber     = 2525;
@@ -64,7 +69,8 @@ int OnInit(){
 
     cExpert.Initialize(Expert_NBands, Expert_Window, Expert_Batch_Size,
                         Expert_NTraining, Expert_OrderSize,
-                          Expert_StopLoss, Expert_TargetProfit);
+                          Expert_Train_StopLoss, Expert_Train_TargetProfit,
+                          Expert_Run_StopLoss, Expert_Run_TargetProfit);
 
     return(INIT_SUCCEEDED);
 }

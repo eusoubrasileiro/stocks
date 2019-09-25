@@ -29,10 +29,13 @@ class CExpertBands : public CExpertX
     CObjectBuffer<XyPair> m_xypairs;
     //CBuffer<double*> m_X;
     //double m_buffXfeatures[][Expert_MaxFeatures];
-    // profit or stop loss calculation
+    // profit or stop loss calculation for training
     double m_ordersize;
     double m_stoploss; // stop loss value in $$$ per order
     double m_targetprofit; //targetprofit in $$$ per order
+    // profit or stop loss calculation for execution
+    double m_run_stoploss; // stop loss value in $$$ per order
+    double m_run_targetprofit; //targetprofit in $$$ per order
     // python sklearn model
     sklearnModel m_model;
     unsigned int m_model_refresh; // how frequent to update the model
@@ -57,16 +60,20 @@ class CExpertBands : public CExpertX
   void CExpertBands::Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
         double ordersize, double stoploss, double targetprofit,
+        double run_stoploss, double run_targetprofit,
         int model_refresh=15){
       // Call only after init indicators
     m_nbands = nbands;
     m_bbwindow = bbwindow;
     // ordersize is in $$
-    // need a conversion here TickValue for stocks
     m_ordersize = ordersize;
+    // for training
     m_stoploss = stoploss; // value in $$$
     m_targetprofit = targetprofit;
-
+    // for execution
+    m_run_stoploss = run_stoploss; // value in $$$
+    m_run_targetprofit = run_stoploss;
+    // training
     m_batch_size = batch_size;
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of other indicators are m_nbands*2*(EMA+MACD+VOLUME)= m_nbands*2*3
@@ -134,7 +141,7 @@ class CExpertBands : public CExpertX
         if(m_xypairs.Size() >= m_ntraining){
           // first time training
           if(!m_model.isready){
-           // time to train the model for the first time           
+           // time to train the model for the first time
             m_model.isready = PythonTrainModel();
           }
           else // time to update the model?
@@ -152,9 +159,9 @@ class CExpertBands : public CExpertX
           XyPair Xforecast = new XyPair;
           Xforecast.time = m_last_time;
           CreateXFeatureVector(Xforecast);
-          int y_pred = PythonPredict(Xforecast);          
+          int y_pred = PythonPredict(Xforecast);
           if(y_pred == 1 || y_pred == -1)
-              BuySell(y_pred);          
+              BuySell(y_pred);
         }
     }
 
@@ -172,12 +179,12 @@ class CExpertBands : public CExpertX
   protected:
 
   void CreateYTargetClasses();
-  void BandCreateYTargetClasses(CBuffer<int> &bandsg_raw, 
+  void BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
         CObjectBuffer<XyPair> &xypairs, int band_number);
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
   void CreateOtherFeatureIndicators();
-  void BuySell(int sign); 
+  void BuySell(int sign);
 
   bool PythonTrainModel();
   int  PythonPredict(XyPair &xypair);
@@ -237,7 +244,7 @@ class CExpertBands : public CExpertX
         if( m_high.GetData(0) <= ((CiBands*) m_bands.At(i)).Lower(0))
             m_raw_signal[i].Add(1); // buy
         else
-            m_raw_signal[i].Add(0); // nothing        
+            m_raw_signal[i].Add(0); // nothing
     }
   }
 

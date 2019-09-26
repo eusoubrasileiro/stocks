@@ -1,8 +1,8 @@
 #property copyright "Andre L. Ferreira"
 #property version   "1.01"
 
-#include "..\TrailingMA.mqh"
-#include "..\Util.mqh"
+#include "..\..\TrailingMA.mqh"
+#include "..\..\Util.mqh"
 #include "CExpertBands.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
@@ -72,7 +72,7 @@ int OnInit(){
     cExpert.Initialize(Expert_NBands, Expert_Window, Expert_Batch_Size,
                         Expert_NTraining, Expert_OrderSize,
                           Expert_Train_StopLoss, Expert_Train_TargetProfit,
-                          Expert_Run_StopLoss, Expert_Run_TargetProfit, 
+                          Expert_Run_StopLoss, Expert_Run_TargetProfit,
                           Expert_Recursive);
 
     return(INIT_SUCCEEDED);

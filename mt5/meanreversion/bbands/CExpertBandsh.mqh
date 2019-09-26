@@ -1,6 +1,6 @@
-#include "..\Util.mqh"
-#include "..\Buffers.mqh"
-#include "..\XyVectors.mqh"
+#include "..\..\Util.mqh"
+#include "..\..\Buffers.mqh"
+#include "XyVectors.mqh"
 #include "BbandsPython.mqh"
 
 // number of samples needed/used for training 5*days?
@@ -168,7 +168,7 @@ class CExpertBands : public CExpertX
             for(int i=0; i<m_nbands; i++){
               int signal = m_raw_signal[i].GetData(0);
               signal *= (y_pred==0)? 0: 1; // change from -1 to 1 or to 0
-              m_raw_signal[i].SetData(0, signal);              
+              m_raw_signal[i].SetData(0, signal);
             }
           }
         }

@@ -74,6 +74,11 @@ public:
     {
        return(m_data[m_data_total-1-index]);
     }
+    
+    void SetData(const int index, Type value)
+    {
+       m_data[m_data_total-1-index] = value;
+    }
 
     int BufferSize(){ return m_data_max; }
 

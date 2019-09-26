@@ -25,6 +25,8 @@ input double              Expert_Train_TargetProfit   = 15;
 input double              Expert_Run_TargetProfit     = 15;
 // target profit per order $$$
 input double              Expert_Run_StopLoss        = 15;
+// recursive == kalman filter option
+input bool                Expert_Recursive           = true;
 
 
 const bool                     Expert_EveryTick       = false;
@@ -70,7 +72,8 @@ int OnInit(){
     cExpert.Initialize(Expert_NBands, Expert_Window, Expert_Batch_Size,
                         Expert_NTraining, Expert_OrderSize,
                           Expert_Train_StopLoss, Expert_Train_TargetProfit,
-                          Expert_Run_StopLoss, Expert_Run_TargetProfit);
+                          Expert_Run_StopLoss, Expert_Run_TargetProfit, 
+                          Expert_Recursive);
 
     return(INIT_SUCCEEDED);
 }

@@ -37,6 +37,7 @@ class CExpertBands : public CExpertX
     double m_run_stoploss; // stop loss value in $$$ per order
     double m_run_targetprofit; //targetprofit in $$$ per order
     // python sklearn model
+    bool m_recursive;
     sklearnModel m_model;
     unsigned int m_model_refresh; // how frequent to update the model
     // (in number of new training samples)
@@ -60,8 +61,9 @@ class CExpertBands : public CExpertX
   void CExpertBands::Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
         double ordersize, double stoploss, double targetprofit,
-        double run_stoploss, double run_targetprofit,
+        double run_stoploss, double run_targetprofit, bool recursive,
         int model_refresh=15){
+    m_recursive = recursive;
       // Call only after init indicators
     m_nbands = nbands;
     m_bbwindow = bbwindow;
@@ -160,8 +162,15 @@ class CExpertBands : public CExpertX
           Xforecast.time = m_last_time;
           CreateXFeatureVector(Xforecast);
           int y_pred = PythonPredict(Xforecast);
-          if(y_pred == 1 || y_pred == -1)
-              BuySell(y_pred);
+          BuySell(y_pred);
+          if(m_recursive && (y_pred == 0 || y_pred == 1 | y_pred == -1)){
+            // modify the band raw signals by the ones predicted
+            for(int i=0; i<m_nbands; i++){
+              int signal = m_raw_signal[i].GetData(0);
+              signal *= (y_pred==0)? 0: 1; // change from -1 to 1 or to 0
+              m_raw_signal[i].SetData(0, signal);              
+            }
+          }
         }
     }
 

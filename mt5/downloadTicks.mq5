@@ -9,11 +9,10 @@
 
 //--- global variables
 int    count=0;
-string symbols[9] = {"WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4"};
-const uint maxms=4294967296; //maximum value 2<<32 - 1 ~ 71.01% of a year
-// msday = 7*60*60*1000 ms in  day
-// msyear = 6048000000 ms in a year
-datetime date=D'2018.01.01 00:00';
+string symbols[11] = {"WDO@", "WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WEGE3"};
+const uint tickcount=UINT_MAX>>4; //  number of ticks to copy / more than this explodes memory
+datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
+int file_io_hnd;
 
 void OnStart(){
    MqlTick mqlticks[];
@@ -25,14 +24,12 @@ void OnStart(){
    { // number of 3 trials of download before giving up
        for(int try=0; try<3; try++) {
           // -1 if it has not complet it yet
-          copied = CopyTicks(symbols[i], mqlticks, COPY_TICKS_ALL,  date, maxms);
+          copied = CopyTicks(symbols[i], mqlticks, COPY_TICKS_ALL,  date, tickcount);
           // CopyTicks
-          Print("copied ", string(maxms));
-          if(copied < maxms) //  sleep time(15 seconds) for downloading the data
-              Sleep(10000);
+          Print("copied ", string(copied));
        } // ticks are allways returned no matter how few
-       
-       Print("minutes downloaded: ", string(copied));
+
+       Print("ticks downloaded: ", string(copied));
        WriteSymbol(symbols[i], mqlticks);
    }
 }
@@ -43,7 +40,7 @@ void WriteSymbol(string symbol, MqlTick &rates[]){
     string format = "bid = %G, ask = %G, last = %G, volume = %d , flags = %d, volume real = %d";
     string out;
 
-    for(int i=0; i<100; i++)
+    for(int i=0; i<5; i++)
     {
     // you can better use the unix time number directly (unix time) and read it from python
         out=i+":"+TimeToString(rates[i].time);
@@ -62,17 +59,27 @@ void WriteSymbol(string symbol, MqlTick &rates[]){
 }
 
 void WriteData(string symbol, MqlTick &arr[]){
-    int n = ArraySize(arr);
 //--- open the file
    ResetLastError();
    StringAdd(symbol,"Tick.mt5bin");
    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN);
+   int size = ArraySize(arr);
    if(handle!=INVALID_HANDLE)
      {
-      //--- write array data to the end of the file
-      //FileSeek(handle,0,SEEK_END);
-      FileWriteArray(handle, arr, 0, n);
-
+     
+      int wrote = 0;
+      if(size > 5e5){ // write in chuncks
+        int i, chunck = 5e5; // 500k ticks per time
+        for(i=0; i < size; i+= wrote){
+            wrote = FileWriteArray(handle, arr, i, chunck);
+        }
+        // write the rest
+        if( i < size)
+            FileWriteArray(handle, arr, i, size-i);        
+      }
+      else
+        //--- write array data once
+        wrote = FileWriteArray(handle, arr, 0, WHOLE_ARRAY);
       //--- close the file
       FileClose(handle);
      }

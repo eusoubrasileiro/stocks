@@ -1,16 +1,13 @@
-// Download 1 minute time frame data for specified symbols
+// Download standard ticks time for specified symbols
 // write on a binary file the mqlrates array
 #property copyright "Andre L. Ferreira June 2018"
 #property version   "1.00"
 #property script_show_inputs
-//--- input parameters
-//input string InpFileName="data.bin";
-//nput string InpDirectoryName="";
 
 //--- global variables
 int    count=0;
 string symbols[11] = {"WDO@", "WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WEGE3"};
-const uint tickcount=UINT_MAX>>4; //  number of ticks to copy / more than this explodes memory
+const uint tickcount=UINT_MAX>>8; //  number of ticks to copy / more than this explodes memory
 datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
 int file_io_hnd;
 
@@ -28,34 +25,39 @@ void OnStart(){
           // CopyTicks
           Print("copied ", string(copied));
        } // ticks are allways returned no matter how few
-
-       Print("ticks downloaded: ", string(copied));
-       WriteSymbol(symbols[i], mqlticks);
+       if(copied == -1)
+       {
+          Print("Failed to get history data for the symbol ", symbols[i]);
+          continue;
+       }
+       Print("symbol ", symbols[i], " ticks downloaded: ", string(copied));
+       PreviewSymbol(symbols[i], mqlticks);
+       WriteData(symbols[i], mqlticks);
    }
 }
 
 // write the symbol data on file
-void WriteSymbol(string symbol, MqlTick &rates[]){
+void PreviewSymbol(string symbol, MqlTick &rates[]){
     // verbose some data 100 first
-    string format = "bid = %G, ask = %G, last = %G, volume = %d , flags = %d, volume real = %d";
+    string format = "bid = %G, ask = %G, last = %G, volume = %d , ms = %d, flags = %u, volume real = %d";
     string out;
-
-    for(int i=0; i<5; i++)
+    int rsize = ArraySize(rates);
+    if(rsize == 0)
+        return;
+    for(int i=rsize-3; i<rsize; i++) // print last 3 ticks
     {
     // you can better use the unix time number directly (unix time) and read it from python
-        out=i+":"+TimeToString(rates[i].time);
+        out= i+"  :  "+TimeToString(rates[i].time);
         out=out+" "+StringFormat(format,
             rates[i].bid,
             rates[i].ask,
             rates[i].last,
             rates[i].volume,
-//rates[i].time_msc, not printing
+            rates[i].time_msc, //not printing
             rates[i].flags,
             rates[i].volume_real);
         Print(out);
     }
-
-    WriteData(symbol, rates);
 }
 
 void WriteData(string symbol, MqlTick &arr[]){
@@ -66,7 +68,6 @@ void WriteData(string symbol, MqlTick &arr[]){
    int size = ArraySize(arr);
    if(handle!=INVALID_HANDLE)
      {
-     
       int wrote = 0;
       if(size > 5e5){ // write in chuncks
         int i, chunck = 5e5; // 500k ticks per time
@@ -75,7 +76,7 @@ void WriteData(string symbol, MqlTick &arr[]){
         }
         // write the rest
         if( i < size)
-            FileWriteArray(handle, arr, i, size-i);        
+            FileWriteArray(handle, arr, i, size-i);
       }
       else
         //--- write array data once

@@ -74,7 +74,7 @@ public:
     {
        return(m_data[m_data_total-1-index]);
     }
-    
+
     void SetData(const int index, Type value)
     {
        m_data[m_data_total-1-index] = value;
@@ -132,15 +132,15 @@ public:
           m_data_total--;
         }
     }
-    
-    void Remove(const int index) 
+
+    void Remove(const int index)
     {
         delete m_data[index];
         ShiftLeftBuffer(index);
         m_data[m_data_total-1] = NULL;
-        m_data_total--;        
+        m_data_total--;
     }
-    
+
     Type *Last() // last added
     {
        return GetData(0);
@@ -169,16 +169,16 @@ public:
     }
 
     int BufferSize(){ return m_data_max; }
-    
-    // following use 
+
+    // following use
     // using Array As Series Convention
-    // youngest sample is at (0) 
-    // Remove data at index position using Array As Series Convention  
+    // youngest sample is at (0)
+    // Remove data at index position using Array As Series Convention
     void RemoveData(const int index){
         Remove(m_data_total-1-index);
     }
 
-    // Get Data At index position using Array As Series Convention      
+    // Get Data At index position using Array As Series Convention
     Type *GetData(const int index) const
     {
        return(m_data[m_data_total-1-index]);
@@ -197,32 +197,34 @@ protected:
 
 };
 
-
-// Same as above but for MqlDateTime
-class CMqlDateTimeBuffer
+// Same as above but for structs
+template<typename Type>
+class CStructBuffer
 {
 protected:
-    MqlDateTime m_data[];
+
     int m_data_total;
     int m_data_max;
     int m_step_resize;
+    Type          m_data[];           // data array
 
 public:
-    CMqlDateTimeBuffer(void) {
+
+    CStructBuffer(void) {
         ArrayResize(m_data, 16); // minimum size
         m_data_total = 0;
         m_data_max = 16;
         m_step_resize = 16;
     }
-    ~CMqlDateTimeBuffer(void) { ArrayFree(m_data); }
+    ~CStructBuffer(void) { ArrayFree(m_data); }
 
-    MqlDateTime operator[](const int index) const { return m_data[index]; }
+    Type operator[](const int index) const { return m_data[index]; }
 
     int Size(void){ return m_data_total; }
 
     void RemoveLast(void){ if(m_data_total>0) m_data_total--; }
 
-    bool Add(MqlDateTime &element){
+    bool Add(Type &element){
       if(m_data_total >= m_data_max){ // m_data
       // copy data overwriting the oldest sample
       // overwriting the first sample
@@ -259,13 +261,22 @@ public:
 
     // Get Data At index position using Array As Series Convention
     // youngest sample is at (0)
-    MqlDateTime GetData(const int index) const
+    Type GetData(const int index) const
     {
        return(m_data[m_data_total-1-index]);
     }
 
     int BufferSize(){ return m_data_max; }
 
+};
+
+
+// Same as above but for MqlDateTime
+// adding QuickSearch functinality
+class CMqlDateTimeBuffer : public CStructBuffer<MqlDateTime>
+{
+
+public:
    // code from clong array
   // quick search for a sorted array
   int QuickSearch(MqlDateTime &element) const

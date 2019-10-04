@@ -1,46 +1,52 @@
 #property script_show_inputs
-input const double MoneyBarSize = 100e6; // 1M R$
 
-// Download Money bars created from ticks time for specified symbols
+// in million R$
+input const double MoneyBarSize = 0.5; 
+
+input const string InputSymbol= "WINV19";
+
+// this is ignored must used tickcount
+// or use 0 to get the last tickcount
+// input datetime Begin=D'2019.01.01 00:00'; 
+
+// Download Money bars created from ticks time for specified InputSymbols
 #include "..\datastruct\Bars.mqh"
+#include "..\datastruct\Ticks.mqh"
 
 //--- global variables
-string symbols[11] = {"WDO@", "WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WEGE3"};
 const uint tickcount=UINT_MAX>>8; //  number of ticks to copy / more than this explodes memory
-datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
-int file_io_hnd;
-
 
 void OnStart(){
    MqlTick mqlticks[];
    MoneyBar bars[];
    ArraySetAsSeries(mqlticks, true);
-   int nsymbols = ArraySize(symbols);
    int copied = 0;
+   double moneybarsize = MoneyBarSize*1e6; // to make it million R$
 
-   for(int i=0; i<nsymbols; i++)
-   { // number of 3 trials of download before giving up
-       for(int try=0; try<3; try++) {
-          // -1 if it has not complet it yet
-          copied = CopyTicks(symbols[i], mqlticks, COPY_TICKS_ALL,  date, tickcount);
-          // CopyTicks
-          Print("copied ", string(copied));
-       } // ticks are allways returned no matter how few
-       if(copied == 0)
-       {
-          Print("Failed to get history data for the symbol ", symbols[i]);
-          continue;
-       }
-       Print("symbol ", symbols[i], " ticks downloaded: ", string(copied));
-       PreviewSymbol(symbols[i], mqlticks);
-       int nbars = MoneyBars(mqlticks, SymbolInfoDouble(symbols[i], SYMBOL_TRADE_TICK_VALUE),
-              MoneyBarSize, bars);
-       WriteData(symbols[i], bars);
+    // number of 3 trials of download before giving up
+   for(int try=0; try<3; try++) {
+      // -1 if it has not complet it yet
+      copied = CopyTicks(InputSymbol, mqlticks, COPY_TICKS_ALL, 0, tickcount);
+      // CopyTicks
+      Print("copied ", string(copied));
+   } // ticks are allways returned no matter how few
+   if(copied == 0)
+   {
+      Print("Failed to get history data for the InputSymbol ", InputSymbol);
+      return;
    }
+   Print("InputSymbol ", InputSymbol, " ticks downloaded: ", string(copied));
+   PreviewSymbol(mqlticks);
+   FixArrayTicks(mqlticks);
+   int nbars = MoneyBars(mqlticks, SymbolInfoDouble(InputSymbol, SYMBOL_TRADE_TICK_VALUE),
+          moneybarsize, bars);
+   Print("InputSymbol ", InputSymbol, " MoneyBars formed: ", string(nbars));
+   WriteData(InputSymbol, bars);
+
 }
 
-// write the symbol data on file
-void PreviewSymbol(string symbol, MqlTick &rates[]){
+// write the InputSymbol data on file
+void PreviewSymbol(MqlTick &rates[]){
     // verbose some data 100 first
     string format = "bid = %G, ask = %G, last = %G, volume = %d , ms = %d, flags = %u, volume real = %d";
     string out;
@@ -66,7 +72,7 @@ void PreviewSymbol(string symbol, MqlTick &rates[]){
 void WriteData(string symbol, MoneyBar &arr[]){
 //--- open the file
    ResetLastError();
-   StringAdd(symbol,"mbar.bin");
+   StringAdd(symbol, "_"+MoneyBarSize+"_mbar.bin");
    int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN);
    int size = ArraySize(arr);
    if(handle!=INVALID_HANDLE)

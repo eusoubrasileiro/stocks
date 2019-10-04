@@ -3,12 +3,15 @@
 #property copyright "Andre L. Ferreira June 2018"
 #property version   "1.00"
 #property script_show_inputs
+input datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
+
+#include "..\datastruct\Bars.mqh"
+#include "..\datastruct\Ticks.mqh"
 
 //--- global variables
-int    count=0;
-string symbols[11] = {"WDO@", "WIN@", "BBDC4", "DOL$", "VALE3", "BBAS3", "PETR4",  "ABEV3", "B3SA3", "ITUB4", "WEGE3"};
+string symbols[4] = {"WINV19", "VALE3", "PETR4", "WEGE3"};
 const uint tickcount=UINT_MAX>>8; //  number of ticks to copy / more than this explodes memory
-datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
+
 int file_io_hnd;
 
 void OnStart(){
@@ -32,6 +35,7 @@ void OnStart(){
        }
        Print("symbol ", symbols[i], " ticks downloaded: ", string(copied));
        PreviewSymbol(symbols[i], mqlticks);
+       FixArrayTicks(mqlticks);
        WriteData(symbols[i], mqlticks);
    }
 }

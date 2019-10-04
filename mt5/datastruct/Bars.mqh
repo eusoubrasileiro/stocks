@@ -1,16 +1,19 @@
-// Ignoring for while ask and bid due Clear Server not providing those very often
 #include "../Buffers.mqh"
+// ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
+// but are present on WINV19 etc. stocks PETR4 etc...
 
+// Money Bar solves many problems of analysis of stocks data
+// stationarity and also empty volumes
 struct MoneyBar
   {
 //   datetime     time;          // Time of the last prices update 1.
-//   double       bid;           // Current Bid price
-//   double       ask;           // Current Ask price
-   double       last;          // Price of the last deal (Last)
-//   ulong        volume;        // Volume for the current Last price
+   double       bid;           // Current Bid price - might be 0 WHEN Equal the LAST
+   double       ask;           // Current Ask price - might be 0 WHEN Equal the LAST
+   double       last;          // Price of the last deal (Last) - never 0 when volume not 0 - zero when no match between ask-bid
+//   ulong        volume;        // Volume for the current Last price 2.
    long         time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
-//   uint         flags;         // Tick flags
-//   double       volume_real;   // Volume for the current Last price with greater accuracy
+//   uint         flags;         // Tick flags - no reason to use this on money-bar - shows what changed from the previous tick
+//   double       volume_real;   // Volume for the current Last price with greater accuracy same as 2. but better
   };
 
 // Create Array of Money/Dollar/Real Bars from Array of MqlTicks
@@ -25,11 +28,13 @@ int MoneyBars(MqlTick &ticks[], double tickvalue, double moneybarsize, MoneyBar 
       while(count_money>=moneybarsize){ // may need to create many bars for one tick
           if(ibars == nticks)// ibars may explode if moneybarsize too small
             return -1;
+          bars[ibars].bid = ticks[i].bid;
+          bars[ibars].ask = ticks[i].ask;
           bars[ibars].last = ticks[i].last;
           bars[ibars++].time_msc = ticks[i].time_msc;
           count_money -= moneybarsize;
       }
-      
+
   }
   ArrayResize(bars, ibars);
   return ibars;
@@ -58,6 +63,8 @@ public:
       while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
           // if(ibars == nticks)// ibars may explode if moneybarsize too small
           //   return -1; // dont explode this is a buffer delete older ones
+          m_bar.bid = tick.bid;
+          m_bar.ask = tick.ask;
           m_bar.last = tick.last;
           m_bar.time_msc = tick.time_msc;
           CStructBuffer<MoneyBar>::Add(m_bar);

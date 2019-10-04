@@ -224,7 +224,7 @@ public:
 
     void RemoveLast(void){ if(m_data_total>0) m_data_total--; }
 
-    bool Add(Type &element){
+    void Add(Type &element){
       if(m_data_total >= m_data_max){ // m_data
       // copy data overwriting the oldest sample
       // overwriting the first sample
@@ -234,7 +234,6 @@ public:
       }
       else //--- add data in the end
         m_data[m_data_total++]=element;
-      return(true);
     }
 
     bool Resize(const int size)

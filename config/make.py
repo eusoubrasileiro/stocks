@@ -24,45 +24,42 @@ parser.add_argument("-cpdll", dest="cpdll", default=False, action="store_true",
                     help="copy built dll and dependencies to all Metatrader 5 tester agent library folders")
 parser.add_argument("-optim", dest="optim", default=False, action="store_true",
                     help="run optimization for specified expert and all symbols passed")
-
 args = parser.parse_args()
+
+
+userhome = str(Path.home()) # get userhome folder
+# repository and libraries paths
+repopath = os.path.join(userhome, r"Projects\stocks")
+# c++ library
+armadilloroot  = os.path.join(userhome,r"Projects\armadillo-code-9.600.x")
+# aewsome c++ library (better use this one? same of vstudio?)
+pybindroot =os.path.join(userhome, r"Projects\pybind11-master")
+# c library talib x64
+talibroot  = os.path.join(userhome,r"Projects\ta-lib\c")
+ # represents the local MetaTrader 5 installation
+usermt5hash = '8B052D0699A0083067EBF3A36123603B'
+# local user paths for MetaTrader 5 installation
+usermt5path = os.path.join(userhome,r"AppData\Roaming\MetaQuotes")
+# better use this one? same of vstudio?
+# python foundation source code - installation needed to buil python dll
+pythonpath = os.path.join(userhome, r"AppData\Local\Programs\Python\Python37")
 
 if os.name == 'nt':
     # getting which machine we are
     if platform.uname()[5] == 'Intel64 Family 6 Model 158 Stepping 9, GenuineIntel': # HOME
         mt5path = r"D:\MetaTrader 5"
-        # repository and libraries paths
-        repopath = r"C:\Users\andre\Projects\stocks"
-        armadilloroot  = r"C:\Users\andre\Projects\armadillo-code-9.600.x" # c++ library
-        # local user paths for MetaTrader 5 installation
-        usermt5hash = "8B052D0699A0083067EBF3A36123603B" # represents the local MetaTrader 5 installation
-        usermt5path = r"C:\Users\andre\AppData\Roaming\MetaQuotes"
         # command to create build env using vsbuildtools default installation paths
         vsbuildenvcmd = "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" " + ' amd64'
-        pythonpath = r"C:\Users\andre\AppData\Local\Programs\Python\Python37"
-        # better use this one? same of vstudio?
-        pybindroot = r"C:\Users\andre\Projects\pybind11-master"
     else: # WORK
         mt5path = r"D:\MetaTrader 5"
-        # repository and libraries paths
-        repopath = r'D:\Users\andre.ferreira\Projects\stocks'
-        armadilloroot  = r"D:\Users\andre.ferreira\Projects\armadillo-code-9.600.x" # c++ library
-        # local user paths for MetaTrader 5 installation
-        usermt5hash = '8B052D0699A0083067EBF3A36123603B' # represents the local MetaTrader 5 installation
-        usermt5path = r"D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes"
         ### Using vs build tools
         vsbuildenvcmd = os.path.join(repopath, r'config\vsbuildtools.bat')
-        #pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Continuum\anaconda3"
-        # better use this one? same of vstudio?
-        pythonpath = r"D:\Users\andre.ferreira\AppData\Local\Programs\Python\Python37"
-        pybindroot = r"D:\Users\andre.ferreira\Projects\pybind11-master"
-
     if args.cppbuild:
         ######################################
         # ARMADILLO DLL
         ######################################
-        armadilloincludes = os.path.join(armadilloroot, "include")
-        armadillolibblas64 = os.path.join(armadilloroot, r"examples\lib_win64\blas_win64_MT.lib")
+        arminc = os.path.join(armadilloroot, "include")
+        armlibs = os.path.join(armadilloroot, r"examples\lib_win64\blas_win64_MT.lib")
         cpppath = os.path.join(repopath, r"mt5\cpp\arm")
         ## cl /LD /EHsc /Gz /Fe"cpparm" /std:c++17 armcpp.cpp /I
         ## /DBUILDING_DLL /LINK D:\Users\andre.ferreira\Projects\armadillo-code-9.600.x\examples\lib_win64\blas_win64_MT.lib
@@ -75,13 +72,30 @@ if os.name == 'nt':
         ## Windows & is the equivalent of ; on linux
         compile = ("cd "+ cpppath + " & " +
                     vsbuildenvcmd +" && "+
-                r"cl.exe /LD /EHsc /Gz /Fecpparm /std:c++17 /DBUILDING_DLL /O2 armcpp.cpp"+
-                " -I "+ armadilloincludes +" /link " + armadillolibblas64)
+                r"cl.exe /LD /EHsc /Gz /Fecpparm /DBUILDING_DLL /O2 armcpp.cpp"+
+                " -I "+ arminc + " " + armlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
         ######################################
-        # PYTHON DLL
+        # CTALIB DLL
         ######################################
+        talibinc = os.path.join(talibroot, "include")
+        taliblibs = "ta_libc_cdr_x64.lib"
+        cpppath = os.path.join(repopath, r"mt5\cpp\ctalib")
+        ## /MD saved my life
+        ## msvcrt.lib: import library for the release DLL version of the CRT
+        compile = ("cd "+ cpppath + " & " + vsbuildenvcmd +" && "+
+            r"cl.exe /MD /EHsc /Gz /DBUILDING_DLL /O2 ctalib.cpp" +
+             " /I "+ talibinc +
+            # linker options bellow
+            " /link /OUT:ctalib.dll " + taliblibs +
+            " /IMPLIB:ctalib.lib " +
+            " /DLL /MACHINE:X64 ")
+        print(compile, file=sys.stderr)
+        subprocess.call(compile, shell=True)
+        # ######################################
+        # # PYTHON DLL
+        # ######################################
         cppdebug = ""
         if args.cppdebug:
             cppdebug = " /DDEBUG "
@@ -92,7 +106,7 @@ if os.name == 'nt':
         compile = ("cd "+ cpppath + " & " +
                     vsbuildenvcmd +" && "+
                 r"cl.exe /LD /EHsc /Gz /Fepythondlib /std:c++17 /DBUILDING_DLL "+ cppdebug + " /O2  pythondll.cpp"+
-                " -I "+ pythonincludes + " -I " + pybindincludes +" /link " + pythonlibs)
+                " /I "+ pythonincludes + " /I " + pybindincludes + " " + pythonlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
 
@@ -100,8 +114,8 @@ if os.name == 'nt':
         # cannot create hardlink but a softlink (junction) works
         # can only create a junction without being admin
         repopath_mt5 = os.path.join(repopath, 'mt5')
-        # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Experts\Advisors\mt5"
-        usermt5path_advisorsmt5 = os.path.join(usermt5path, "Terminal", usermt5hash, "MQL5\Experts\Advisors\mt5")
+        # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Experts\mt5"
+        usermt5path_advisorsmt5 = os.path.join(usermt5path, "Terminal", usermt5hash, r"MQL5\Experts\mt5")
         symlink = r'mklink /j ' + "\"" + usermt5path_advisorsmt5 + "\""+ " " +  repopath_mt5
         print(symlink, file=sys.stderr)
         subprocess.call(symlink, shell=True)
@@ -184,30 +198,31 @@ if os.name == 'nt':
             for usermt5_optreport in usermt5_optreports:
                 shutil.copy(usermt5_optreport, repopath_optreport)
 
-else: ### Ubuntu
-    if args.clean:
-        subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
-                            find . -type l -exec unlink \{\} \;""", shell=True)
-
-    if args.meta5:
-        subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
-                        find . -type l -exec unlink \{\} \;""", shell=True)
-        # make symlinks from stocks folder to Metatrader folder
-        subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
-                    ln -s /home/andre/Projects/stocks/mt5/*.mq* .""", shell=True)
-
-    if args.cppbuild:
-        ### Ubuntu  everything starts with sudo apt-get install gcc-mingw-w64-x86-64
-        ### not using blas, lapack etc just vector utils - building a x64 dll for metatrader 5 c++ call
-        ### on wine64
-        ### another note is must use -static otherwise dll will depend on *dlls on linux from mingw
-        ### with static everything will be inside of the dll altough it will be 2MB
-        ### but since I started using conv - convolution I started depend upon lapack/blas
-        ### so I have to copy those *.dll from lib_win64 folder everywhere I place this library
-        subprocess.call("""cd '/home/andre/Projects/stocks/mt5/cpp';
-                        x86_64-w64-mingw32-g++-posix -c armcpp.cpp -o main.o -O3 -std=gnu++11 -DBUILDING_DLL=1 -I'/home/andre/Downloads/armadillo-9.500.2/include';
-                        x86_64-w64-mingw32-g++-posix -shared main.o -o '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors/cpparm.dll' -static -L'/home/andre/Downloads/armadillo-9.500.2/examples/lib_win64' -llapack_win64_MT -lblas_win64_MT -Wl,--output-def,libcpparm.def,--out-implib,libcpparm.a,--add-stdcall-alias""", shell=True)
-
-    if args.newdata:
-        subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Files';
-                        cp *.mt5bin /home/andre/Projects/stocks/data """, shell=True)
+# dont see when will use this again since Wine/MetaTrader is not good for MT5
+# else: ### Ubuntu
+#     if args.clean:
+#         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
+#                             find . -type l -exec unlink \{\} \;""", shell=True)
+#
+#     if args.meta5:
+#         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
+#                         find . -type l -exec unlink \{\} \;""", shell=True)
+#         # make symlinks from stocks folder to Metatrader folder
+#         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors';
+#                     ln -s /home/andre/Projects/stocks/mt5/*.mq* .""", shell=True)
+#
+#     if args.cppbuild:
+#         ### Ubuntu  everything starts with sudo apt-get install gcc-mingw-w64-x86-64
+#         ### not using blas, lapack etc just vector utils - building a x64 dll for metatrader 5 c++ call
+#         ### on wine64
+#         ### another note is must use -static otherwise dll will depend on *dlls on linux from mingw
+#         ### with static everything will be inside of the dll altough it will be 2MB
+#         ### but since I started using conv - convolution I started depend upon lapack/blas
+#         ### so I have to copy those *.dll from lib_win64 folder everywhere I place this library
+#         subprocess.call("""cd '/home/andre/Projects/stocks/mt5/cpp';
+#                         x86_64-w64-mingw32-g++-posix -c armcpp.cpp -o main.o -O3 -std=gnu++11 -DBUILDING_DLL=1 -I'/home/andre/Downloads/armadillo-9.500.2/include';
+#                         x86_64-w64-mingw32-g++-posix -shared main.o -o '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Advisors/cpparm.dll' -static -L'/home/andre/Downloads/armadillo-9.500.2/examples/lib_win64' -llapack_win64_MT -lblas_win64_MT -Wl,--output-def,libcpparm.def,--out-implib,libcpparm.a,--add-stdcall-alias""", shell=True)
+#
+#     if args.newdata:
+#         subprocess.call("""cd '/home/andre/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Files';
+#                         cp *.mt5bin /home/andre/Projects/stocks/data """, shell=True)

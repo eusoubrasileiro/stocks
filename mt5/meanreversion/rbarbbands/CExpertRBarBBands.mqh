@@ -4,8 +4,8 @@
 #include "..\bbands\BbandsPython.mqh"
 
 // number of samples needed/used for training 5*days?
-const int                Expert_BufferSize      = 60*7*5; // indicators buffer needed
-const int                Expert_MaxFeatures     = 1000; // max features allowed
+const int                Expert_BufferSize      = 5000; // indicators buffer needed
+const int                Expert_MaxFeatures     = 100; // max features allowed
 
 // Using Dolar/Real Bars and consequently tick data
 class CExpertRBarBands : public CExpertX
@@ -23,9 +23,12 @@ class CExpertRBarBands : public CExpertX
     // 1|-1|0 = buy|sell|hold
     //CIndicators m_bands; // collection of bbands indicators
     //CIndicators m_oindfeatures; // other 'feature' indicators used to identify patterns
+    //double m_signal_features[Expert_MaxFeatures][Expert_BufferSize];
+    // array of buffers for each signal feature
+    CBuffer<double> m_signal_features[];
+    int m_nsignal_features;
     int m_batch_size;
     int m_ntraining;
-    int m_nsignal_features;
     int m_xtrain_dim; // dimension of x train vector
     CObjectBuffer<XyPair> m_xypairs;
     //CBuffer<double*> m_X;
@@ -52,8 +55,6 @@ class CExpertRBarBands : public CExpertX
       m_bands = new CIndicators;
       m_oindfeatures = new CIndicators;
       m_bbwindow_inc = 0.5;
-      // use all those series
-      m_used_series = USE_SERIES_OPEN|USE_SERIES_CLOSE|USE_SERIES_HIGH|USE_SERIES_LOW;
       m_model = new sklearnModel;
       m_xypair_count = 0;
       m_model_last_training =0;
@@ -84,6 +85,8 @@ class CExpertRBarBands : public CExpertX
     m_nsignal_features = m_nbands*6 + m_nbands;
     //m_nsignal_features = m_nbands + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
+
+
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs

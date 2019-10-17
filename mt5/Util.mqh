@@ -178,3 +178,19 @@ bool IsEqualMqldt_M1(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
     return false;
 }
 
+
+// returns the fractdif kernel with enough zeros already appended
+// filter size will be allways odd so
+void FracDifKernel(double d, int size, double fdkernel[]){
+  //if(size%2==0) // if
+  //  size +=1
+
+}
+
+// @jit(nopython=True)
+// def getKernel(d, size):
+//     w = np.zeros(size)
+//     w[0] = 1.
+//     for k in range(1, size):
+//         w[k]=-w[k-1]/k*(d-k+1)
+//     return w[::-1]

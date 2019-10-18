@@ -2,6 +2,7 @@
 #include "TrailingMA.mqh"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
+#include <Math/Alglib/fasttransforms.mqh> // fracdif
 
 #import "cpparm.dll"
 int Unique(double &arr[],int n);
@@ -178,19 +179,35 @@ bool IsEqualMqldt_M1(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
     return false;
 }
 
-
-// returns the fractdif kernel with enough zeros already appended
-// filter size will be allways odd so
-void FracDifKernel(double d, int size, double fdkernel[]){
-  //if(size%2==0) // if
-  //  size +=1
-
+// returns the fractdif coeficients
+// $$ \omega_{k} = -\omega_{k-1}\frac{d-k+1}{k} $$
+// output is allocated inside
+void FracDifCoefs(double d, int size, double &w[]){
+    ArrayResize(w, size);
+    w[0] = 1.;
+    for(int k=1; k<size; k++)
+        w[k]=-w[k-1]/k*(d-k+1);
+    ArrayReverse(w);
 }
 
-// @jit(nopython=True)
-// def getKernel(d, size):
-//     w = np.zeros(size)
-//     w[0] = 1.
-//     for k in range(1, size):
-//         w[k]=-w[k-1]/k*(d-k+1)
-//     return w[::-1]
+// apply fracdif filter on signal array
+// FracDifCoefs must be supplied
+// output is allocated inside
+int FracDifApply(double &signal[], int ssize, double &fracdifcoefs[], int fsize, double &output[]){
+    int corrsize, outsize;
+    corrsize = ssize + fsize - 1;
+    outsize = ssize - fsize + 1; // == corrsize-(fsize-1)*2
+    ArrayResize(output, corrsize);
+    CCorr::CorrR1D(signal, ssize, fracdifcoefs, fsize, output);
+    ArrayCopy(output, output, 0, 0, outsize);
+    ArrayResize(output, outsize);
+    return outsize;
+}
+
+// check almost equal with espsilon tolerance
+bool almostEqual(double &a[], double &b[], int size, double eps){
+  for(int i=0; i<size; i++)
+    if( a[i] > b[i] + eps || a[i] < b[i] - eps)
+      return false;
+  return true;
+}

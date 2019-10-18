@@ -89,7 +89,7 @@ void OnDeinit(const int reason){
     EventKillTimer();
 }
 
-//| Expert tick function                                             |
+//| Expert tick function     
 void OnTick(){
 }
 

@@ -46,7 +46,7 @@ protected:
     double m_count_money;
     double m_tickvalue;
     double m_moneybarsize;
-    MoneyBar m_bar;
+    MoneyBar m_bar; // temp variable 
 
 public:
     MoneyBarBuffer(double tickvalue, double moneybarsize){

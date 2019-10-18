@@ -2,14 +2,25 @@
 #include "..\..\Buffers.mqh"
 #include "..\bbands\XyVectors.mqh"
 #include "..\bbands\BbandsPython.mqh"
+#include "..\..\datastruct\Bars.mqh"
 
 // number of samples needed/used for training 5*days?
 const int                Expert_BufferSize      = 5000; // indicators buffer needed
 const int                Expert_MaxFeatures     = 100; // max features allowed
+const double             Expert_MoneyBar_Size   = 500e3; // R$ to form 1 money bar
 
 // Using Dolar/Real Bars and consequently tick data
+// only for tick time-frame
 class CExpertRBarBands : public CExpertX
 {
+    MoneyBarBuffer m_bars; // buffer of money bars base for everything
+    // created from ticks
+    MqlTick m_last_tick, m_current_tick;
+
+
+
+    // bollinger bands configuration
+    // m_bands; // array of indicators for each bollinger band
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
     double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
@@ -19,11 +30,8 @@ class CExpertRBarBands : public CExpertX
     MqlDateTime m_last_time; // last time after refresh
     CMqlDateTimeBuffer m_mqltime; // time buffer
     int m_last_raw_signal[]; // last raw signal in all m_nbands
-    //CBuffer<datetime> m_raw_signal_time[];
-    // 1|-1|0 = buy|sell|hold
-    //CIndicators m_bands; // collection of bbands indicators
-    //CIndicators m_oindfeatures; // other 'feature' indicators used to identify patterns
-    //double m_signal_features[Expert_MaxFeatures][Expert_BufferSize];
+
+    // features and training vectors
     // array of buffers for each signal feature
     CBuffer<double> m_signal_features[];
     int m_nsignal_features;
@@ -31,8 +39,8 @@ class CExpertRBarBands : public CExpertX
     int m_ntraining;
     int m_xtrain_dim; // dimension of x train vector
     CObjectBuffer<XyPair> m_xypairs;
-    //CBuffer<double*> m_X;
-    //double m_buffXfeatures[][Expert_MaxFeatures];
+
+    // execution of positions and orders
     // profit or stop loss calculation for training
     double m_ordersize;
     double m_stoploss; // stop loss value in $$$ per order
@@ -40,7 +48,8 @@ class CExpertRBarBands : public CExpertX
     // profit or stop loss calculation for execution
     double m_run_stoploss; // stop loss value in $$$ per order
     double m_run_targetprofit; //targetprofit in $$$ per order
-    // python sklearn model
+
+    // python sklearn model trainning
     bool m_recursive;
     sklearnModel m_model;
     unsigned int m_model_refresh; // how frequent to update the model
@@ -50,6 +59,24 @@ class CExpertRBarBands : public CExpertX
     unsigned long m_model_last_training; // referenced on m_xypair_count's
 
   public:
+    // NewTick #
+    // The NewTick event is generated if there are new quotes, it is processed by OnTick() of Expert Advisors attached.
+    // In case when OnTick function for the previous quote is being processed
+    // when a new quote is received, the new quote will be ignored by an Expert Advisor,
+    // because the corresponding event will not enqueued.
+    // All new quotes that are received while the program is running are ignored until the OnTick() is completed
+    // After that the function will run only after a new quote is received.
+    // The NewTick event is generated irrespective of whether automated trade is allowed or not ("Allow/prohibit Auto trading" button).
+    // The prohibition of automated trading denotes only that sending of trade requests from an Expert Advisor is not allowed,
+    // while the Expert Advisor keeps working.  
+    void OnTick(void) // overwrite it - will be called massivly
+    {
+        if(SymbolInfoTick(Symbol(), m_current_tick))
+            // docs : returns a tick even if the same as previous
+            if(m_current_tick.time_msc != m_last_tick.time_msc &&
+                m_bars.AddTick(last_tick)>0)  // at least one new money bar created
+                Refresh(); // refresh whatever possible
+    }
 
    CExpertBands(void){
       m_bands = new CIndicators;
@@ -60,11 +87,18 @@ class CExpertRBarBands : public CExpertX
       m_model_last_training =0;
    };
 
-  void CExpertBands::Initialize(int nbands, int bbwindow,
+  void CExpertRBarBands::Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
         double ordersize, double stoploss, double targetprofit,
         double run_stoploss, double run_targetprofit, bool recursive,
-        int model_refresh=15){
+        int model_refresh=15)
+    {
+    // create money bars
+    m_bars = new MoneyBarBuffer(m_symbol.TickValue(),  Expert_MoneyBar_Size);
+
+
+
+
     m_recursive = recursive;
       // Call only after init indicators
     m_nbands = nbands;
@@ -107,11 +141,9 @@ class CExpertRBarBands : public CExpertX
 
   }
 
-  bool CExpertBands::Refresh(void)
+  bool CExpertRBarBands::Refresh(void)
   {
-    TimeCurrent(m_mqldt_now);
-    if(IsEqualMqldt_M1(m_last_time, m_mqldt_now))
-        return false;
+
     // also updates m_bands
     if(!CExpert::Refresh())
         return (false);

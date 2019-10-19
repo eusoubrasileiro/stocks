@@ -66,17 +66,33 @@ class CExpertRBarBands : public CExpertX
     // because the corresponding event will not enqueued.
     // All new quotes that are received while the program is running are ignored until the OnTick() is completed
     // After that the function will run only after a new quote is received.
-    // The NewTick event is generated irrespective of whether automated trade is allowed or not ("Allow/prohibit Auto trading" button).
-    // The prohibition of automated trading denotes only that sending of trade requests from an Expert Advisor is not allowed,
-    // while the Expert Advisor keeps working.  
-    void OnTick(void) // overwrite it - will be called massivly
+    // Could ignore OnTick and use only the 1 second call of OnTimer
+    // to get updated ticks
+    void OnTick(void) // overwrite it - will be called massively
     {
         if(SymbolInfoTick(Symbol(), m_current_tick))
             // docs : returns a tick even if the same as previous
             if(m_current_tick.time_msc != m_last_tick.time_msc &&
                 m_bars.AddTick(last_tick)>0)  // at least one new money bar created
                 Refresh(); // refresh whatever possible
+
+          // int  CopyTicksRange(
+          //  const string     symbol_name,           // symbol name
+          //  MqlTick&         ticks_array[],         // tick receiving array
+          //  uint             flags=COPY_TICKS_ALL,  // flag that defines the type of the ticks that are received
+          //  ulong            from_msc=0,            // date, starting from which ticks are requested
+          //  ulong            to_msc=0               // date, up to which ticks are requested
+          //  );
+          // to_msc = allways 0
+          // from_msc = last tick downloaded Minus in ms - 1 (to avoid missing ticks on same ms)
+          // 10k MqlTicks size doesnt matter since it will be allways fast
+          // copy due small number of ticks
+          // binary & comparision between mqltick structs in c++
+          // use the last mqltick download to find initial position of missing
+          // ticks
     }
+
+
 
    CExpertBands(void){
       m_bands = new CIndicators;

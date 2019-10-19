@@ -43,7 +43,9 @@ CExpertBands cExpert = new CExpertBands;
 //| Expert initialization function
 int OnInit(){
 
-    EventSetTimer(60); // in seconds - 1 Minute
+    // Use the timer to get missing ticks every 1 second
+    // will be more than enough this is not HFT! remember that!
+    EventSetTimer(1); // in seconds - 1 Minute
 
     //--- Initializing expert
     if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber)

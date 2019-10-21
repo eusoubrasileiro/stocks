@@ -39,11 +39,28 @@ public:
       // overwriting the first sample
         ArrayCopy(m_data, m_data, 0, 1, m_data_total-1);
         //--- add to the end
-        m_data[m_data_total-1] = element;
+        m_data_total--;
       }
-      else //--- add data in the end
-        m_data[m_data_total++]=element;
+      //--- add data in the end
+      m_data[m_data_total++]=element;
       return(true);
+    }
+
+    // you may want to insert a range smaller than the full size of elements array
+    void AddRange(Type &elements[], int tsize=0){
+      tsize = (tsize <= 0) ? ArraySize(elements): tsize;
+      //int tsize = ArraySize(elements);
+      int space_needed = (m_data_total+tsize)-m_data_max;
+      // 5 + 6 - 10 = 1
+      if(space_needed > 0){ // m_data
+        // copy data overwriting the oldest sample - overwriting the firsts
+        // (shift left array)  making space for new samples in the end
+        // src, dst, dst_idx_srt, src_idx_srt, count_to_copy
+        ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
+        m_data_total -= space_needed;
+      }
+      ArrayCopy(elements, m_data, m_data_total, 0, tsize);
+      m_data_total += tsize;
     }
 
     bool Resize(const int size)
@@ -206,9 +223,10 @@ protected:
     int m_data_total;
     int m_data_max;
     int m_step_resize;
-    Type          m_data[];           // data array
 
 public:
+
+    Type          m_data[];           // data array
 
     CStructBuffer(void) {
         ArrayResize(m_data, 16); // minimum size
@@ -237,7 +255,8 @@ public:
     }
 
     // you may want to insert a range smaller than the full size of elements array
-    void AddRange(Type &elements[], int tsize){
+    void AddRange(Type &elements[], int tsize=0){
+      tsize = (tsize <= 0) ? ArraySize(elements): tsize;
       //int tsize = ArraySize(elements);
       int space_needed = (m_data_total+tsize)-m_data_max;
       // 5 + 6 - 10 = 1

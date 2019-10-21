@@ -15,17 +15,25 @@
 #endif
 
 // warning do not mix c code static library with c++ of armadillo (c++17) in a dll
-// lost hours trying to make a mixed c++/c dll 
+// lost hours trying to make a mixed c++/c dll
 
 extern "C"
 {
-	
+
 int DLL_EXPORT taMA(int  startIdx, // start the calculation at index
 	                  int    endIdx, // end the calculation at index
 	                  const double inReal[],
 	                  int   optInTimePeriod, // From 1 to 100000  - EMA window
 	                  int   optInMAType,
                     double        outReal[]);
-}
 
+
+int DLL_EXPORT taSTDDEV(int  startIdx, // start the calculation at index
+					int    endIdx, // end the calculation at index
+					const double inReal[],
+					int           optInTimePeriod, // From 1 to 100000  - EMA window
+					double        outReal[]);
+
+          
+}
 #endif //EXPORTS_H

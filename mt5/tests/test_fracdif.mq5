@@ -1,5 +1,5 @@
 #include <Math/Alglib/fasttransforms.mqh>
-#include "..\Util.mqh"
+#include "Tests.mqh"
 
 //+------------------------------------------------------------------+
 //| 1-dimensional real cross-correlation.                            |

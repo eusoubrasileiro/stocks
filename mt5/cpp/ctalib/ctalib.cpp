@@ -120,6 +120,25 @@ int DLL_EXPORT taMA(int  startIdx, // start the calculation at index
 }
 
 
+// you can use this way also (buffer used as input and output)
+// TA_MA(0, BUFFER_SIZE - 1,
+// &buffer[0],
+//	30, TA_MAType_SMA,
+// 	&outBeg, &outNbElement, &buffer[0]);
+int DLL_EXPORT taSTDDEV(int  startIdx, // start the calculation at index
+					int    endIdx, // end the calculation at index
+					const double inReal[],
+					int           optInTimePeriod, // From 1 to 100000  - EMA window
+					double        outReal[])
+{
+  int outBegIdx; // index based on the input array inReal where we start having valid MA values
+  int outNBElement; // number of elements on the output discounting for initial window values needed
+	TA_STDDEV(startIdx, endIdx, inReal,
+		optInTimePeriod, 1., // number to multiply stddev to
+		&outBegIdx, &outNBElement, outReal);
+	return outNBElement-1;
+}
+
 
 // https://stackoverflow.com/questions/15213082/c-histogram-bin-sorting
 //

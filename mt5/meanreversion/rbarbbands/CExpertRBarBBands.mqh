@@ -1,5 +1,6 @@
 #include "..\..\Util.mqh"
 #include "..\..\Buffers.mqh"
+#include "CBufferMqlTicks.mqh"
 #include "..\bbands\XyVectors.mqh"
 #include "..\bbands\BbandsPython.mqh"
 #include "..\..\datastruct\Bars.mqh"
@@ -13,14 +14,13 @@ const double             Expert_MoneyBar_Size   = 500e3; // R$ to form 1 money b
 // only for tick time-frame
 class CExpertRBarBands : public CExpertX
 {
+    CBufferMqlTicks m_ticks; // buffer of ticks w. control to download unique ones.
     MoneyBarBuffer m_bars; // buffer of money bars base for everything
     // created from ticks
-    MqlTick m_last_tick, m_current_tick;
-
-
 
     // bollinger bands configuration
-    // m_bands; // array of indicators for each bollinger band
+    CBuffer<double> m_bands_upr[]; // array of indicators for each bollinger band
+    CBuffer<double> m_bands_dwn[]; // upper and down
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
     double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
@@ -59,21 +59,8 @@ class CExpertRBarBands : public CExpertX
     unsigned long m_model_last_training; // referenced on m_xypair_count's
 
   public:
-    // simpler to use OnTimer instead of onTick
-    // using a timer of 1 second
-    void OnTimer(void) // overwrite it - will be called every 1 second
-    {
 
-            if(m_current_tick.time_msc != m_last_tick.time_msc &&
-                m_bars.AddTick(last_tick)>0)  // at least one new money bar created
-                Refresh(); // refresh whatever possible
-
-
-    }
-
-
-
-   CExpertBands(void){
+   void CExpertRBarBands(void){
       m_bands = new CIndicators;
       m_oindfeatures = new CIndicators;
       m_bbwindow_inc = 0.5;
@@ -82,16 +69,15 @@ class CExpertRBarBands : public CExpertX
       m_model_last_training =0;
    };
 
-  void CExpertRBarBands::Initialize(int nbands, int bbwindow,
+  void Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
         double ordersize, double stoploss, double targetprofit,
         double run_stoploss, double run_targetprofit, bool recursive,
         int model_refresh=15)
     {
     // create money bars
+    m_ticks = new CBufferMqlTicks(m_symbol.Name);
     m_bars = new MoneyBarBuffer(m_symbol.TickValue(),  Expert_MoneyBar_Size);
-
-
 
 
     m_recursive = recursive;
@@ -115,7 +101,8 @@ class CExpertRBarBands : public CExpertX
     //m_nsignal_features = m_nbands + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
-
+    ArrayResize(m_bands_upr, m_nbands); // allocate pointers
+    ArrayResize(m_bands_dwn, m_nbands); // allocate pointers
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
@@ -136,7 +123,7 @@ class CExpertRBarBands : public CExpertX
 
   }
 
-  bool CExpertRBarBands::Refresh(void)
+  bool Refresh(void)
   {
 
     // also updates m_bands
@@ -155,10 +142,31 @@ class CExpertRBarBands : public CExpertX
     return(true);
   }
 
-  void CExpertBands::OnTimer(){
+  // simpler to use OnTimer instead of onTick
+  // using a timer of 1 second
+  void OnTimer(void) // overwrite it - will be called every 1 second
+   {
+    if(m_ticks.Refresh() > 0 &&
+      m_bars.AddTicks(m_ticks.m_data,
+        m_ticks.beginNewTicks(), m_ticks.nNew()) > 0)
+    { // some new ticks arrived and new bars created
+      // at least one new money bar created
+      // refresh whatever possible
+      if(Refresh()){ // sucess of updating everything w. new data
+          verifyEntry();
+      }
+    }
+    // check to see if we should close any position
+    if(SelectPosition()){ // if any open position
+        CloseOpenPositionsbyTime();
+        CheckTrailingStop();
+    }
+  }
+
+  void verifyEntry(){
     //--- updated quotes and indicators
-    if(!Refresh() || !isInsideDay())
-        return; // no work without correct data
+      if(!isInsideDay())
+        return; // no work outside day scope
 
     // has an entry signal in any band? on the last raw signal
     if(lastRawSignal())
@@ -205,16 +213,11 @@ class CExpertRBarBands : public CExpertX
         }
     }
 
-    // in case did not reach the take profit close it by the day end
-    // check to see if we should close any position
-    if(SelectPosition()){ // if any open position
-        CloseOpenPositionsbyTime();
-        CheckTrailingStop();
-    }
+
 
   }
 
-  ~CExpertBands(){}; // dont care for now memory leaks on expert execution
+  ~CExpertRBarBands(){}; // dont care for now memory leaks on expert execution
 
   protected:
 
@@ -252,17 +255,20 @@ class CExpertRBarBands : public CExpertX
       }
 
       // call only after refresh / resize all internal series buffers to BufferSize
-      m_open.BufferResize(Expert_BufferSize);
-      m_close.BufferResize(Expert_BufferSize);
-      m_high.BufferResize(Expert_BufferSize);
-      m_low.BufferResize(Expert_BufferSize);
-      m_mqltime.Resize(Expert_BufferSize); // time is allawys sorted
+      // m_open.BufferResize(Expert_BufferSize);
+      // m_close.BufferResize(Expert_BufferSize);
+      // m_high.BufferResize(Expert_BufferSize);
+      // m_low.BufferResize(Expert_BufferSize);
+      // m_mqltime.Resize(Expert_BufferSize); // time is allawys sorted
 
       double inc=m_bbwindow_inc;
       for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
-          CiBands *band = new CiBands;
-          band.Create(m_symbol.Name(), PERIOD_M1, m_bbwindow*inc, 0, 2.5, PRICE_TYPICAL);
-          band.BufferResize(Expert_BufferSize);
+          m_bands_upr[i] = new CBuffer<double>(); // up
+          m_bands_dwn[i] = new CBuffer<double>(); // down bands
+          m_bands_dwn[i].BufferResize(Expert_BufferSize);
+          m_bands_upr[i].BufferResize(Expert_BufferSize);
+          //band.Create(m_symbol.Name(), PERIOD_M1, m_bbwindow*inc, 0, 2.5, PRICE_TYPICAL);
+          //band.BufferResize(Expert_BufferSize);
           m_indicators.Add(band); // needed to be refreshed by CExpert
           m_bands.Add(band);
           inc += m_bbwindow_inc;

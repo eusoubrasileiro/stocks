@@ -73,5 +73,13 @@ public:
       }
       return added;
     }
+    
+    // add ticks from bg_idx until size
+    int AddTicks(MqlTick &ticks[], int bg_idx, int size){
+      int added = 0;
+      for(int i=bg_idx; i<size; i++)
+        added += AddTick(ticks[i]);
+      return added;
+    }
 
 };

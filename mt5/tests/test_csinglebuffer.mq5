@@ -12,7 +12,7 @@
 //+------------------------------------------------------------------+
 void OnStart()
   {   
-   CBuffer<double> sbuffer = new CBuffer<double>;
+   CBuffer<double> sbuffer();
    sbuffer.Resize(4);
    for(int i=0; i<12; i++) // minimum buffer size is 16
         sbuffer.Add(0);

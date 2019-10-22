@@ -44,9 +44,9 @@ void test_fftcorr(){
     double expected[] = {5, 6, 5, 3, 1, 1, 3};
 
     if(!almostEqual(res, expected, 7, 0.0))
-        Print("Did not pass Test FFT CorrR1D");
+        Print("Failed - Test FFT CorrR1D");
     else
-        Print("Passed Test FFT CorrR1D");
+        Print("Passed - Test FFT CorrR1D");
 }
 
 void test_fracdif(){
@@ -102,17 +102,17 @@ void test_fracdif(){
     FracDifCoefs(frac, fsize, mql5fcoefs);
 
     if(!almostEqual(mql5fcoefs, pyfcoefs, fsize, eps))
-        Print("Did not pass Test FracDifCoefs");
+        Print("Passed - Test FracDifCoefs");
     else
-        Print("Passed Test FracDifCoefs");
+        Print("Passed - Test FracDifCoefs");
 
     double mql5filtered[];
     int outsize = FracDifApply(in, insize, pyfcoefs, fsize, mql5filtered);
 
     if((!almostEqual(mql5filtered, pyout, outsize, eps)) || outsize != 91)
-        Print("Did not pass Test FracDifApply");
+        Print("Failed - Test FracDifApply");
     else
-        Print("Passed Test FracDifApply");
+        Print("Passed - Test FracDifApply");
 }
 
 

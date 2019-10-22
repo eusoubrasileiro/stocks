@@ -21,6 +21,8 @@ void OnStart()
  
    if ( sbuffer.GetData(0) == 6 &&  sbuffer.GetData(1) == 5 &&
         sbuffer.GetData(2) == 4 && sbuffer.GetData(3) == 3 )
-        Print("Passed CBuffer Test");    
+        Print("Passed - Test CBuffer");    
+   else
+        Print("Failed - Test CBuffer");  
   }
 //+------------------------------------------------------------------+

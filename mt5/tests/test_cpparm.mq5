@@ -19,7 +19,7 @@ void test_Unique(){
     if (size == 5 && ex[0]==1 && ex[1]==2 && ex[2]==3 && ex[4]==5 )
         Print("Passed - Test Unique");
     else
-        Print("Failed   - Test Unique");
+        Print("Failed - Test Unique");
 }
 
 int arange(double start, double stop, double step, double &arr[]){
@@ -45,7 +45,7 @@ void test_Histsma_Simple(){
     if (bins[0]==0 && bins[1]==2 && bins[2]==1 &&  bins[3]==1 && bins[4]==1 && bins[5] == 2 && bins[6] == 0 )
         Print("Passed - Test Histsma_Simple");
     else
-        Print("Failed   - Test Histsma_Simple");
+        Print("Failed - Test Histsma_Simple");
 }
 
 
@@ -62,9 +62,9 @@ void test_Histsma_Sma(){
     Histsma(ex, 7, bins, nbins, 2); // window 1 means no smooth at all
 
     if (bins[0]==1 && bins[1]==1.5 && bins[2]==1 && bins[3]==1 && bins[4] == 1.5 && bins[5] == 1 )
-        Print("Passed - Test  Histsma_Sma");
+        Print("Passed - Test Histsma_Sma");
     else
-        Print("Failed   - Test Histsma_Sma");
+        Print("Failed - Test Histsma_Sma");
 }
 
 void OnStart(){

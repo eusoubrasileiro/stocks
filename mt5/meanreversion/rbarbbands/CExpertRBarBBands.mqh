@@ -19,8 +19,8 @@ class CExpertRBarBands : public CExpertX
     // created from ticks
 
     // bollinger bands configuration
-    CBuffer<double> m_bands_upr[]; // array of indicators for each bollinger band
-    CBuffer<double> m_bands_dwn[]; // upper and down
+    CTaBBANDS m_bands[]; // array of indicators for each bollinger band
+    // upper and down and middle
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
     double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
@@ -61,7 +61,6 @@ class CExpertRBarBands : public CExpertX
   public:
 
    void CExpertRBarBands(void){
-      m_bands = new CIndicators;
       m_oindfeatures = new CIndicators;
       m_bbwindow_inc = 0.5;
       m_model = new sklearnModel;
@@ -101,8 +100,8 @@ class CExpertRBarBands : public CExpertX
     //m_nsignal_features = m_nbands + m_nbands;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
-    ArrayResize(m_bands_upr, m_nbands); // allocate pointers
-    ArrayResize(m_bands_dwn, m_nbands); // allocate pointers
+    // allocate array of bbands indicators
+    ArrayResize(m_bands, m_nbands);
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
@@ -139,6 +138,11 @@ class CExpertRBarBands : public CExpertX
    // due TimeframesFlags(time)
    // also garantees indicators refreshed
     RefreshRawBandSignals();
+
+    // update all bands indicators 
+    for(int i=0; i<m_nbands; i++){
+        m_nbands[i].Refresh(); // 1-Exponential type
+
     return(true);
   }
 
@@ -254,23 +258,10 @@ class CExpertRBarBands : public CExpertX
           m_raw_signal[j].Resize(Expert_BufferSize);
       }
 
-      // call only after refresh / resize all internal series buffers to BufferSize
-      // m_open.BufferResize(Expert_BufferSize);
-      // m_close.BufferResize(Expert_BufferSize);
-      // m_high.BufferResize(Expert_BufferSize);
-      // m_low.BufferResize(Expert_BufferSize);
-      // m_mqltime.Resize(Expert_BufferSize); // time is allawys sorted
-
       double inc=m_bbwindow_inc;
       for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
-          m_bands_upr[i] = new CBuffer<double>(); // up
-          m_bands_dwn[i] = new CBuffer<double>(); // down bands
-          m_bands_dwn[i].BufferResize(Expert_BufferSize);
-          m_bands_upr[i].BufferResize(Expert_BufferSize);
-          //band.Create(m_symbol.Name(), PERIOD_M1, m_bbwindow*inc, 0, 2.5, PRICE_TYPICAL);
-          //band.BufferResize(Expert_BufferSize);
-          m_indicators.Add(band); // needed to be refreshed by CExpert
-          m_bands.Add(band);
+          m_nbands[i] = new CTaBBANDS(m_bbwindow*inc, 2.5, 1); // 1-Exponential type
+          m_nbands[i].Resize(Expert_BufferSize);
           inc += m_bbwindow_inc;
       }
   }

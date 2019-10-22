@@ -3,8 +3,7 @@
 
 const int Max_Tick_Copy = 10e3;
 // 10k ticks maximum downloaded every time Refresh is called
-// 1 ms time-frame
-
+// 1 ms time-frame suggested using OnTimer
 class CBufferMqlTicks : public CStructBuffer<MqlTick>
 {
 protected:

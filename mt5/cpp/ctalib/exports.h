@@ -20,6 +20,7 @@
 extern "C"
 {
 
+
 int DLL_EXPORT taMA(int  startIdx, // start the calculation at index
 	                  int    endIdx, // end the calculation at index
 	                  const double inReal[],
@@ -34,6 +35,17 @@ int DLL_EXPORT taSTDDEV(int  startIdx, // start the calculation at index
 					int           optInTimePeriod, // From 1 to 100000  - EMA window
 					double        outReal[]);
 
-          
+
+int DLL_EXPORT taBBANDS(int  startIdx, // start the calculation at index
+					int    endIdx, // end the calculation at index
+					const double inReal[],
+					int      optInTimePeriod, // From 1 to 100000  - MA window
+					double   optInNbDev,
+					int      optInMAType, // MA type
+					double outRealUpperBand[],
+					double outRealMiddleBand[],
+					double outRealLowerBand[]);
+
+
 }
 #endif //EXPORTS_H

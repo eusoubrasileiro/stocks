@@ -12,13 +12,14 @@
 template<typename Type>
 class CBuffer
 {
-protected:
-    Type m_data[];
+protected:    
     int m_data_total;
     int m_data_max;
     int m_step_resize;
 
 public:
+    Type m_data[];
+    
     CBuffer(void) {
         ArrayResize(m_data, 16); // minimum size
         m_data_total = 0;
@@ -46,7 +47,8 @@ public:
       return(true);
     }
 
-    // you may want to insert a range smaller than the full size of elements array
+    // you may want to insert a range smaller than the full size 
+    // of elements array
     void AddRange(Type &elements[], int tsize=0){
       tsize = (tsize <= 0) ? ArraySize(elements): tsize;
       //int tsize = ArraySize(elements);
@@ -55,13 +57,15 @@ public:
       if(space_needed > 0){ // m_data
         // copy data overwriting the oldest sample - overwriting the firsts
         // (shift left array)  making space for new samples in the end
-        // src, dst, dst_idx_srt, src_idx_srt, count_to_copy
+        // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
         ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
         m_data_total -= space_needed;
       }
-      ArrayCopy(elements, m_data, m_data_total, 0, tsize);
+      ArrayCopy(m_data, elements, m_data_total, 0, tsize);
       m_data_total += tsize;
     }
+    
+    
 
     bool Resize(const int size)
       {
@@ -267,7 +271,7 @@ public:
         ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
         m_data_total -= space_needed;
       }
-      ArrayCopy(elements, m_data, m_data_total, 0, tsize);
+      ArrayCopy(m_data, elements, m_data_total, 0, tsize);
       m_data_total += tsize;
     }
 

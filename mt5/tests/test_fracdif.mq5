@@ -1,4 +1,5 @@
 #include <Math/Alglib/fasttransforms.mqh>
+#include "..\Util.mqh"
 #include "Tests.mqh"
 
 //+------------------------------------------------------------------+

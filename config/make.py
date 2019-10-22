@@ -70,8 +70,8 @@ if os.name == 'nt':
         ## /O2 optimize code for speed
         ## /D make a predefinition of symbol BUILDING_DLL
         ## Windows & is the equivalent of ; on linux
-        compile = ("cd "+ cpppath + " & " +
-                    vsbuildenvcmd +" && "+
+        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " +  # dont echo vsbuildenvcmd
+                    vsbuildenvcmd +" && "+ " @echo on " + " & " +
                 r"cl.exe /LD /EHsc /Gz /Fecpparm /DBUILDING_DLL /O2 armcpp.cpp"+
                 " -I "+ arminc + " " + armlibs)
         print(compile, file=sys.stderr)
@@ -84,7 +84,8 @@ if os.name == 'nt':
         cpppath = os.path.join(repopath, r"mt5\cpp\ctalib")
         ## /MD saved my life
         ## msvcrt.lib: import library for the release DLL version of the CRT
-        compile = ("cd "+ cpppath + " & " + vsbuildenvcmd +" && "+
+        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " + # dont echo vsbuildenvcmd
+                    vsbuildenvcmd +" && "+ " @echo on " + " & " +
             r"cl.exe /MD /EHsc /Gz /DBUILDING_DLL /O2 ctalib.cpp" +
              " /I "+ talibinc +
             # linker options bellow
@@ -103,9 +104,9 @@ if os.name == 'nt':
         pythonlibs = os.path.join(pythonpath, r"libs\python37.lib") # never use _d debug
         pybindincludes = os.path.join(pybindroot, "include")
         cpppath = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll")
-        compile = ("cd "+ cpppath + " & " +
-                    vsbuildenvcmd +" && "+
-                r"cl.exe /LD /EHsc /Gz /Fepythondlib /std:c++17 /DBUILDING_DLL "+ cppdebug + " /O2  pythondll.cpp"+
+        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " + # dont echo vsbuildenvcmd 
+                    vsbuildenvcmd +" && "+ " @echo on " + " & " +
+                r"cl.exe /LD /EHsc /Gz /Fepythondlib /DBUILDING_DLL "+ cppdebug + " /O2  pythondll.cpp"+
                 " /I "+ pythonincludes + " /I " + pybindincludes + " " + pythonlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)

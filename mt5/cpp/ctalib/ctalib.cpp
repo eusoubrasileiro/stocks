@@ -140,22 +140,23 @@ int DLL_EXPORT taSTDDEV(int  startIdx, // start the calculation at index
 }
 
 
-// https://stackoverflow.com/questions/15213082/c-histogram-bin-sorting
-//
-// unsigned int bin;
-// for (unsigned int sampleNum = 0; sampleNum < SAMPLE_COUNT; ++sampleNum)
-// {
-//       const int sample = data0[sampleNum];
-//       bin = BIN_COUNT;
-//       for (unsigned int binNum = 0; binNum < BIN_COUNT; ++binNum)  {
-//             const int rightEdge = binranges[binNum];
-//             if (sample <= rightEdge) {
-//                bin = binNum;
-//                break;
-//            }
-//       }
-//       bins[bin]++;
-//  }
+int DLL_EXPORT taBBANDS(int  startIdx, // start the calculation at index
+					int    endIdx, // end the calculation at index
+					const double inReal[],
+					int      optInTimePeriod, // From 1 to 100000  - MA window
+					double   optInNbDev,
+					int      optInMAType, // MA type
+					double outRealUpperBand[],
+					double outRealMiddleBand[],
+					double outRealLowerBand[])
+{
+  int outBegIdx; // index based on the input array inReal where we start having valid MA values
+  int outNBElement; // number of elements on the output discounting for initial window values needed
+	TA_BBANDS(startIdx, endIdx, inReal, // number deviations upper and down
+		optInTimePeriod, optInNbDev, optInNbDev, (TA_MAType) optInMAType, 
+		&outBegIdx, &outNBElement, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
+	return outNBElement-1;
+}
 
 
 BOOL APIENTRY DllMain(HMODULE hModule,

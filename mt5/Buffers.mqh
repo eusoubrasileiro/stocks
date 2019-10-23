@@ -252,10 +252,10 @@ public:
       // overwriting the first sample
         ArrayCopy(m_data, m_data, 0, 1, m_data_total-1);
         //--- add to the end
-        m_data[m_data_total-1] = element;
+        m_data_total--;
       }
-      else //--- add data in the end
-        m_data[m_data_total++]=element;
+      //--- add data in the end
+      m_data[m_data_total++]=element;
     }
 
     // you may want to insert a range smaller than the full size of elements array

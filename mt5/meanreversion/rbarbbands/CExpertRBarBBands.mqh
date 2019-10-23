@@ -1,6 +1,9 @@
+
 #include "..\..\Util.mqh"
 #include "..\..\Buffers.mqh"
 #include "CBufferMqlTicks.mqh"
+#include "..\..\indicators\CTalibIndicators.mqh"
+#include "..\..\indicators\CSpecialIndicators.mqh"
 #include "..\bbands\XyVectors.mqh"
 #include "..\bbands\BbandsPython.mqh"
 #include "..\..\datastruct\Bars.mqh"
@@ -9,13 +12,16 @@
 const int                Expert_BufferSize      = 5000; // indicators buffer needed
 const int                Expert_MaxFeatures     = 100; // max features allowed
 const double             Expert_MoneyBar_Size   = 500e3; // R$ to form 1 money bar
+const double             Expert_Fracdif         = 0.6; // fraction for fractional difference 
+const double             Expert_Fracdif_Window  = 512; // window size fraction fracdif 
+
 
 // Using Dolar/Real Bars and consequently tick data
 // only for tick time-frame
 class CExpertRBarBands : public CExpertX
 {
-    CBufferMqlTicks m_ticks; // buffer of ticks w. control to download unique ones.
-    MoneyBarBuffer m_bars; // buffer of money bars base for everything
+    CBufferMqlTicks *m_ticks; // buffer of ticks w. control to download unique ones.
+    MoneyBarBuffer *m_bars; // buffer of money bars base for everything
     // created from ticks
 
     // bollinger bands configuration
@@ -24,6 +30,10 @@ class CExpertRBarBands : public CExpertX
     int m_nbands; // number of bands
     int m_bbwindow; // reference size of bollinger band indicator others
     double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
+
+    // feature indicators
+    CFracDiffIndicator *m_fd_mbarp; // frac diff on money bar prices
+
     // store buy|sell|hold signals for each bband
     CBuffer<int> m_raw_signal[];
     MqlDateTime m_mqldt_now;
@@ -60,8 +70,7 @@ class CExpertRBarBands : public CExpertX
 
   public:
 
-   void CExpertRBarBands(void){
-      m_oindfeatures = new CIndicators;
+   void CExpertRBarBands(void){      
       m_bbwindow_inc = 0.5;
       m_model = new sklearnModel;
       m_xypair_count = 0;
@@ -75,7 +84,7 @@ class CExpertRBarBands : public CExpertX
         int model_refresh=15)
     {
     // create money bars
-    m_ticks = new CBufferMqlTicks(m_symbol.Name);
+    m_ticks = new CBufferMqlTicks(m_symbol.Name());
     m_bars = new MoneyBarBuffer(m_symbol.TickValue(),  Expert_MoneyBar_Size);
 
 
@@ -126,10 +135,10 @@ class CExpertRBarBands : public CExpertX
   {
 
     // also updates m_bands
-    if(!CExpert::Refresh())
-        return (false);
+    //if(!CExpert::Refresh()) // useless on Tick timeframe 
+    //    return (false);
     // features indicators
-    m_oindfeatures.Refresh();
+    m_fd_mbarp.Refresh();
     // insert current time in the time buffer
     // must be here so all buffers are aligned
     TimeCurrent(m_last_time);
@@ -139,10 +148,10 @@ class CExpertRBarBands : public CExpertX
    // also garantees indicators refreshed
     RefreshRawBandSignals();
 
-    // update all bands indicators 
+    // update all bands indicators
     for(int i=0; i<m_nbands; i++){
-        m_nbands[i].Refresh(); // 1-Exponential type
-
+        m_bands[i].Refresh(); // 1-Exponential type
+    }
     return(true);
   }
 
@@ -260,8 +269,8 @@ class CExpertRBarBands : public CExpertX
 
       double inc=m_bbwindow_inc;
       for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
-          m_nbands[i] = new CTaBBANDS(m_bbwindow*inc, 2.5, 1); // 1-Exponential type
-          m_nbands[i].Resize(Expert_BufferSize);
+          m_bands[i] = new CTaBBANDS(m_bbwindow*inc, 2.5, 1); // 1-Exponential type
+          m_bands[i].Resize(Expert_BufferSize);
           inc += m_bbwindow_inc;
       }
   }
@@ -296,3 +305,8 @@ class CExpertRBarBands : public CExpertX
 
 
 };
+
+
+void CExpertRBarBands::CreateOtherFeatureIndicators(){
+    m_fd_mbarp = new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif);
+}

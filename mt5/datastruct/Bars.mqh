@@ -47,18 +47,20 @@ protected:
     double m_tickvalue;
     double m_moneybarsize;
     MoneyBar m_bar; // temp variable 
+    int m_added; // number of bars added on last call 
 
 public:
     MoneyBarBuffer(double tickvalue, double moneybarsize){
       m_tickvalue = tickvalue;
       m_moneybarsize = moneybarsize;
       m_count_money = 0; // count_money amount to form 1 money bar
+      m_added = 0;
     }
 
     // add one tick and create as many money bars as needed (or 0)
     // return number created or -1 on error
     int AddTick(MqlTick &tick){
-      int added = 0;
+      m_added = 0;
       m_count_money += tick.volume_real*tick.last*m_tickvalue;
       while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
           // if(ibars == nticks)// ibars may explode if moneybarsize too small
@@ -69,9 +71,9 @@ public:
           m_bar.time_msc = tick.time_msc;
           CStructBuffer<MoneyBar>::Add(m_bar);
           m_count_money -= m_moneybarsize;
-          added++;
-      }
-      return added;
+          m_added++;
+      }                  
+      return m_added;
     }
     
     // add ticks from bg_idx until size
@@ -79,7 +81,8 @@ public:
       int added = 0;
       for(int i=bg_idx; i<size; i++)
         added += AddTick(ticks[i]);
-      return added;
+      m_added = added; // overwrite internal added increment 
+      return m_added;
     }
 
 };

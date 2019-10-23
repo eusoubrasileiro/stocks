@@ -7,8 +7,8 @@ void test_CTaMAIndicator(){
 	int size = 8;
 	int window = 2;
 	double out[10];
-	CTaMAIndicator cta_MA(window, 0);
-	//cta_MA.setParams(window, 0); // simple MA
+	CTaMAIndicator cta_MA(window, 0);	 // simple MA
+	cta_MA.Resize(10);
 
 	// partial calls until total array calculated
 	double a[] = {1, 1};
@@ -36,7 +36,8 @@ void test_CTaBBANDSIndicator(){
 	int window = 2;
 	double out[10];
 	CTaBBANDS cta_BBANDS(window, 2.5, 0); // simple MA + 2.5 deviations
-
+    cta_BBANDS.Resize(10);
+    
 	// partial calls until total array calculated
 	double a[] = {1, 1};
 	double b[] = {2, 3};

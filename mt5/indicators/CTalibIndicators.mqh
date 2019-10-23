@@ -46,8 +46,6 @@ public:
         CWindowIndicator::Init(window);
     };
 
-    void setParams(int window, int tama_type){m_tama_type = tama_type; Init(window);}
-
     int Calculate(double &indata[], int size, double &outdata[])
     {
       return taMA(0, size,

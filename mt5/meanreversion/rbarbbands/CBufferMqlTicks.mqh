@@ -16,7 +16,7 @@ protected:
 
 public:
 
-  void CBufferMqlTicks(string symbol){
+  CBufferMqlTicks(string symbol){
       m_symbol = symbol;
       ArrayResize(m_copied_ticks, Max_Tick_Copy);
       m_ncopied = 0;

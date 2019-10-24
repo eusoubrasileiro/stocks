@@ -47,9 +47,11 @@ protected:
     double m_tickvalue;
     double m_moneybarsize;
     MoneyBar m_bar; // temp variable 
-    int m_added; // number of bars added on last call 
+    
 
 public:
+    int m_added; // number of bars added on last call 
+
     MoneyBarBuffer(double tickvalue, double moneybarsize){
       m_tickvalue = tickvalue;
       m_moneybarsize = moneybarsize;

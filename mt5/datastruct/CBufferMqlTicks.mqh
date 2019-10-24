@@ -1,5 +1,5 @@
-#include "..\..\Buffers.mqh"
-#include "..\..\datastruct\Ticks.mqh"
+#include "..\Buffers.mqh"
+#include "Ticks.mqh"
 
 const int Max_Tick_Copy = 10e3;
 // 10k ticks maximum downloaded every time Refresh is called
@@ -7,7 +7,7 @@ const int Max_Tick_Copy = 10e3;
 class CBufferMqlTicks : public CStructBuffer<MqlTick>
 {
 protected:
-  long m_last_ms;
+  
   int m_bgidx; // temp:: where the new ticks starts on array m_copied_ticks
   string m_symbol;
   MqlTick m_copied_ticks[]; // fixed size number of ticks copied every x seconds
@@ -15,12 +15,15 @@ protected:
   int m_nnew; // number of new ticks last copied
 
 public:
-
+  long m_last_ms;
+    
   CBufferMqlTicks(string symbol){
       m_symbol = symbol;
       ArrayResize(m_copied_ticks, Max_Tick_Copy);
       m_ncopied = 0;
-      m_last_ms = GetTickCount(); // time now in ms
+      // time now in ms - 0 will work 'coz next tick.ms value will be bigger
+      // and will take its place
+      m_last_ms = 0; 
       m_nnew = 0;
   }
 

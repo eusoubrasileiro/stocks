@@ -12,14 +12,14 @@
 template<typename Type>
 class CBuffer
 {
-protected:    
+protected:
     int m_data_total;
     int m_data_max;
     int m_step_resize;
 
 public:
     Type m_data[];
-    
+
     CBuffer(void) {
         ArrayResize(m_data, 16); // minimum size
         m_data_total = 0;
@@ -47,7 +47,7 @@ public:
       return(true);
     }
 
-    // you may want to insert a range smaller than the full size 
+    // you may want to insert a range smaller than the full size
     // of elements array
     void AddRange(Type &elements[], int tsize=0){
       tsize = (tsize <= 0) ? ArraySize(elements): tsize;
@@ -64,8 +64,8 @@ public:
       ArrayCopy(m_data, elements, m_data_total, 0, tsize);
       m_data_total += tsize;
     }
-    
-    
+
+
 
     bool Resize(const int size)
       {
@@ -305,45 +305,5 @@ public:
     }
 
     int BufferSize(){ return m_data_max; }
-
-};
-
-
-// Same as above but for MqlDateTime
-// adding QuickSearch functinality
-class CMqlDateTimeBuffer : public CStructBuffer<MqlDateTime>
-{
-
-public:
-   // code from clong array
-  // quick search for a sorted array
-  int QuickSearch(MqlDateTime &element) const
-    {
-     int  i,j,m=-1;
-     MqlDateTime mqldtcurrent;
-     datetime d_mqldtcurrent;
-     datetime d_element = StructToTime(element);
-  //--- search
-     i=0;
-     j=m_data_total-1;
-     while(j>=i)
-       {
-        //--- ">>1" is quick division by 2
-        m=(j+i)>>1;
-        if(m<0 || m>=m_data_total)
-           break;
-        mqldtcurrent=m_data[m];
-        d_mqldtcurrent = StructToTime(mqldtcurrent);
-        // if(mqldtcurrent==element)
-        if(IsEqualMqldt(mqldtcurrent, element))
-           break;
-        if(d_mqldtcurrent>d_element)
-           j=m-1;
-        else
-           i=m+1;
-       }
-  //--- position
-     return(m);
-    }
 
 };

@@ -1,4 +1,5 @@
 #include "../Buffers.mqh"
+//#include "Time.mqh"
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
 
@@ -11,7 +12,8 @@ struct MoneyBar
    double       ask;           // Current Ask price - might be 0 WHEN Equal the LAST
    double       last;          // Price of the last deal (Last) - never 0 when volume not 0 - zero when no match between ask-bid
 //   ulong        volume;        // Volume for the current Last price 2.
-   long         time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
+   long         time_msc;       // Time of a price last update in milliseconds == 1. but with milliseconds precision
+//   int          day;             // day of year
 //   uint         flags;         // Tick flags - no reason to use this on money-bar - shows what changed from the previous tick
 //   double       volume_real;   // Volume for the current Last price with greater accuracy same as 2. but better
   };
@@ -46,11 +48,11 @@ protected:
     double m_count_money;
     double m_tickvalue;
     double m_moneybarsize;
-    MoneyBar m_bar; // temp variable 
-    
+    MoneyBar m_bar; // temp variable
+
 
 public:
-    int m_added; // number of bars added on last call 
+    int m_added; // number of bars added on last call
 
     MoneyBarBuffer(double tickvalue, double moneybarsize){
       m_tickvalue = tickvalue;
@@ -74,16 +76,16 @@ public:
           CStructBuffer<MoneyBar>::Add(m_bar);
           m_count_money -= m_moneybarsize;
           m_added++;
-      }                  
+      }
       return m_added;
     }
-    
+
     // add ticks from bg_idx until size
     int AddTicks(MqlTick &ticks[], int bg_idx, int size){
       int added = 0;
       for(int i=bg_idx; i<size; i++)
         added += AddTick(ticks[i]);
-      m_added = added; // overwrite internal added increment 
+      m_added = added; // overwrite internal added increment
       return m_added;
     }
 

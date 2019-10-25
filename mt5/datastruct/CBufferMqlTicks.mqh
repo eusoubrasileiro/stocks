@@ -16,6 +16,8 @@ protected:
 
 public:
   long m_last_ms;
+  
+  CBufferMqlTicks(void);
     
   CBufferMqlTicks(string symbol){
       m_symbol = symbol;
@@ -23,7 +25,7 @@ public:
       m_ncopied = 0;
       // time now in ms - 0 will work 'coz next tick.ms value will be bigger
       // and will take its place
-      m_last_ms = 0; 
+      m_last_ms = long (TimeCurrent())*1000; // turn in 'fake' ms
       m_nnew = 0;
   }
 
@@ -36,17 +38,17 @@ public:
    // to avoid missing ticks on same ms)
    m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
         COPY_TICKS_ALL, m_last_ms-1, 0);
-
-    if(m_ncopied == -1){
-      int error = GetLastError();
+        
+    if(m_ncopied < 1){
+      //int error = GetLastError();
       // better threatment here ??...better ignore and wait for next call
       // The number of copied tick or -1 in case of an error. GetLastError() is able to return the following errors:
       // ERR_HISTORY_TIMEOUT – ticks synchronization waiting time is up, the function has sent all it had.
       // ERR_HISTORY_SMALL_BUFFER – static buffer is too small. Only the amount the array can store has been sent.
       // ERR_NOT_ENOUGH_MEMORY – insufficient memory for receiving a history from the specified range to the dynamic
       // tick array. Failed to allocate enough memory for the tick array.
-      m_nnew = 0;
-      m_ncopied = 0;
+      //m_nnew = 0;
+      //m_ncopied = 0;
       return -1;
     }
 

@@ -3,7 +3,7 @@
 
 void test_CTaMAIndicator(){
 	double in[] = {1, 1, 2, 3, 4, 5, 5, 3, 1};
-	double ta_truth[] = { 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2.};
+	double ta_truth[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2.};
 	int size = 8;
 	int window = 2;
 	double out[10];
@@ -11,9 +11,9 @@ void test_CTaMAIndicator(){
 	cta_MA.Resize(10);
 
 	// partial calls until total array calculated
-	double a[] = {1, 1};
-	double b[] = {2, 3};
-	double c[] = {4, 5, 5};
+	double a[] = {1};
+	double b[] = {1};
+	double c[] = {2, 3, 4, 5, 5};
 	double d[] = {3, 1};
 	cta_MA.Refresh(a);
 	cta_MA.Refresh(b);
@@ -28,9 +28,9 @@ void test_CTaMAIndicator(){
 
 void test_CTaBBANDSIndicator(){
 	double in[] = {1, 1, 2, 3, 4, 5, 5, 3, 1};
-	double ta_truth_upper[] = { 1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
-	double ta_truth_middle[] = { 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2.};
-	double ta_truth_down[] = { 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5};
+	double ta_truth_upper[] = { EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
+	double ta_truth_middle[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2.};
+	double ta_truth_down[] = { EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5};
 	
 	int size = 8;
 	int window = 2;
@@ -39,9 +39,9 @@ void test_CTaBBANDSIndicator(){
     cta_BBANDS.Resize(10);
     
 	// partial calls until total array calculated
-	double a[] = {1, 1};
-	double b[] = {2, 3};
-	double c[] = {4, 5, 5};
+	double a[] = {1}; 
+	double b[] = {1};
+	double c[] = {2, 3, 4, 5, 5};
 	double d[] = {3, 1};
 	cta_BBANDS.Refresh(a);
 	cta_BBANDS.Refresh(b);

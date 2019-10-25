@@ -3,7 +3,7 @@
 
 #include "..\..\TrailingMA.mqh"
 #include "..\..\Util.mqh"
-#include "CExpertBands.mqh"
+#include "CExpertRBarBBands.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -26,7 +26,7 @@ input double              Expert_Run_TargetProfit     = 15;
 // target profit per order $$$
 input double              Expert_Run_StopLoss        = 15;
 // recursive == kalman filter option
-input bool                Expert_Recursive           = true;
+input bool                Expert_Recursive           = false;
 
 
 const bool                     Expert_EveryTick       = false;
@@ -38,14 +38,14 @@ const int Expert_OrdersPerDay = 100; // Number of orders placed per day
 const double Expert_PositionExpireHours = 1.5; // Time to expire a position (close it)
 const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
-CExpertBands cExpert = new CExpertBands;
+CExpertRBarBands cExpert = new CExpertRBarBands;
 
 //| Expert initialization function
 int OnInit(){
 
     // Use the timer to get missing ticks every 1 second
     // will be more than enough this is not HFT! remember that!
-    EventSetTimer(1); // in seconds - 1 Minute
+    EventSetTimer(120*5); // in seconds
 
     //--- Initializing expert
     if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber)
@@ -82,7 +82,7 @@ int OnInit(){
 
 
 void OnTimer() {
-    cExpert.OnTimer();
+    //cExpert.CheckTicks();
 }
 
 // Useless stuff
@@ -91,8 +91,9 @@ void OnDeinit(const int reason){
     EventKillTimer();
 }
 
-//| Expert tick function     
+//| Expert tick function
 void OnTick(){
+  cExpert.CheckTicks();
 }
 
 //| Trade function                                                   |

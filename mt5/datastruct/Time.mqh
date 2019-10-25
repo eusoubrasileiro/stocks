@@ -12,7 +12,7 @@
 // minimum needed for identify day of a tick timestamp in milliseconds
 // can be inserted on MoneyBar struct
 // and C++ could create array of timedays from
-// array of moneybar structs 
+// array of moneybar structs
 struct timeday {
   int day; // day of year from MqlDateTime.day_of_year
   long ms;

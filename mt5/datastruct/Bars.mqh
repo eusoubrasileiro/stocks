@@ -46,16 +46,18 @@ class MoneyBarBuffer : public CStructBuffer<MoneyBar>
 {
 protected:
     double m_count_money;
-    double m_tickvalue;
+    double m_point_value;
     double m_moneybarsize;
     MoneyBar m_bar; // temp variable
 
 
 public:
     int m_added; // number of bars added on last call
-
-    MoneyBarBuffer(double tickvalue, double moneybarsize){
-      m_tickvalue = tickvalue;
+    
+    int BeginAdded(){ return Size()-m_added; }
+    
+    MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize){
+      m_point_value = tickvalue/ticksize;
       m_moneybarsize = moneybarsize;
       m_count_money = 0; // count_money amount to form 1 money bar
       m_added = 0;
@@ -65,7 +67,7 @@ public:
     // return number created or -1 on error
     int AddTick(MqlTick &tick){
       m_added = 0;
-      m_count_money += tick.volume_real*tick.last*m_tickvalue;
+      m_count_money += tick.volume_real*tick.last*m_point_value;
       while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
           // if(ibars == nticks)// ibars may explode if moneybarsize too small
           //   return -1; // dont explode this is a buffer delete older ones
@@ -83,7 +85,7 @@ public:
     // add ticks from bg_idx until size
     int AddTicks(MqlTick &ticks[], int bg_idx, int size){
       int added = 0;
-      for(int i=bg_idx; i<size; i++)
+      for(int i=bg_idx; i<bg_idx+size; i++)
         added += AddTick(ticks[i]);
       m_added = added; // overwrite internal added increment
       return m_added;

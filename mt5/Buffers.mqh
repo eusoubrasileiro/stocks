@@ -16,7 +16,15 @@ protected:
     int m_data_total;
     int m_data_max;
     int m_step_resize;
-
+    
+    void MakeSpace(int space_needed){
+        // copy data overwriting the oldest sample - overwriting the firsts
+        // (shift left array)  making space for new samples in the end
+        // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
+        ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
+        m_data_total -= space_needed;
+    }
+    
 public:
     Type m_data[];
 
@@ -35,17 +43,12 @@ public:
     void RemoveLast(void){ if(m_data_total>0) m_data_total--; }
 
     bool Add(Type element){
-      if(m_data_total >= m_data_max){ // m_data
-      // copy data overwriting the oldest sample
-      // overwriting the first sample
-        ArrayCopy(m_data, m_data, 0, 1, m_data_total-1);
-        //--- add to the end
-        m_data_total--;
-      }
+      if(m_data_total >= m_data_max) // m_data
+        MakeSpace(1);      
       //--- add data in the end
       m_data[m_data_total++]=element;
       return(true);
-    }
+    }  
 
     // you may want to insert a range smaller than the full size
     // of elements array
@@ -54,18 +57,22 @@ public:
       //int tsize = ArraySize(elements);
       int space_needed = (m_data_total+tsize)-m_data_max;
       // 5 + 6 - 10 = 1
-      if(space_needed > 0){ // m_data
-        // copy data overwriting the oldest sample - overwriting the firsts
-        // (shift left array)  making space for new samples in the end
-        // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
-        ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
-        m_data_total -= space_needed;
-      }
+      if(space_needed > 0)// m_data
+        MakeSpace(space_needed);
+                      
       ArrayCopy(m_data, elements, m_data_total, 0, tsize);
       m_data_total += tsize;
     }
 
-
+    void AddEmpty(int count){ // and count samples with EMPTY value
+        int space_needed = (m_data_total+count)-m_data_max;
+        
+        if(space_needed > 0)// m_data
+            MakeSpace(space_needed);       
+            
+        ArrayFill(m_data, m_data_total, count, EMPTY_VALUE);        
+        m_data_total += count;
+    }
 
     bool Resize(const int size)
       {

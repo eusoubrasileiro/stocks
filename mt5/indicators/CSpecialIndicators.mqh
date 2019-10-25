@@ -9,6 +9,8 @@ protected:
 
 public:
 
+    CFracDiffIndicator();
+    
     CFracDiffIndicator(int window, double dfraction){
         m_dfraction = dfraction;
         CWindowIndicator::Init(window);

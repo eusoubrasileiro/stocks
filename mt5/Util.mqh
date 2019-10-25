@@ -59,10 +59,7 @@ class CExpertX : public CExpert
      datetime timenow= TimeCurrent();
      datetime dayend = dayEnd(timenow);
      datetime positiontime  = m_position.Time();
-     //--- if the MagicNumber matches MagicNumber of the position
      // Magic check inside CTrade PositionClose
-     //if(PositionGetInteger(POSITION_MAGIC) != m_magic)
-     //   return false;
      if(positiontime +  m_positionExpireTime > timenow
                 && timenow < dayend )
           return false;

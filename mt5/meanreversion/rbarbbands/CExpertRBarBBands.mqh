@@ -142,9 +142,10 @@ class CExpertRBarBands : public CExpertX
   // start index and count of new bars that just arrived
   bool Refresh(int start, int count)
   {
+    int end = start+count;
     ArrayResize(m_mlast, count);
     // money bars
-    for(int i=start; i<start+count; i++){
+    for(int i=start; i<end; i++){
         m_mlast[i-start] = m_bars.m_data[i].last; // moneybar.last price
         // insert current times in the times buffer
         // must be here so all buffers are aligned
@@ -156,18 +157,18 @@ class CExpertRBarBands : public CExpertX
     // by creating empty samples
     
     // features indicators
-    // fracdif on bar prices
-    result = result && m_fd_mbarp.Refresh(m_mlast, start, count);
-
+    // fracdif on bar prices order of && matter
+    // first is what you want to do and second what you want to try
+    result = m_fd_mbarp.Refresh(m_mlast, 0, count) && result;
 
     // update all bollinger bands indicators
     for(int j=0; j<m_nbands; j++){
-        result = result && m_bands[j].Refresh(m_mlast, start, count);
+        result = m_bands[j].Refresh(m_mlast, 0, count) && result;
     }
 
    // called after m_ticks.Refresh() and Refreshs() above
    // garantes not called twice and bband indicators available
-    RefreshRawBandSignals();
+    RefreshRawBandSignals(start, end);
 
     return result;
   }
@@ -326,27 +327,25 @@ class CExpertRBarBands : public CExpertX
       }
   }
 
-  void RefreshRawBandSignals(void){
+  void RefreshRawBandSignals(int start, int end){
     // should be called only once per refresh
     // use the last added samples
     // same of number of new indicator samples due refresh() true
     // of indicator
-    int begin_added = m_bars.BeginAdded();
-    int count = m_bars.m_added;
     for(int j=0; j<m_nbands; j++){
         //    Based on a bollinger band defined by upper-band and lower-band
         //    return signal:
         //        buy   1 : crossing down-outside it's buy
         //        sell -1 : crossing up-outside it's sell
         //        hold  0 : nothing usefull happend
-        for(int i=begin_added; i<count; i++){
+        for(int i=start; i<end; i++){
             if( m_bars[i].last >= m_bands[j].m_upper[i])
-                m_raw_signal[i].Add(-1.); // sell
+                m_raw_signal[j].Add(-1.); // sell
             else
             if( m_bars[i].last <= m_bands[j].m_down[i])
-                m_raw_signal[i].Add(+1.); // buy
+                m_raw_signal[j].Add(+1.); // buy
             else
-                m_raw_signal[i].Add(0); // nothing
+                m_raw_signal[j].Add(0); // nothing
         }
     }
   }

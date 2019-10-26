@@ -129,20 +129,24 @@ void test_fracdf_indicator(){
   	// partial calls until total array calculated
   	double a[10];
     // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
-    ArrayCopy(a, in, 0, 0, 10);
+    ArrayCopy(a, in, 0, 0, 7);
   	double b[30];
-    ArrayCopy(b, in, 0, 10, 30); // 10:40 [left open - no included]
+    ArrayCopy(b, in, 0, 7, 33); // 7:40 [left open - no included]
   	double c[11];
     ArrayCopy(c, in, 0, 40, 11); // 40:51
   	double d[49];
-    ArrayCopy(d, in, 0, 51, 100); // 51:100 = 49
+    ArrayCopy(d, in, 0, 51, 49); // 51:100 = 49
     
-  	c_fdiff.Refresh(a);
-  	c_fdiff.Refresh(b);
-  	c_fdiff.Refresh(c);
-  	c_fdiff.Refresh(d);
+  	c_fdiff.Refresh(a, 0, 7);
+  	c_fdiff.Refresh(b, 0, 33);
+  	c_fdiff.Refresh(c, 0, 11);
+  	c_fdiff.Refresh(d, 0, 49);
 
-  	if(!almostEqual(pyfractruth, c_fdiff.m_data, c_fdiff.Size(), 1e-6))
+    double pyfractruth_indicator[100]; // prepend EMPTY_VALUES of indicator
+    ArrayFill(pyfractruth_indicator, 0, fsize-2, EMPTY_VALUE);
+    ArrayCopy(pyfractruth_indicator, pyfractruth, fsize-2); 
+    
+  	if(!almostEqual(pyfractruth_indicator, c_fdiff.m_data, c_fdiff.Size(), 1e-6))
   	    Print("Failed - Test CFracDiffIndicator");
   	else
   	    Print("Passed - Test CFracDiffIndicator");

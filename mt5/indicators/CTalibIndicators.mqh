@@ -128,31 +128,37 @@ public:
     ArrayFree(m_previous_data);
     ArrayFree(m_calculating);
   }
-  
+
   void AddEmpty(int count){
     m_upper.AddEmpty(count);
     m_middle.AddEmpty(count);
-    m_down.AddEmpty(count); 
+    m_down.AddEmpty(count);
   }
 
   // re-calculate indicator values
   bool Refresh(double &newdata[], int start=0, int count=0){
-    int nnew_data = (count > 0)? count : ArraySize(newdata);    
+    int nnew_data = (count > 0)? count : ArraySize(newdata);
 
-      if(nnew_data==0) // no data
-        return false;  
-      // needs m_window samples to calculate 1 output sample
-      // check enough samples using previous
-      if(m_nprevious + nnew_data < m_window){
+    if(nnew_data==0) // no data
+      return false;
+    // needs m_window samples to calculate 1 output sample
+    // check enough samples using previous
+    if(m_nprevious < m_window-1){
+      if(m_nprevious + nnew_data < m_window){ // cannot calculate 1 output
         m_nprevious = (m_nprevious==0)? 1: m_nprevious;
         // not enough data now, but insert on previous data
-        ArrayCopy(m_previous_data, newdata, 
-                    m_nprevious-1, start, nnew_data);        
-        m_nprevious = ((m_nprevious==1)? 0: m_nprevious) + nnew_data;      
+        ArrayCopy(m_previous_data, newdata,
+                    m_nprevious-1, start, nnew_data);
+        m_nprevious = ((m_nprevious==1)? 0: m_nprevious) + nnew_data;
         // add dummy samples to mainting allignment with time and buffers
-        AddEmpty(nnew_data);        
-        return false;        
+        AddEmpty(nnew_data);
+        return false;
       }
+      else { // now can calculate 1 or more outputs
+        // insert the missing EMPTY_VALUES
+        AddEmpty(m_window-1-m_nprevious);
+      }
+    }
 
     // if exists previous data include its size for array of calculation
     int ncalc = m_nprevious;

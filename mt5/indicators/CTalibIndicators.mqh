@@ -183,9 +183,9 @@ public:
              m_out_middle,
              m_out_down);
 
-    m_upper.AddRange(m_out_upper, m_calculated);
-    m_middle.AddRange(m_out_middle, m_calculated);
-    m_down.AddRange(m_out_down, m_calculated);
+    m_upper.AddRange(m_out_upper, 0, m_calculated);
+    m_middle.AddRange(m_out_middle, 0, m_calculated);
+    m_down.AddRange(m_out_down, 0, m_calculated);
 
     // copy the now previous data for the subsequent call
     ArrayCopy(m_previous_data, newdata, 0, start+nnew_data-m_window+1, m_window-1);

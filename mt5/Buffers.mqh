@@ -1,4 +1,6 @@
 #include "Util.mqh"
+
+// FIFO first in first out  
 // Buffer single is an array when new data is added
 // it deletes the oldest bigger than buffer size
 // like a Queue or FIFO
@@ -16,22 +18,26 @@ protected:
     int m_data_total;
     int m_data_max;
     int m_step_resize;
-    
+
     void MakeSpace(int space_needed){
+        if(space_needed >= m_data_max){ // otherwise bellow will
+            m_data_total = 0; // resize m_data array space
+            return;
+        }
         // copy data overwriting the oldest sample - overwriting the firsts
         // (shift left array)  making space for new samples in the end
         // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
         ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
         m_data_total -= space_needed;
     }
-    
+
 public:
     Type m_data[];
 
     CBuffer(void) {
-        ArrayResize(m_data, 16); // minimum size
+        // ArrayResize(m_data, 16); // minimu size if specified by Resize
         m_data_total = 0;
-        m_data_max = 16;
+        m_data_max = 0;
         m_step_resize = 16;
     }
     ~CBuffer(void) { ArrayFree(m_data); }
@@ -44,36 +50,41 @@ public:
 
     bool Add(Type element){
       if(m_data_total >= m_data_max) // m_data
-        MakeSpace(1);      
+        MakeSpace(1);
       //--- add data in the end
       m_data[m_data_total++]=element;
       return(true);
-    }  
+    }
 
     // you may want to insert a range smaller than the full size
     // of elements array
-    void AddRange(Type &elements[], int tsize=0){
+    void AddRange(Type &elements[], int start=0, int tsize=0){
       tsize = (tsize <= 0) ? ArraySize(elements): tsize;
       //int tsize = ArraySize(elements);
       int space_needed = (m_data_total+tsize)-m_data_max;
       // 5 + 6 - 10 = 1
       if(space_needed > 0)// m_data
         MakeSpace(space_needed);
-                      
-      ArrayCopy(m_data, elements, m_data_total, 0, tsize);
+
+      // garantee not resizing m_data
+      start = (tsize > m_data_max)? tsize-m_data_max : start;
+      ArrayCopy(m_data, elements, m_data_total, start, tsize);
       m_data_total += tsize;
     }
 
     void AddEmpty(int count){ // and count samples with EMPTY value
         int space_needed = (m_data_total+count)-m_data_max;
-        
+
         if(space_needed > 0)// m_data
-            MakeSpace(space_needed);       
-            
-        ArrayFill(m_data, m_data_total, count, EMPTY_VALUE);        
+            MakeSpace(space_needed);
+
+        ArrayFill(m_data, m_data_total, count, EMPTY_VALUE);
         m_data_total += count;
     }
 
+    // this to garantee compatibility with Resize of
+    // buffers of CIndicators and default mql5 libraries
+    // and CExpert, CExpertBase etc.
     bool Resize(const int size)
       {
        int new_size;
@@ -95,6 +106,12 @@ public:
     //--- result
        return(m_data_max==new_size);
       }
+
+     bool ResizeFixed(const int size)
+     {
+        m_data_max = size;
+        return ArrayResize(m_data, size);
+     }
 
     // Get Data At index position using Array As Series Convention
     // youngest sample is at (0)
@@ -174,6 +191,9 @@ public:
        return GetData(0);
     }
 
+    // this to garantee compatibility with Resize of
+    // buffers of CIndicators and default mql5 libraries
+    // and CExpert, CExpertBase etc.
      bool Resize(const int size)
      {
        int new_size;
@@ -282,6 +302,9 @@ public:
       m_data_total += tsize;
     }
 
+    // this to garantee compatibility with Resize of
+    // buffers of CIndicators and default mql5 libraries
+    // and CExpert, CExpertBase etc.
     bool Resize(const int size)
       {
        int new_size;

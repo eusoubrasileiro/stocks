@@ -1,6 +1,6 @@
 #include "Util.mqh"
 
-// FIFO first in first out  
+// FIFO first in first out
 // Buffer single is an array when new data is added
 // it deletes the oldest bigger than buffer size
 // like a Queue or FIFO
@@ -61,15 +61,14 @@ public:
     void AddRange(Type &elements[], int start=0, int tsize=0){
       tsize = (tsize <= 0) ? ArraySize(elements): tsize;
       //int tsize = ArraySize(elements);
-      int space_needed = (m_data_total+tsize)-m_data_max;
-      // 5 + 6 - 10 = 1
-      if(space_needed > 0)// m_data
-        MakeSpace(space_needed);
-
+      // int space_needed = (m_data_total+tsize)-m_data_max;
+      // // 5 + 6 - 10 = 1
+      // if(space_needed > 0)// m_data
+      //   MakeSpace(space_needed);
       // garantee not resizing m_data
-      start = (tsize > m_data_max)? tsize-m_data_max : start;
-      ArrayCopy(m_data, elements, m_data_total, start, tsize);
-      m_data_total += tsize;
+      //start = (tsize > m_data_max)? tsize-m_data_max : start;
+      for(int i=start; i<tsize; i++)
+         Add(elements[i]);
     }
 
     void AddEmpty(int count){ // and count samples with EMPTY value
@@ -289,17 +288,19 @@ public:
     void AddRange(Type &elements[], int tsize=0){
       tsize = (tsize <= 0) ? ArraySize(elements): tsize;
       //int tsize = ArraySize(elements);
-      int space_needed = (m_data_total+tsize)-m_data_max;
-      // 5 + 6 - 10 = 1
-      if(space_needed > 0){ // m_data
-        // copy data overwriting the oldest sample - overwriting the firsts
-        // (shift left array)  making space for new samples in the end
-        // src, dst, dst_idx_srt, src_idx_srt, count_to_copy
-        ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
-        m_data_total -= space_needed;
-      }
-      ArrayCopy(m_data, elements, m_data_total, 0, tsize);
-      m_data_total += tsize;
+      // int space_needed = (m_data_total+tsize)-m_data_max;
+      // // 5 + 6 - 10 = 1
+      // if(space_needed > 0){ // m_data
+      //   // copy data overwriting the oldest sample - overwriting the firsts
+      //   // (shift left array)  making space for new samples in the end
+      //   // src, dst, dst_idx_srt, src_idx_srt, count_to_copy
+      //   ArrayCopy(m_data, m_data, 0, space_needed, m_data_total-space_needed);
+      //   m_data_total -= space_needed;
+      // }
+      // ArrayCopy(m_data, elements, m_data_total, 0, tsize);
+      //  m_data_total += tsize;
+      for(int i=0; i<tsize; i++)
+        Add(elements[i]);
     }
 
     // this to garantee compatibility with Resize of

@@ -284,11 +284,11 @@ class CExpertRBarBands : public CExpertX
   // stored in the buffer of raw signal bands
   int lastRawSignals(){
     int begin_added = m_bars.BeginAdded();
-    int count = m_bars.m_added;
+    int end = begin_added+m_bars.m_added;
     int direction = 0;
     m_last_raw_signal_index = -1;
 
-    for(int i=begin_added; i<count; i++){
+    for(int i=begin_added; i<end; i++){
       for(int j=0; j<m_nbands; j++){
           m_last_raw_signal[j] = m_raw_signal[j][i];
           if(m_last_raw_signal[j] != 0){
@@ -399,7 +399,7 @@ void CExpertRBarBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
       double profit = 0;
       double quantity = 0; // number of contracts or stocks shares
       // Starts from the past (begin of buffer of signals)
-      int i=0;// bandsg_raw.Size()-1;
+      int i=0;//
       // OR
       // For not adding again the same signal
       // Starts where it stop the last time
@@ -413,7 +413,7 @@ void CExpertRBarBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
         i = last_buff_index + 1;
       }
       // net mode ONLY
-      for(; i<bandsg_raw.Size(); i--){ // from past to present
+      for(; i<bandsg_raw.Size(); i++){ // from past to present
           time = m_times[i].ms;
           day = m_times[i].day; // unique day identifier
           if(day != previous_day){ // a new day reset everything

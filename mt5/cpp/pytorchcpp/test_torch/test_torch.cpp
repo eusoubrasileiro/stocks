@@ -27,9 +27,10 @@ int main() {
     torch::Tensor thfilter = torch::ones({ 1, 1, 3 }, device); // float by default
 
     //torch::Tensor indata = new torch::Tensor();
+	torch::Tensor result = torch::conv1d(thdata, thfilter);
 
     std::cout << thdata << std::endl;
-    std::cout << torch::conv1d(thdata, thfilter) << std::endl;
+    std::cout << result << std::endl;
 
 	return 0;
 }

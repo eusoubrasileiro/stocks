@@ -43,6 +43,7 @@ usermt5path = os.path.join(userhome,r"AppData\Roaming\MetaQuotes")
 # better use this one? same of vstudio?
 # python foundation source code - installation needed to buil python dll
 pythonpath = os.path.join(userhome, r"AppData\Local\Programs\Python\Python37")
+libtorchpath = os.path.join(userhome, r"Projects\libtorch")
 
 if os.name == 'nt':
     # getting which machine we are
@@ -104,10 +105,27 @@ if os.name == 'nt':
         pythonlibs = os.path.join(pythonpath, r"libs\python37.lib") # never use _d debug
         pybindincludes = os.path.join(pybindroot, "include")
         cpppath = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll")
-        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " + # dont echo vsbuildenvcmd 
+        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " + # dont echo vsbuildenvcmd
                     vsbuildenvcmd +" && "+ " @echo on " + " & " +
                 r"cl.exe /LD /EHsc /Gz /Fepythondlib /DBUILDING_DLL "+ cppdebug + " /O2  pythondll.cpp"+
                 " /I "+ pythonincludes + " /I " + pybindincludes + " " + pythonlibs)
+        print(compile, file=sys.stderr)
+        subprocess.call(compile, shell=True)
+        # ######################################
+        # # PYTORCHCPP DLL
+        # ######################################
+        cppdebug = ""
+        if args.cppdebug:
+            cppdebug = " /DDEBUG "
+        libtorchincludes1 = os.path.join(libtorchpath, r"include\torch\csrc\api\include")
+        libtorchincludes2 = os.path.join(libtorchpath, r"include")
+        libtorchlibs = ' '.join([ os.path.join(libtorchpath, r"lib\\"+lib)
+                                for lib in ['c10.lib', 'torch.lib'] ])
+        cpppath = os.path.join(repopath, r"mt5\cpp\pytorchcpp\pytorch")
+        compile = ("cd "+ cpppath + " & " + " @echo off " + " & " + # dont echo vsbuildenvcmd
+                    vsbuildenvcmd +" && "+ " @echo on " + " & " +
+                r"cl.exe /LD /EHsc /Ot /Gz /Fepytorchcpp /DBUILDING_DLL "+ cppdebug + " /O2  pytorch.cpp"+
+                " /I "+ libtorchincludes1 + " /I " + libtorchincludes2 + " " + libtorchlibs)
         print(compile, file=sys.stderr)
         subprocess.call(compile, shell=True)
 
@@ -122,8 +140,10 @@ if os.name == 'nt':
         subprocess.call(symlink, shell=True)
 
     if args.cpdll:
-        repopath_dlls = os.path.join(repopath, 'mt5\cpp')
+        repopath_dlls = os.path.join(repopath, r'mt5\cpp')
         dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll's # (glob recursive not working)
+        # include pytorchcpp dll's
+        dllpaths += list(Path(os.path.join(libtorchpath, 'lib')).glob(r'**\*.dll'))
         # for repeated files get the created most recently
         times = [ os.path.getctime(dll) for dll in dllpaths ]
         dllnames = [os.path.basename(dll) for dll in dllpaths ]

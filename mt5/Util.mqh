@@ -176,27 +176,27 @@ bool IsEqualMqldt_M1(MqlDateTime &mqldt_a, MqlDateTime &mqldt_b)
     return false;
 }
 
-// returns the fractdif coeficients
-// $$ \omega_{k} = -\omega_{k-1}\frac{d-k+1}{k} $$
-// output is allocated inside
-void FracDifCoefs(double d, int size, double &w[]){
-    ArrayResize(w, size);
-    w[0] = 1.;
-    for(int k=1; k<size; k++)
-        w[k]=-w[k-1]/k*(d-k+1);
-    ArrayReverse(w);
-}
-
-// apply fracdif filter on signal array
-// FracDifCoefs must be supplied
-// output is allocated inside
-int FracDifApply(double &signal[], int ssize, double &fracdifcoefs[], int fsize, double &output[]){
-    int corrsize, outsize;
-    corrsize = ssize + fsize - 1;
-    outsize = ssize - fsize + 1; // == corrsize-(fsize-1)*2
-    ArrayResize(output, corrsize);
-    CCorr::CorrR1D(signal, ssize, fracdifcoefs, fsize, output);
-    ArrayCopy(output, output, 0, 0, outsize);
-    ArrayResize(output, outsize);
-    return outsize;
-}
+// // returns the fractdif coeficients
+// // $$ \omega_{k} = -\omega_{k-1}\frac{d-k+1}{k} $$
+// // output is allocated inside
+// void FracDifCoefs(double d, int size, double &w[]){
+//     ArrayResize(w, size);
+//     w[0] = 1.;
+//     for(int k=1; k<size; k++)
+//         w[k]=-w[k-1]/k*(d-k+1);
+//     ArrayReverse(w);
+// }
+//
+// // apply fracdif filter on signal array
+// // FracDifCoefs must be supplied
+// // output is allocated inside
+// int FracDifApply(double &signal[], int ssize, double &fracdifcoefs[], int fsize, double &output[]){
+//     int corrsize, outsize;
+//     corrsize = ssize + fsize - 1;
+//     outsize = ssize - fsize + 1; // == corrsize-(fsize-1)*2
+//     ArrayResize(output, corrsize);
+//     CCorr::CorrR1D(signal, ssize, fracdifcoefs, fsize, output);
+//     ArrayCopy(output, output, 0, 0, outsize);
+//     ArrayResize(output, outsize);
+//     return outsize;
+// }

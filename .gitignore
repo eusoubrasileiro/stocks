@@ -26,3 +26,11 @@
 *.vcxproj*
 *.txt
 *.vs
+*.pdb
+*.exe
+*.ilk
+*.log
+*.tlog
+*.idb
+*.enc
+*.TMP

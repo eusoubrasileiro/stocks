@@ -1,6 +1,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+#define NOMINMAX
+
 #include <windows.h>
 
 /*  To use this exported function of dll, include this header
@@ -10,7 +12,7 @@
 #ifdef BUILDING_DLL
     #define DLL_EXPORT __declspec(dllexport)
 #else
-    #define DLL_EXPORT __declspec(dllimport)  
+    #define DLL_EXPORT __declspec(dllimport)
 #endif
 
 

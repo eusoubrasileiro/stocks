@@ -1,30 +1,28 @@
-#ifndef __MAIN_H__
-#define __MAIN_H__
+#ifndef EXPORTS_H
+#define EXPORTS_H
 
+#define NOMINMAX
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files
 #include <windows.h>
+#include <iostream>
+
 
 /*  To use this exported function of dll, include this header
  *  in your project.
  */
 
 #ifdef BUILDING_DLL
-    #define DLL_EXPORT __declspec(dllexport)
+#define DLL_EXPORT __declspec(dllexport)
 #else
-    #define DLL_EXPORT __declspec(dllimport)  
+#define DLL_EXPORT __declspec(dllimport)
 #endif
 
-
-#ifdef __cplusplus
 extern "C"
 {
-#endif
-
-int DLL_EXPORT Unique(double arr[], int n);
-
-void DLL_EXPORT Histsma(double data[], int n, double bins[], int nb, int nwindow);
-
-#ifdef __cplusplus
+	int DLL_EXPORT FracDifApply(double signal[], int size, double output[]);
+	void DLL_EXPORT setFracDifCoefs(double d, int size);
 }
-#endif
 
-#endif // __MAIN_H__
+#endif //EXPORTS_H

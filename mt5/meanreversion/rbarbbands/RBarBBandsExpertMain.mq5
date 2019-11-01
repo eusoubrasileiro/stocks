@@ -45,7 +45,7 @@ int OnInit(){
 
     // Use the timer to get missing ticks every 1 second
     // will be more than enough this is not HFT! remember that!
-    EventSetTimer(120*5); // in seconds
+    EventSetTimer(30); // in seconds
 
     //--- Initializing expert
     if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber)
@@ -82,18 +82,19 @@ int OnInit(){
 
 
 void OnTimer() {
-    //cExpert.CheckTicks();
+    cExpert.CheckTicks();
 }
 
 // Useless stuff
 //| Expert deinitialization function                                 |
 void OnDeinit(const int reason){
     EventKillTimer();
+    cExpert.Deinit();
 }
 
 //| Expert tick function
 void OnTick(){
-  cExpert.CheckTicks();
+  //cExpert.CheckTicks();
 }
 
 //| Trade function                                                   |

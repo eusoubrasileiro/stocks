@@ -20,6 +20,9 @@ const double             Expert_Fracdif_Window  = 512; // window size fraction f
 // only for tick time-frame
 class CExpertRBarBands : public CExpertX
 {
+#ifdef _DEBUG
+    int file_io_hnd;
+#endif
     // Base Data
     CBufferMqlTicks *m_ticks; // buffer of ticks w. control to download unique ones.
 
@@ -84,6 +87,13 @@ class CExpertRBarBands : public CExpertX
       m_model_last_training =0;
       m_last_raw_signal_index = -1;
    };
+   
+   void Deinit(void){
+        CExpertX::Deinit();
+#ifdef _DEBUG
+        FileClose(file_io_hnd);
+#endif
+   }
 
   void Initialize(int nbands, int bbwindow,
         int batch_size, int ntraining,
@@ -91,6 +101,9 @@ class CExpertRBarBands : public CExpertX
         double run_stoploss, double run_targetprofit, bool recursive,
         int model_refresh=15)
     {
+#ifdef _DEBUG
+    file_io_hnd = FileOpen("rbarbands_ticks.bin", FILE_SHARE_READ|FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON );
+#endif
     // create money bars
     m_ticks = new CBufferMqlTicks(m_symbol.Name());
     m_ticks.Resize(Expert_BufferSize);
@@ -184,13 +197,19 @@ class CExpertRBarBands : public CExpertX
     if(m_ticks.Refresh() > 0 &&
       m_bars.AddTicks(m_ticks.m_data,
         m_ticks.beginNewTicks(), m_ticks.nNew()) > 0)
-    { // some new ticks arrived and new bars created
+    { 
+#ifdef _DEBUG      
+      FileWriteArray(file_io_hnd, m_ticks.m_data, 0, m_ticks.Size());
+      FileFlush(file_io_hnd);
+#endif
+      // some new ticks arrived and new bars created
       // at least one new money bar created
       // refresh whatever possible with new bars
       if(Refresh(m_bars.Size()-m_bars.m_added, m_bars.m_added)){
         // sucess of updating everything w. new data
           verifyEntry();
         }
+       
     }
     // update indicators (trailing stop) 
     // m_symbol.RefreshRates();
@@ -205,7 +224,7 @@ class CExpertRBarBands : public CExpertX
 
   void verifyEntry(){
     //--- updated quotes and indicators
-      if(!isInsideDay())
+    if(!isInsideDay())
         return; // no work outside day scope
 
     // has an entry signal in any band? on the lastest

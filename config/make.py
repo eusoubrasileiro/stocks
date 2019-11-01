@@ -152,35 +152,13 @@ if os.name == 'nt':
         # transform(min) for me should be max - but works
         dllpaths = df.path.values
         print(dllpaths, file=sys.stderr)
-        usermt5path_testeragents = os.path.join(usermt5path, 'Tester', usermt5hash)
-        #print(usermt5path_testeragents,  file=sys.stderr)
-        # search and get all local tester agents paths
-        testeragents= glob.glob(os.path.join(usermt5path_testeragents, 'Agent-127.0.0.1*'))
-        for testeragent in testeragents: # for all tester agents copy all dlls
-            testeragentpath = os.path.join(usermt5path_testeragents, testeragent, r'MQL5\Libraries')
-            #print(testeragentpath,  file=sys.stderr)
-            for dll in dllpaths: # every dll
-                #print(dll,  file=sys.stderr)
-                shutil.copy(dll, testeragentpath)
-            # create a junction for the Python Anaconda3 installation
-            # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  testeragentpath
-            # print(symlink, file=sys.stderr)
-            # subprocess.call(symlink, shell=True)
-        # copy to terminal tester optimization path for command line execution
-        # D:\Users\andre.ferreira\AppData\Roaming\MetaQuotes\Terminal\8B052D0699A0083067EBF3A36123603B\MQL5\Libraries
-        usermt5path_termlibraries = os.path.join(usermt5path, "Terminal", usermt5hash, r'MQL5\Libraries')
-        #print(usermt5path_termlibraries,  file=sys.stderr)
-        for dll in dllpaths: # every dll
-            shutil.copy(dll, usermt5path_termlibraries)
-        # create a junction for the Python Anaconda3 installation?
-        # symlink = r'mklink /j ' + "\"" + pythonpath + "\""+ " " +  usermt5path_termlibraries
-        # print(symlink, file=sys.stderr)
-        # subprocess.call(symlink, shell=True)
-        # must also copy python_code.py  to root D:\Metatrader 5\ path
+        # every dll to mt5path root D:\Metatrader 5\ path MUCH better
+        for dll in dllpaths: #  than multiple cpies to every agent tester path
+            shutil.copy(dll, mt5path)
+        # must also copy python_code.py
         # must run mt5 with python37 envs variables set on "cmd"
         pythoncode_path = os.path.join(repopath, r"mt5\cpp\pythondll\vspythondll\python_code.py")
         shutil.copy(pythoncode_path, mt5path)
-        #dllpaths.append(os.path.join(repopath, r'mt5\cpp\vspythondll\testvspythondll\python_code.py'))
 
     if args.optim:
         # run optimization on default symbols stocks passed as params (to implement)

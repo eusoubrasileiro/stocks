@@ -19,11 +19,13 @@
 
 // Fix array of ticks so if last ask, bid or last is 0
 // they get filled with previous non-zero value as should be
+// volume i dont care because it will only be usefull in change if flag >= 16
 void FixArrayTicks(MqlTick &ticks[]){
   int nticks = ArraySize(ticks);
   double       bid = 0;           // Current Bid price
   double       ask = 0;           // Current Ask price
   double       last = 0;          // Price of the last deal (Last)
+  double       volume = 0;
   for(int i=0; i<nticks;i++){ // cannot be done in parallel?
     if(ticks[i].bid == 0)
        ticks[i].bid = bid;

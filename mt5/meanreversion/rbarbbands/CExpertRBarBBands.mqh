@@ -87,7 +87,7 @@ class CExpertRBarBands : public CExpertX
       m_model_last_training =0;
       m_last_raw_signal_index = -1;
    };
-   
+
    void Deinit(void){
         CExpertX::Deinit();
 #ifdef _DEBUG
@@ -99,7 +99,7 @@ class CExpertRBarBands : public CExpertX
         int batch_size, int ntraining,
         double ordersize, double stoploss, double targetprofit,
         double run_stoploss, double run_targetprofit, bool recursive,
-        int model_refresh=15)
+        int model_refresh=60e8)
     {
 #ifdef _DEBUG
     file_io_hnd = FileOpen("rbarbands_ticks.bin", FILE_SHARE_READ|FILE_READ|FILE_WRITE|FILE_BIN|FILE_COMMON );
@@ -107,7 +107,7 @@ class CExpertRBarBands : public CExpertX
     // create money bars
     m_ticks = new CBufferMqlTicks(m_symbol.Name());
     m_ticks.Resize(Expert_BufferSize);
-    m_bars = new MoneyBarBuffer(m_symbol.TickValue(),     
+    m_bars = new MoneyBarBuffer(m_symbol.TickValue(),
                     m_symbol.TickSize(), Expert_MoneyBar_Size);
     m_bars.Resize(Expert_BufferSize);
     m_times = new CTimeDayBuffer();
@@ -128,9 +128,11 @@ class CExpertRBarBands : public CExpertX
     // training
     m_batch_size = batch_size;
     m_ntraining = ntraining; // minimum number of X, y training pairs
-    // total of indicar features is 1
+    // total of signal features
+    // m_nbands band signals
+    // indicar features is 1
     // 1 - fracdiff on prices
-    m_nsignal_features = 1;
+    m_nsignal_features = m_nbands+1;
     m_xtrain_dim = m_nsignal_features*m_batch_size;
 
     // allocate array of bbands indicators
@@ -165,10 +167,10 @@ class CExpertRBarBands : public CExpertX
         m_times.Add(m_bars.m_data[i].time_msc); //moneybar.time_msc
     }
     bool result = true;
-    
+
     // all bellow must be called to maintain alligment of buffers
     // by creating empty samples
-    
+
     // features indicators
     // fracdif on bar prices order of && matter
     // first is what you want to do and second what you want to try
@@ -194,24 +196,26 @@ class CExpertRBarBands : public CExpertX
   // has not being processed yet
   void CheckTicks(void)
   {
-    if(m_ticks.Refresh() > 0 &&
-      m_bars.AddTicks(m_ticks.m_data,
-        m_ticks.beginNewTicks(), m_ticks.nNew()) > 0)
-    { 
-#ifdef _DEBUG      
-      FileWriteArray(file_io_hnd, m_ticks.m_data, 0, m_ticks.Size());
+    if(m_ticks.Refresh() > 0){
+#ifdef _DEBUG
+      //FileSeek(file_io_hnd, 0, SEEK_SET);
+      FileWriteArray(file_io_hnd, m_ticks.m_data,
+          m_ticks.beginNewTicks(), m_ticks.nNew());
       FileFlush(file_io_hnd);
 #endif
-      // some new ticks arrived and new bars created
-      // at least one new money bar created
-      // refresh whatever possible with new bars
-      if(Refresh(m_bars.Size()-m_bars.m_added, m_bars.m_added)){
-        // sucess of updating everything w. new data
-          verifyEntry();
+        if( m_bars.AddTicks(m_ticks.m_data,
+            m_ticks.beginNewTicks(), m_ticks.nNew()) > 0)
+        {
+          // some new ticks arrived and new bars created
+          // at least one new money bar created
+          // refresh whatever possible with new bars
+          if(Refresh(m_bars.Size()-m_bars.m_added, m_bars.m_added)){
+            // sucess of updating everything w. new data
+              verifyEntry();
+          }
         }
-       
     }
-    // update indicators (trailing stop) 
+    // update indicators (trailing stop)
     // m_symbol.RefreshRates();
     m_indicators.Refresh();
 
@@ -245,12 +249,12 @@ class CExpertRBarBands : public CExpertX
            // time to train the model for the first time
             m_model.isready = PythonTrainModel();
           }
-          else // time to update the model?
-          if((m_xypair_count - m_model_last_training) >= m_model_refresh){
+          //else // time to update the model?
+          //if((m_xypair_count - m_model_last_training) >= m_model_refresh){
           // if diference in training samples to the last training is bigger than
           // refresh criteria - time to train again
-            m_model.isready = PythonTrainModel();
-          }
+          //  m_model.isready = PythonTrainModel();
+          //}
           // record when last training happened
           m_model_last_training = m_xypair_count;
         }
@@ -565,13 +569,17 @@ bool CExpertRBarBands::CreateXFeatureVector(XyPair &xypair)
   // double[Expert_BufferSize][nsignal_features] would be awesome
   // easier to copy to X also to create cross-features
   // using a constant on the second dimension is possible
-  bufi = BufferTotal()-1-bufi;
+  //bufi = BufferTotal()-1-bufi;
+  bufi -= m_batch_size;
   int batch_end_idx = bufi+m_batch_size;
   for(int timeidx=bufi; timeidx<batch_end_idx; timeidx++){
     // from past to present
+    // features from band signals
+    for(int i=0; i<m_nbands; i++, xifeature++){
+      xypair.X[xifeature] = m_raw_signal[i][timeidx];
+    }
     // fracdif feature
-    //for(int i=0; i<m_nbands; i++, xifeature++)
-    xypair.X[xifeature] = m_fd_mbarp[timeidx];
+    xypair.X[xifeature++] = m_fd_mbarp[timeidx];
     // some indicators might contain EMPTY_VALUE == DBL_MAX values
     // verified volumes with EMPTY VALUES but I suppose that also might happen
     // with others in this case better drop the training sample?
@@ -622,6 +630,8 @@ int CExpertRBarBands::PythonPredict(XyPair &xypair){
 
 void CExpertRBarBands::BuySell(int sign){
     double amount, sl, tp;
+    m_symbol.Refresh();
+    m_symbol.RefreshRates();
     if(sign == 1){
         amount = roundVolume(m_ordersize/m_symbol.Ask());
         sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_run_stoploss)/amount);

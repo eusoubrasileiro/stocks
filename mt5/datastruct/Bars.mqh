@@ -53,9 +53,9 @@ protected:
 
 public:
     int m_added; // number of bars added on last call
-    
+
     int BeginAdded(){ return Size()-m_added; }
-    
+
     MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize){
       m_point_value = tickvalue/ticksize;
       m_moneybarsize = moneybarsize;
@@ -64,20 +64,23 @@ public:
     }
 
     // add one tick and create as many money bars as needed (or 0)
-    // return number created or -1 on error
+    // return number created 
     int AddTick(MqlTick &tick){
       m_added = 0;
-      m_count_money += tick.volume_real*tick.last*m_point_value;
-      while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
-          // if(ibars == nticks)// ibars may explode if moneybarsize too small
-          //   return -1; // dont explode this is a buffer delete older ones
-          m_bar.bid = tick.bid;
-          m_bar.ask = tick.ask;
-          m_bar.last = tick.last;
-          m_bar.time_msc = tick.time_msc;
-          CStructBuffer<MoneyBar>::Add(m_bar);
-          m_count_money -= m_moneybarsize;
-          m_added++;
+      // flags bellow < 16 are only re-quotes
+      if(tick.flags > 12){ // at last volume changed - so there was a deal
+          m_count_money += tick.volume_real*tick.last*m_point_value;
+          while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
+              // if(ibars == nticks)// ibars may explode if moneybarsize too small
+              //   return -1; // dont explode this is a buffer delete older ones
+              m_bar.bid = tick.bid;
+              m_bar.ask = tick.ask;
+              m_bar.last = tick.last;
+              m_bar.time_msc = tick.time_msc;
+              CStructBuffer<MoneyBar>::Add(m_bar);
+              m_count_money -= m_moneybarsize;
+              m_added++;
+          }
       }
       return m_added;
     }

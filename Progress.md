@@ -251,3 +251,43 @@ July 2019
     - [x] Implement money based input for expert when buying stocks. `OrderSize` changed to money value in R$ in `NaiveGapExpert`
     - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.
     - [ ] Use ARIMA `statsmodel` package to predict price every two hours per day.  
+
+
+#### Found book Advances In Financial Machine Learning (2018) - Marcos Lopez de Prado
+
+- Best thing ever since the beginning. Discuss everything I want to do. Because of it changed from minute bar.  
+  - Money Bar based on ticks
+    - Everything implemented to work in seconds time-frame
+      - [x] Implement buffer of ticks     
+      - [x] Implement talib C indicators
+      - [x] Implement fractional differences indicator    
+  - Verified that mt5 has problems with optimization when using `CopyTicksRange`.
+    - Every tick / Every tick based on real ticks - is useless
+      - volumes negotiated have nothing to-do with reality
+      - Every tick
+          - Creates non-sense volume ticks (do no respect the minvolume for the symbol)
+          - ask-bid flutuates crazily
+      - Every tick based on reak ticks
+          - Volumes are correct but interpolates
+    - [x] Solution found create a custom SYMBOl (unless change do MT4 that's x86 only)
+        - Import bar data M1, import tick data
+        - Use every tick based on real ticks
+        - Ideally minute bars should be created from the ticks because mt5 trust them more.
+        If ticks and bars are available and differ bars are used and fake ticks are created.
+
+ - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
+So cpu is allways in 100%.
+
+  - Todo:
+    - [x] Max number of open positions
+    - [ ] Labeling samples
+      - [ ] Tripple barrier method. Implement missing expire time for positions.
+      - [ ] Correct for delay on execution with random integer max bars allowed on execution.
+    - [ ] Cross-validation to check if model is ready. In fact better to use `oob_score_` to check if model is good at first fit call.
+    Then is better to use `accuracy_score` from `sklearn.metrics` with `sample_weight` to check if a new model is needed.
+    - [ ] Change number of estimatiors to 1k
+    - [ ] Use `warm_start` to make a partial fit on new data also adding on n_estimators (e.g  clf.n_estimators += 100)
+Is not the same thing as training the model with all data but might be useful.
+    - [x] Use adasyn or smote for correcting for class inbalance seem too much for now (overkill).
+Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subsample' is due the bootstrap process to created each random tree.
+    - [x] Also use `max_features` smaller than the `xdim` to fight overfitting.

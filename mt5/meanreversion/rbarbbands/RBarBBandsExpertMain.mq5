@@ -3,7 +3,7 @@
 
 #include "..\..\TrailingMA.mqh"
 #include "..\..\Util.mqh"
-#include "CExpertRBarBBands.mqh"
+#include "RBarBBands.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -14,7 +14,7 @@ input int                      Expert_Window          = 21;
 // "memory" of patterns for training sklearn model
 input int                  Expert_Batch_Size          = 15;
 // minimum number of samples for training
-input int                   Expert_NTraining          = 60;
+input int                   Expert_NTraining          = 600;
 // orderSize in $$$
 input double                Expert_OrderSize          = 25e3;
 // stop loss for each order $$$
@@ -48,8 +48,7 @@ int OnInit(){
     EventSetTimer(30); // in seconds
 
     //--- Initializing expert
-    if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber)
-          || !cExpert.setPublic()) // initialize "gambiarra" CTrade public variable
+    if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber))
       return(-1);
 
     cExpert.setDayTradeParams(Expert_PositionExpireHours, Expert_DayEndHour);
@@ -93,24 +92,19 @@ void OnDeinit(const int reason){
 }
 
 //| Expert tick function
-void OnTick(){
-  //cExpert.CheckTicks();
-}
+//void OnTick(){
+//cExpert.CheckTicks();
+//}
 
 //| Trade function                                                   |
 void OnTrade(){
+    cExpert.OnTrade();
 }
 
-//| TradeTransaction function                                        |
-void OnTradeTransaction(const MqlTradeTransaction &trans,
-    const MqlTradeRequest &request,
-    const MqlTradeResult &result){
-}
+//| TradeTransaction function                                       |
 
-//| TesterInit function
-void OnTesterInit(){
-}
-
-//+------------------------------------------------------------------+
-void OnTesterDeinit(){
-}
+//void OnTradeTransaction(const MqlTradeTransaction &trans,
+//    const MqlTradeRequest &request,
+//    const MqlTradeResult &result){
+//
+//}

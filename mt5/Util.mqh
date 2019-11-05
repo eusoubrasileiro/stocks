@@ -2,91 +2,12 @@
 #include "TrailingMA.mqh"
 #include <Arrays\ArrayDouble.mqh>
 #include <Trade\Trade.mqh>
-#include <Math/Alglib/fasttransforms.mqh> // fracdif
 
 #import "cpparm.dll"
 int Unique(double &arr[],int n);
 // bins specify center of bins
 int  Histsma(double &data[],int n,double &bins[],int nb,int nwindow);
 #import
-
-// custom Expert class with additional functionalities
-// - Day Trade
-//      - Expire positions by time
-// - Rounding Volumes and Prices
-
-class CExpertX : public CExpert
-{
-  int m_positionExpireTime; // to close a position by time (expire time)
-  double m_expertDayEndHour; // Operational window maximum HOUR OF DAY (in hours)
-
-  public:
-  CTrade *trader;
-  CSymbolInfo *symbol;
-
-                     CExpertX(void){};
-                    ~CExpertX(void){};
-
-  void setDayTradeParams(double positionExpireHours=100, // default dont close  positions by time
-                              double dayEndHour=16.5){ // default day end 16:30 hs
-      m_positionExpireTime = (int) (positionExpireHours*3600); // hours to seconds
-      m_expertDayEndHour = dayEndHour;
-  }
-
-  bool setPublic(){ // make protect usefull variables public
-    // can only be called after CExpertInit()
-    if(m_trade != NULL && m_symbol != NULL){
-      trader = GetPointer(m_trade);
-      symbol = GetPointer(m_symbol);
-      return true;
-    }
-    return false;
-  }
-
-  // round price value to tick size of symbol replaced by m_symbol.NormalizePrice
-  // double roundTickSize(double price){
-  //     return int(price/m_symbol.TickSize())*m_symbol.TickSize();
-  // }
-  // round price minimum volume of symbol 100's stocks 1 for future contracts
-  double roundVolume(double vol){
-      // LotsMin same as SYMBOL_VOLUME_MIN
-      return int(vol/m_symbol.LotsMin())*m_symbol.LotsMin();
-  }
-
- bool CloseOpenPositionsbyTime(){
-     // Refresh() and SelectPosition() MUST have been called prior to this
-     // NET MODE only ONE buy or ONE sell at once
-     datetime timenow= TimeCurrent();
-     datetime dayend = dayEnd(timenow);
-     datetime positiontime  = m_position.Time();
-     // Magic check inside CTrade PositionClose
-     if(positiontime +  m_positionExpireTime > timenow
-                && timenow < dayend )
-          return false;
-      // close whatever position is open NET_MODE
-      m_trade.PositionClose(m_symbol.Name());
-      return true;
-  }
-
-  bool isInsideDay(){
-    // check inside daytrade allowed period
-    datetime now = TimeCurrent();
-    if(now >= dayEnd(now))
-        return false;
-    return true;
-  }
-
-
-  protected:
-
-  datetime dayEnd(datetime timenow){
-      // set end of THIS day for operations, based on _expertDayEndHour
-      // http://www.b3.com.br/en_us/solutions/platforms/
-      //puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
-      return GetDayZeroHour(timenow)+int(m_expertDayEndHour*3600);
-  }
-
-};
 
 // calculate begin of the day Zero Hour
 // TODO OPTIMIZE it to make use of the 8 bytes

@@ -1350,35 +1350,10 @@ bool CExpert::CheckTradeState(void)
    int ord_tot     =OrdersTotal();
    int deal_tot    =HistoryDealsTotal();
    int pos_tot     =PositionsTotal();
-//--- check for quantitative changes
-   if(hist_ord_tot==m_hist_ord_tot && ord_tot==m_ord_tot && deal_tot==m_deal_tot && pos_tot==m_pos_tot)
-     {
-      //--- no quantitative changes
-      if(IS_WAITING_POSITION_MODIFIED)
-        {
-         res=TradeEventPositionModified();
-         NoWaitEvent(TRADE_EVENT_POSITION_MODIFY);
-        }
-      if(IS_WAITING_ORDER_MODIFIED)
-        {
-         res=TradeEventOrderModified();
-         NoWaitEvent(TRADE_EVENT_ORDER_MODIFY);
-        }
-      return(true);
-     }
-//--- check added a pending order
-   if(hist_ord_tot==m_hist_ord_tot && ord_tot==m_ord_tot+1 && deal_tot==m_deal_tot && pos_tot==m_pos_tot)
-     {
-      //--- was added a pending order
-      res=TradeEventOrderPlaced();
-      //--- establishment of the checkpoint history of the trade
-      HistoryPoint(true);
-      return(true);
-     }
 //--- check make a deal "with the market"
-   if(hist_ord_tot==m_hist_ord_tot+1 && ord_tot==m_ord_tot)
+   if(hist_ord_tot==m_hist_ord_tot+1)
      {
-      //--- was an attempt to make a deal "with the market"
+      //--- was a deal "with the market"
       if(deal_tot==m_deal_tot+1)
         {
          //--- operation successfull
@@ -1386,11 +1361,7 @@ bool CExpert::CheckTradeState(void)
          if(pos_tot==m_pos_tot)
            {
             //--- position update/subtracting
-            if(IS_WAITING_POSITION_VOLUME_CHANGED)
-              {
-               res=TradeEventPositionVolumeChanged();
-               NoWaitEvent(TRADE_EVENT_POSITION_VOLUME_CHANGE);
-              }
+            res=TradeEventPositionVolumeChanged();
             //--- establishment of the checkpoint history of the trade
             HistoryPoint(true);
             return(res);
@@ -1399,11 +1370,7 @@ bool CExpert::CheckTradeState(void)
          if(pos_tot==m_pos_tot+1)
            {
             //--- position open
-            if(IS_WAITING_POSITION_OPENED)
-              {
-               res=TradeEventPositionOpened();
-               NoWaitEvent(TRADE_EVENT_POSITION_OPEN);
-              }
+            res=TradeEventPositionOpened();
             //--- establishment of the checkpoint history of the trade
             HistoryPoint(true);
             return(res);
@@ -1412,13 +1379,7 @@ bool CExpert::CheckTradeState(void)
          if(pos_tot==m_pos_tot-1)
            {
             //--- position is closed (including the stoploss/takeprofit)
-            if(IS_WAITING_POSITION_CLOSED)
-              {
-               res=TradeEventPositionClosed();
-               NoWaitEvent(TRADE_EVENT_POSITION_CLOSE);
-              }
-            else
-               res=TradeEventPositionStopTake();
+            res=TradeEventPositionClosed();
             //--- establishment of the checkpoint history of the trade
             HistoryPoint(true);
             return(res);
@@ -1432,62 +1393,6 @@ bool CExpert::CheckTradeState(void)
          return(false);
         }
      }
-//--- check delete pending order
-   if(hist_ord_tot==m_hist_ord_tot+1 && ord_tot==m_ord_tot-1 && deal_tot==m_deal_tot && pos_tot==m_pos_tot)
-     {
-      //--- delete pending order
-      res=TradeEventOrderDeleted();
-      //--- establishment of the checkpoint history of the trade
-      HistoryPoint(true);
-      return(res);
-     }
-//--- check triggering of a pending order
-   if(hist_ord_tot==m_hist_ord_tot+1 && ord_tot==m_ord_tot-1)
-     {
-      //--- triggering of a pending order
-      if(deal_tot==m_deal_tot+1)
-        {
-         //--- operation successfull
-         //--- check position update/subtracting
-         if(pos_tot==m_pos_tot)
-           {
-            //--- position update/subtracting
-            res=TradeEventOrderTriggered();
-            //--- establishment of the checkpoint history of the trade
-            HistoryPoint(true);
-            return(res);
-           }
-         //--- check position open
-         if(pos_tot==m_pos_tot+1)
-           {
-            //--- position open
-            res=TradeEventOrderTriggered();
-            //--- establishment of the checkpoint history of the trade
-            HistoryPoint(true);
-            return(res);
-           }
-         //--- check position is closed
-         if(pos_tot==m_pos_tot-1)
-           {
-            //--- position is closed
-            res=TradeEventOrderTriggered();
-            //--- establishment of the checkpoint history of the trade
-            HistoryPoint(true);
-            return(res);
-           }
-        }
-      else
-        {
-         //--- operation failed
-         //--- establishment of the checkpoint history of the trade
-         HistoryPoint(true);
-         return(false);
-        }
-     }
-//--- trade event non identifical
-   res=TradeEventNotIdentified();
-//--- establishment of the checkpoint history of the trade
-   HistoryPoint(true);
 //---
    return(res);
   }

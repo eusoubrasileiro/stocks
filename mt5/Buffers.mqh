@@ -338,3 +338,229 @@ public:
     int BufferSize(){ return m_data_max; }
 
 };
+
+//////////////////////////////////
+// Circular Buffers - Fixed Size//
+/////////////////////////////////
+
+// much faster because dont need to ArrayCopy
+// everything once full
+
+template<typename Type>
+class CCBuffer
+{
+protected:
+    int m_data_max;
+    int m_intdiv;
+
+public:
+    Type m_data[];
+    int m_cposition; // current position of end of data
+    int isfull;
+
+    CCBuffer();
+
+    CCBuffer(int size) {
+        SetSize(size);
+    }
+
+    void SetSize(int size){
+      isfull = 0;
+      m_data_max = size;
+      m_cposition = 0;
+      ArrayResize(m_data, size);
+    }
+
+    ~CCBuffer(void) { ArrayFree(m_data); }
+
+    Type operator[](const int index) const { return m_data[index]; }
+
+    int Count(void){ return (isfull!=0)? m_data_max: m_cposition; }
+
+    void RemoveLast(void){
+      if(m_cposition==0)
+        m_cposition = m_data_max-1;
+      else
+        m_cposition--;
+    }
+
+    void Add(Type element){
+      //--- add data in the end
+      m_data[m_cposition]=element;
+      m_cposition++;
+      // integer division
+      m_intdiv = m_cposition/m_data_max; // if bigger is gonna be 1
+      m_cposition -= m_intdiv*m_data_max; // same as making (m_cposition +1)%m_data_max
+      isfull = (isfull!=0)? isfull : m_intdiv;
+    }
+
+    // you may want to insert a range smaller than the full size
+    // of elements array
+    void AddRange(Type &elements[], int start=0, int tsize=0){
+      tsize = (tsize <= 0) ? ArraySize(elements): tsize;
+      for(int i=start; i<tsize; i++)
+         Add(elements[i]);
+    }
+
+    void AddEmpty(int count){ // and count samples with EMPTY value
+      for(int i=0; i<count;i++)
+        Add(EMPTY_VALUE);
+    }
+
+    int Size(){ return m_data_max; }
+
+    // given begin
+    // -- index based on start of data
+    // and count
+    // -- number of elements to copy
+    // returns indexes of data to performs copy
+    // in two parts or one part
+    // start and end of two parts
+    // depending on the m_cposition
+    // return 1 or 2 depending if two parts
+    // or only 1 part needed to be copied
+    int indexesData(int  begin,  int count,
+                    int &start1, int &end1,
+                    int &start2, int &end2){
+      int tmpcount = Count();
+      if(count > m_data_max | count > tmpcount | tmpcount == 0)
+        return 0;
+      if(m_cposition!=0 && isfull!=0){
+        // buffer has two parts full filled
+        start1 = (m_cposition + begin);
+        if(start1 > m_data_max){
+          start1 %= m_data_max;
+          end1 = start1 + count; // cannot go around again
+          // otherwise count would be bigger than m_data_max
+          start2 = 0;
+          end2 = 0;
+          return 1;
+        }
+        end1 = start1 + count;
+        if(end1 > m_data_max){
+          start2 = 0;
+          end2 = end1%m_data_max;
+          end1 = m_data_max;
+          return 2;
+        }
+        start2 = 0;
+        end2 = 0;
+        return 1;
+      }
+      // one part only
+      start1 = begin;
+      end1 = begin+count;
+      start2 = 0;
+      end2 = 0;
+      return 1;
+    }
+
+};
+
+// Same as above but for structs
+// without  AddEmpty
+template<typename Type>
+class CCStructBuffer
+{
+protected:
+    int m_data_max;
+    int m_intdiv;
+
+public:
+    Type m_data[];
+    int m_cposition; // current position of end of data
+    int isfull;
+
+    CCStructBuffer(){isfull=0;m_cposition=0;};
+
+    CCStructBuffer(int size) {
+        SetSize(size);
+    }
+
+    void SetSize(int size){
+      isfull = 0;
+      m_data_max = size;
+      m_cposition = 0;
+      ArrayResize(m_data, size);
+    }
+
+    ~CCStructBuffer(void) { ArrayFree(m_data); }
+
+    Type operator[](const int index) const { return m_data[index]; }
+
+    int Count(void){ return (isfull!=0)? m_data_max: m_cposition; }
+
+    void RemoveLast(void){
+      if(m_cposition==0)
+        m_cposition = m_data_max-1;
+      else
+        m_cposition--;
+    }
+
+    void Add(Type &element){
+      //--- add data in the end
+      m_data[m_cposition]=element;
+      m_cposition++;
+      // integer division
+      m_intdiv = m_cposition/m_data_max; // if bigger is gonna be 1
+      m_cposition -= m_intdiv*m_data_max; // same as making (m_cposition +1)%m_data_max
+      isfull = (isfull!=0)? isfull : m_intdiv;
+    }
+
+    // you may want to insert a range smaller than the full size
+    // of elements array
+    void AddRange(Type &elements[], int start=0, int tsize=0){
+      tsize = (tsize <= 0) ? ArraySize(elements): tsize;
+      for(int i=start; i<tsize; i++)
+         Add(elements[i]);
+    }
+
+    int Size(){ return m_data_max; }
+
+    // given begin
+    // -- index based on start of data
+    // and count
+    // -- number of elements to copy
+    // returns indexes of data to performs copy
+    // in two parts or one part
+    // start and end of two parts
+    // depending on the m_cposition
+    // return 1 or 2 depending if two parts
+    // or only 1 part needed to be copied
+    int indexesData(int  begin,  int count,
+                    int &start1, int &end1,
+                    int &start2, int &end2){
+      int tmpcount = Count();
+      if(count > m_data_max | count > tmpcount | tmpcount == 0)
+        return 0;
+      if(m_cposition!=0 && isfull!=0){
+        // buffer has two parts full filled
+        start1 = (m_cposition + begin);
+        if(start1 > m_data_max){
+          start1 %= m_data_max;
+          end1 = start1 + count; // cannot go around again
+          // otherwise count would be bigger than m_data_max
+          start2 = 0;
+          end2 = 0;
+          return 1;
+        }
+        end1 = start1 + count;
+        if(end1 > m_data_max){
+          start2 = 0;
+          end2 = end1%m_data_max;
+          end1 = m_data_max;
+          return 2;
+        }
+        start2 = 0;
+        end2 = 0;
+        return 1;
+      }
+      // one part only
+      start1 = begin;
+      end1 = begin+count;
+      start2 = 0;
+      end2 = 0;
+      return 1;
+    }
+
+};

@@ -47,8 +47,8 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
   //  TRADE_EVENT_POSITION_CLOSE|TRADE_EVENT_POSITION_VOLUME_CHANGE);
     
   // create money bars
-  m_ticks = new CBufferMqlTicks(m_symbol.Name());
-  m_ticks.Resize(Expert_BufferSize);
+  m_ticks = new CCBufferMqlTicks(m_symbol.Name());
+  m_ticks.SetSize(Expert_BufferSize);
   m_bars = new MoneyBarBuffer(m_symbol.TickValue(),
                   m_symbol.TickSize(), Expert_MoneyBar_Size);
   m_bars.Resize(Expert_BufferSize);
@@ -56,7 +56,7 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
   m_times.Resize(Expert_BufferSize);
 
   m_recursive = recursive;
-    // Call only after init indicators
+  // Call only after init indicators
   m_nbands = nbands;
   m_bbwindow = bbwindow;
   // ordersize is in $$
@@ -145,8 +145,7 @@ void CExpertRBarBands::CheckTicks(void)
         m_ticks.beginNewTicks(), m_ticks.nNew());
     FileFlush(file_io_hnd);
   #endif
-      if( m_bars.AddTicks(m_ticks.m_data,
-          m_ticks.beginNewTicks(), m_ticks.nNew()) > 0)
+      if(m_bars.AddTicks(m_ticks) > 0)
       {
         // some new ticks arrived and new bars created
         // at least one new money bar created

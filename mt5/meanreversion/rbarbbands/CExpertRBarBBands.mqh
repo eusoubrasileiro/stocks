@@ -25,7 +25,7 @@ class CExpertRBarBands : public CExpertMain
     int file_io_hnd;
 #endif
     // Base Data
-    CBufferMqlTicks *m_ticks; // buffer of ticks w. control to download unique ones.
+    CCBufferMqlTicks *m_ticks; // buffer of ticks w. control to download unique ones.
 
     // All Buffer-Derived classes bellow have indexes alligned
     // except for CObjectBuffer<XyPair>
@@ -110,7 +110,7 @@ class CExpertRBarBands : public CExpertMain
   // OnTick is not called again if the first OnTick
   // has not being processed yet
   void CheckTicks(void);
-  void verifyEntry();
+  virtual void verifyEntry();
 
   protected:
 

@@ -9,6 +9,10 @@ int Unique(double &arr[],int n);
 int  Histsma(double &data[],int n,double &bins[],int nb,int nwindow);
 #import
 
+#import "msvcrt.dll"
+  int memcpy(double &dst[],  double &src[], int cnt);  
+#import
+
 // calculate begin of the day Zero Hour
 // TODO OPTIMIZE it to make use of the 8 bytes
 // UNIX timestamp in seconds since 1970 only 8 bytes

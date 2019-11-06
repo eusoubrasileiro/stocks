@@ -1,4 +1,5 @@
 #include "../Buffers.mqh"
+#include "CBufferMqlTicks.mqh"
 //#include "Time.mqh"
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
@@ -77,7 +78,7 @@ public:
               m_bar.ask = tick.ask;
               m_bar.last = tick.last;
               m_bar.time_msc = tick.time_msc;
-              CStructBuffer<MoneyBar>::Add(m_bar);
+              Add(m_bar);
               m_count_money -= m_moneybarsize;
               m_added++;
           }
@@ -93,5 +94,19 @@ public:
       m_added = added; // overwrite internal added increment
       return m_added;
     }
+    
+    int AddTicks(CCBufferMqlTicks &ticks)
+    {
+      int added = 0;
+      int start1, start2, end1, end2;
+      ticks.indexesNewTicks(start1, end1, start2, end2);          
+      for(int i=start1; i<end1; i++)
+          added += AddTick(ticks.m_data[i]);
+      for(int i=start2; i<end2; i++)
+          added += AddTick(ticks.m_data[i]);            
+      m_added = added; // overwrite internal added increment
+      return m_added;
+    }  
+    
 
 };

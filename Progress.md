@@ -291,3 +291,9 @@ Is not the same thing as training the model with all data but might be useful.
     - [x] Use adasyn or smote for correcting for class inbalance seem too much for now (overkill).
 Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subsample' is due the bootstrap process to created each random tree.
     - [x] Also use `max_features` smaller than the `xdim` to fight overfitting.
+    - [x] ArrayCopy of `CBuffer` and `CStructBuffer<MqlTicks>` is way too slow, even without any Python call, because of ArrayCopy.
+Unfortunately circular buffer is needed now.
+        - [x] Created `CCBuffer` and `CCStructBuffer` using circular buffer fixed size.
+        - [x] Solved new version `CCBufferMqlTicks` using circular buffer change place from 98% time used to 0.25% on profiling
+    - [ ] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size). 
+`ArrayCopy` of `CBuffer` is taking 95.24% on profiling.

@@ -95,9 +95,9 @@ public:
    // borroewd code from CWindowIndicator due no multiple inheritance
   int m_calculated; // number of samples calculated in the last call
   //CTaBBands code
-  CBuffer<double> *m_upper;
-  CBuffer<double> *m_middle;
-  CBuffer<double> *m_down;
+  CCBuffer<double> *m_upper;
+  CCBuffer<double> *m_middle;
+  CCBuffer<double> *m_down;
 
   // borroewd code from CWindowIndicator due no multiple inheritance
   void Init(int window){
@@ -108,9 +108,9 @@ public:
   }
 
   CTaBBANDS(int window, double devs, int ma_type){
-      m_upper = new CBuffer<double>();
-      m_down = new CBuffer<double>();
-      m_middle = new CBuffer<double>();
+      m_upper = new CCBuffer<double>();
+      m_down = new CCBuffer<double>();
+      m_middle = new CCBuffer<double>();
       m_devs = devs;
       m_tama_type = ma_type;
       // borroewd code from CWindowIndicator due no multiple inheritance
@@ -194,11 +194,11 @@ public:
     return true;
   }
 
-  bool Resize(const int size)
+  void SetSize(const int size)
   {
-    return m_upper.Resize(size) &&
-           m_middle.Resize(size) &&
-           m_down.Resize(size);
+    m_upper.SetSize(size);
+    m_middle.SetSize(size); 
+    m_down.SetSize(size);
   }
 
   int Size(){

@@ -109,7 +109,7 @@ public:
      bool ResizeFixed(const int size)
      {
         m_data_max = size;
-        return ArrayResize(m_data, size);
+        return ArrayResize(m_data, size) != -1;
      }
 
     // Get Data At index position using Array As Series Convention
@@ -328,6 +328,12 @@ public:
        return(m_data_max==new_size);
       }
 
+     bool ResizeFixed(const int size)
+     {
+        m_data_max = size;
+        return ArrayResize(m_data, size) != -1;
+     }
+
     // Get Data At index position using Array As Series Convention
     // youngest sample is at (0)
     Type GetData(const int index) const
@@ -358,7 +364,7 @@ public:
     int m_cposition; // current position of end of data
     int isfull;
 
-    CCBuffer();
+    CCBuffer(){};
 
     CCBuffer(int size) {
         SetSize(size);
@@ -373,7 +379,17 @@ public:
 
     ~CCBuffer(void) { ArrayFree(m_data); }
 
-    Type operator[](const int index) const { return m_data[index]; }
+    Type operator[](const int index) const {
+        return m_data[(m_cposition+index)%m_data_max];
+    }
+    // convert to index based on start of data
+    // from absolute index
+    int toIndex(int abs_index)
+    {
+        if(isfull!=0 && m_cposition!=0)
+          return (abs_index >= m_cposition)? abs_index-m_cposition: abs_index+(m_data_max-m_cposition);
+        return abs_index;
+    }
 
     int Count(void){ return (isfull!=0)? m_data_max: m_cposition; }
 
@@ -423,7 +439,7 @@ public:
                     int &start1, int &end1,
                     int &start2, int &end2){
       int tmpcount = Count();
-      if(count > m_data_max | count > tmpcount | tmpcount == 0)
+      if(count > m_data_max || count > tmpcount || tmpcount == 0)
         return 0;
       if(m_cposition!=0 && isfull!=0){
         // buffer has two parts full filled
@@ -460,7 +476,7 @@ public:
     {
       return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
     }
-    
+
 };
 
 // Same as above but for structs
@@ -492,7 +508,19 @@ public:
 
     ~CCStructBuffer(void) { ArrayFree(m_data); }
 
-    Type operator[](const int index) const { return m_data[index]; }
+    // correct index to start of data
+    Type operator[](const int index) const {
+        return m_data[(m_cposition+index)%m_data_max];
+    }
+
+    // convert to index based on start of data
+    // from absolute index
+    int toIndex(int abs_index)
+    {
+        if(isfull!=0 && m_cposition!=0)
+          return (abs_index >= m_cposition)? abs_index-m_cposition: abs_index+(m_data_max-m_cposition);
+        return abs_index;
+    }
 
     int Count(void){ return (isfull!=0)? m_data_max: m_cposition; }
 
@@ -537,7 +565,7 @@ public:
                     int &start1, int &end1,
                     int &start2, int &end2){
       int tmpcount = Count();
-      if(count > m_data_max | count > tmpcount | tmpcount == 0)
+      if(count > m_data_max || count > tmpcount || tmpcount == 0)
         return 0;
       if(m_cposition!=0 && isfull!=0){
         // buffer has two parts full filled

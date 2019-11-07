@@ -1,5 +1,5 @@
 #include "../Buffers.mqh"
-#include "CBufferMqlTicks.mqh"
+#include "Ticks.mqh"
 //#include "Time.mqh"
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
@@ -55,7 +55,7 @@ protected:
 public:
     int m_nnew; // number of bars nnew on last call
     double m_last[]; // lastest added last prices
-    double m_times[]; // ... . ...... times in msc
+    long m_times[]; // ... . ...... times in msc
 
     ~MoneyBarBuffer(){ ArrayFree(m_last); ArrayFree(m_times); }
 
@@ -63,21 +63,28 @@ public:
         return indexesData(Count()-m_nnew, m_nnew, parts);
     }
 
-    // copy last prices of new bars m_nnew
+    // copy last data of new bars m_nnew
+    // to local arrays 
     void RefreshArrays(){
-      ArrayResize(m_last, m_nnew);
-      ArrayResize(m_times, m_nnew);
-      int parts[4]; int k; int nparts;
+      int parts[4]; 
+      int i, j, k, nparts, start, end;
       nparts = indexesNewBars(parts);
-      for(int i=0, k=0; i<nparts;i++){
+      for(i=0, k=0; i<nparts;i++){
         // money bars circular buffer copy in two parts
         start = parts[i*2];
         end = parts[1+i*2];
-        for(int j=start; j<end; j++, k++){
-            m_last[k] = m_bars.m_data[j].last; // moneybar.last price
-            m_times[k] = m_bars.m_data[j].time_msc); //moneybar.time_msc
+        for(j=start; j<end; j++, k++){
+            m_last[k] = m_data[j].last; // moneybar.last price
+            m_times[k] = m_data[j].time_msc; //moneybar.time_msc
         }
       }
+    }
+    
+    // local arrays have max size equal buffer size
+    void SetSize(int size){
+      CCStructBuffer<MoneyBar>::SetSize(size);
+      ArrayResize(m_last, size);
+      ArrayResize(m_times, size);
     }
 
     MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize){

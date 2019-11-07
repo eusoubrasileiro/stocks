@@ -3,7 +3,7 @@
 // there is no multiple inheritance on mql5
 // an indicator the each sample calculated depends itself + window-1 samples before it
 // or u need window samples to produce 1 output
-class CWindowIndicator: public CBuffer<double>
+class CWindowIndicator: public CCBuffer<double>
 {
 
 protected:

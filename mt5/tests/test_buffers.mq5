@@ -6,6 +6,7 @@
 #property copyright "Andre L. Ferreira 2018"
 #property version   "1.00"
 #include "..\Buffers.mqh"
+#include "..\datastruct\Time.mqh"
 #include "Tests.mqh"
 
 void test_CBuffer(){
@@ -93,9 +94,48 @@ void test_CCBuffer_Indexes_Data(){
 
 }
 
+void test_CCTimeDayBuffer(){
+   CCTimeDayBuffer times();
+   times.SetSize(10);
+   
+   for(long i=0; i<5; i++)
+      times.AddTimeMs(i);
+   times.AddTimeMs(4);  
+   times.AddTimeMs(8);
+   times.AddTimeMs(9);
+   times.AddTimeMs(10);
+   times.AddTimeMs(12);
+   times.AddTimeMs(13);   
+   times.AddTimeMs(20);
+   times.AddTimeMs(26);
+   times.AddTimeMs(27);   
+   
+   int index = times.QuickSearch(26);
+    
+   if( times[index].ms == 26)
+       Print("Passed - Test CCTimeDayBuffer QuickSearch Sorted 1");
+   else
+       Print("Failed - Test CCTimeDayBuffer QuickSearch Sorted 1");  
+         
+   index = times.QuickSearch(8);       
+   if( times[index].ms == 8)
+       Print("Passed - Test CCTimeDayBuffer QuickSearch Sorted 2");
+   else
+       Print("Failed - Test CCTimeDayBuffer QuickSearch Sorted 2");    
+       
+   index = times.QuickSearch(21);       
+   if( index == -1)
+       Print("Passed - Test CCTimeDayBuffer QuickSearch Sorted 3");
+   else
+       Print("Failed - Test CCTimeDayBuffer QuickSearch Sorted 3");  
+              
+}
+
 void OnStart()
 {
     test_CBuffer();
     test_CCBuffer_Add();
     test_CCBuffer_Indexes_Data();
+    test_CCTimeDayBuffer();
 }
+

@@ -52,8 +52,8 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
   m_bars = new MoneyBarBuffer(m_symbol.TickValue(),
                   m_symbol.TickSize(), Expert_MoneyBar_Size);
   m_bars.SetSize(Expert_BufferSize);
-  m_times = new CTimeDayBuffer();
-  m_times.Resize(Expert_BufferSize);
+  m_times = new CCTimeDayBuffer();
+  m_times.SetSize(Expert_BufferSize);
 
   m_recursive = recursive;
   // Call only after init indicators
@@ -100,7 +100,7 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
 bool CExpertRBarBands::Refresh()
 {
   m_bars.RefreshArrays(); // update internal latest arrays of times, prices
-  m_times.AddRange(m_bars.m_times, m_bars.m_nnew);
+  m_times.AddRangeTimeMs(m_bars.m_times, m_bars.m_nnew);
   bool result = true;
 
   // all bellow must be called to maintain alligment of buffers
@@ -118,7 +118,7 @@ bool CExpertRBarBands::Refresh()
 
   // called after m_ticks.Refresh() and Refreshs() above
   // garantes not called twice and bband indicators available
-  RefreshRawBandSignals(m_bars.m_last, 0,  m_bars.m_nnew);
+  RefreshRawBandSignals(m_bars.m_last, m_bars.m_nnew);
 
   return result;
 }
@@ -200,13 +200,11 @@ void CExpertRBarBands::verifyEntry(){
         CreateXFeatureVector(Xforecast);
         int y_pred = PythonPredict(Xforecast);
         BuySell(y_pred);
-        if(m_recursive && (y_pred == 0 || y_pred == 1 | y_pred == -1)){
+        if(m_recursive && (y_pred == 0 || y_pred == 1 || y_pred == -1)){
           // modify the band raw signals by the ones predicted
-          for(int i=0; i<m_nbands; i++){
-            int signal = m_raw_signal[i].GetData(0);
-            signal *= (y_pred==0)? 0: 1; // change from -1 to 1 or to 0
-            m_raw_signal[i].SetData(0, signal);
-          }
+          for(int i=0; i<m_nbands; i++)
+            // change from -1 to 1 or to 0
+            m_raw_signal[i].m_data[m_raw_signal[i].Count()-1] = y_pred;
         }
       }
    }
@@ -224,10 +222,8 @@ void CExpertRBarBands::verifyEntry(){
 int CExpertRBarBands::lastRawSignals(){
   int direction = 0;
   m_last_raw_signal_index = -1;
- // to do convert m_last_raw_signal_index to
- // circular buffer index
- // all buffers are alligned
-
+ // m_last_raw_signal_index is index based
+ // on circular buffers start of data index alligned
   for(int i=0; i<m_bars.m_nnew; i++){
     for(int j=0; j<m_nbands; j++){
         m_last_raw_signal[j] = m_raw_signal[j][i];
@@ -255,40 +251,39 @@ int CExpertRBarBands::lastRawSignals(){
 void CExpertRBarBands::CreateBBands(){
   // raw signal storage
   for(int j=0; j<m_nbands; j++){
-      m_raw_signal[j] = new CBuffer<int>;
-      m_raw_signal[j].Resize(Expert_BufferSize);
+      m_raw_signal[j] = new CCBuffer<int>(Expert_BufferSize);
   }
 
   // ctalib bbands
   double inc=m_bbwindow_inc;
   for(int i=0; i<m_nbands; i++){ // create multiple increasing bollinger bands
       m_bands[i] = new CTaBBANDS(m_bbwindow*inc, 2.5, 1); // 1-Exponential type
-      m_bands[i].Resize(Expert_BufferSize);
+      m_bands[i].SetSize(Expert_BufferSize);
       inc += m_bbwindow_inc;
   }
 }
 
-void CExpertRBarBands::RefreshRawBandSignals(double last[], int start, int end){
-// should be called only once per refresh
-// use the last added samples
-// same of number of new indicator samples due refresh() true
-// of indicator
-for(int j=0; j<m_nbands; j++){
-    //    Based on a bollinger band defined by upper-band and lower-band
-    //    return signal:
-    //        buy   1 : crossing down-outside it's buy
-    //        sell -1 : crossing up-outside it's sell
-    //        hold  0 : nothing usefull happend
-    for(int i=start; i<end; i++){
-        if( last[i] >= m_bands[j].m_upper[i])
-            m_raw_signal[j].Add(-1.); // sell
-        else
-        if( last[i] <= m_bands[j].m_down[i])
-            m_raw_signal[j].Add(+1.); // buy
-        else
-            m_raw_signal[j].Add(0); // nothing
+void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count){
+    // should be called only once per refresh
+    // use the last added samples
+    // same of number of new indicator samples due refresh() true
+    // of indicator
+    for(int j=0; j<m_nbands; j++){
+        //    Based on a bollinger band defined by upper-band and lower-band
+        //    return signal:
+        //        buy   1 : crossing down-outside it's buy
+        //        sell -1 : crossing up-outside it's sell
+        //        hold  0 : nothing usefull happend
+        for(int i=0; i<count; i++){
+            if( last[i] >= m_bands[j].m_upper[i])
+                m_raw_signal[j].Add(-1.); // sell
+            else
+            if( last[i] <= m_bands[j].m_down[i])
+                m_raw_signal[j].Add(+1.); // buy
+            else
+                m_raw_signal[j].Add(0); // nothing
+        }
     }
-}
 }
 
 
@@ -297,13 +292,13 @@ for(int j=0; j<m_nbands; j++){
 // Real Buffer Size since Expert_BufferSize is just
 // an initilization parameter and Resize functions make
 // buffer a little bigger
-int CExpertRBarBands::BufferSize(){ return m_times.BufferSize();}
-int CExpertRBarBands::BufferTotal(){ return m_times.Size(); }
+int CExpertRBarBands::BufferSize(){ return m_times.Size(); }
+int CExpertRBarBands::BufferTotal(){ return m_times.Count(); }
 
 void CExpertRBarBands::CreateOtherFeatureIndicators(){
     // only fracdiff on prices
     m_fd_mbarp = new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif);
-    m_fd_mbarp.Resize(Expert_BufferSize);
+    m_fd_mbarp.SetSize(Expert_BufferSize);
 }
 
 
@@ -320,7 +315,7 @@ void CExpertRBarBands::CreateYTargetClasses(){
     }
 }
 
-void CExpertRBarBands::BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
+void CExpertRBarBands::BandCreateYTargetClasses(CCBuffer<int> &bandsg_raw,
         CObjectBuffer<XyPair> &xypairs, int band_number)
 {
       // buy at ask = High at minute time-frame (being pessimistic)

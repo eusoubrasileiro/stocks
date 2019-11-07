@@ -6,7 +6,7 @@
 #include "..\bbands\BbandsPython.mqh"
 #include "..\..\datastruct\Bars.mqh"
 #include "..\..\datastruct\Time.mqh"
-#include "..\..\datastruct\CBufferMqlTicks.mqh"
+#include "..\..\datastruct\Ticks.mqh"
 
 // number of samples needed/used for training 5*days?
 const int                Expert_BufferSize      = 100e3; // indicators buffer needed
@@ -32,7 +32,7 @@ class CExpertRBarBands : public CExpertMain
     MoneyBarBuffer *m_bars; // buffer of money bars base for everything
     double m_mlast[]; // moneybar.last values of last added money bars
     // created from ticks
-    CTimeDayBuffer *m_times; // time buffer from moneybar time-ms
+    CCTimeDayBuffer *m_times; // time buffer from moneybar time-ms
     //MqlDateTime m_mqldt_now;
     //MqlDateTime m_last_time; // last time after refresh
 
@@ -47,7 +47,7 @@ class CExpertRBarBands : public CExpertMain
     CFracDiffIndicator *m_fd_mbarp; // frac diff on money bar prices
 
     // store buy|sell|hold signals for each bband
-    CBuffer<int> *m_raw_signal[];
+    CCBuffer<int> *m_raw_signal[];
 
     int m_last_raw_signal[]; // last raw signal in all m_nbands
     int m_last_raw_signal_index; // related to m_bars buffer on refresh()
@@ -115,7 +115,7 @@ class CExpertRBarBands : public CExpertMain
   protected:
 
   void CreateYTargetClasses();
-  void BandCreateYTargetClasses(CBuffer<int> &bandsg_raw,
+  void BandCreateYTargetClasses(CCBuffer<int> &bandsg_raw,
         CObjectBuffer<XyPair> &xypairs, int band_number);
   void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
   bool CreateXFeatureVector(XyPair &xypair);
@@ -136,7 +136,7 @@ class CExpertRBarBands : public CExpertMain
   // stored in the buffer of raw signal bands
   int lastRawSignals();
   void CreateBBands();
-  void RefreshRawBandSignals(int start, int end);
+  void RefreshRawBandSignals(double &last[], int count);
   // Global Buffer Size (all buffers MUST have same size)
   // that's why they all use same ResizeBuffer code
   // Real Buffer Size since Expert_BufferSize is just

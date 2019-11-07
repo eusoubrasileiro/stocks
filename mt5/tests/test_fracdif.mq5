@@ -76,7 +76,7 @@ void test_fracdf_indicator(){
     double eps = 0.0001; // error tolerance in comparison
     int fsize = 10;
   	CFracDiffIndicator c_fdiff(fsize, 0.56);
-  	c_fdiff.Resize(200); // whatever buffer size just need to be enough
+  	c_fdiff.SetSize(200); // whatever buffer size just need to be enough
 
   	// partial calls until total array calculated
   	double a[7];
@@ -98,7 +98,7 @@ void test_fracdf_indicator(){
     ArrayFill(pyfractruth_indicator, 0, fsize-1, EMPTY_VALUE);
     ArrayCopy(pyfractruth_indicator, pyfractruth, fsize-1);
 
-  	if(!almostEqual(pyfractruth_indicator, c_fdiff.m_data, c_fdiff.Size(), 1e-6))
+  	if(!almostEqual(pyfractruth_indicator, c_fdiff.m_data, c_fdiff.Count(), 1e-6))
   	    Print("Failed - Test CFracDiffIndicator");
   	else
   	    Print("Passed - Test CFracDiffIndicator");

@@ -11,6 +11,25 @@ int pyPredictwModel(double &X[], int xtrain_dim,
 int Unique(double &arr[], int n);
 #import
 
+int file_io_hnd;
+string python_code = "import numpy as np\n"
+                     "from sklearn.ensemble import ExtraTreesClassifier\n"
+                     "import pickle\n"
+                     "def pyTrainModel(X, y):\n"
+                     "    trees = ExtraTreesClassifier(\n"
+                     "    n_estimators=120, verbose=0)\n"
+                     "    trees.fit(X, y)\n"
+                     "    str_trees = pickle.dumps(trees)\n"
+                     "return str_trees # easier to pass to C++\n"
+                     "                                       \n"
+                     "def pyPredictwModel(X, str_trees):\n"
+                     "    trees = pickle.loads(str_trees);\n"
+                     "return trees.predict(X)[0]\n"
+                     "                                       \n"
+                     "def Unique(arr):\n"
+                     "    return np.unique(arr);\n";             
+
+
 void test_Unique(){
     double ex[] = {1, 1, 2, 3, 4, 5., 5};
 
@@ -32,18 +51,24 @@ void test_pyTrainModel(){
 	ArrayResize(pymodel, 1024*500); // 500 Kb
 	int pymodel_size = pyTrainModel(X, y, 4, 2, pymodel, 1024*500);
 	if(pymodel_size > 0){
-		Print("Passed - Test pyTrainModel");
-    for(int i=0; i<3; i++){ // input {0, 1} what will be the prediction? 1 should be
-      double Xp[2] = {0, 1};
-      int ypred = pyPredictwModel(Xp, 2, pymodel, pymodel_size);
-      if(ypred == -1)
-        Print("Passed - Test pyPredictwModel");
-    }
-  }
+    	Print("Passed - Test pyTrainModel");
+        for(int i=0; i<3; i++){ // input {0, 1} what will be the prediction? 1 should be
+          double Xp[2] = {0, 1};
+          int ypred = pyPredictwModel(Xp, 2, pymodel, pymodel_size);
+          if(ypred == -1)
+            Print("Passed - Test pyPredictwModel");
+          else
+            Print("Failed - Test pyPredictwModel");
+        }
+   }
+   else
+      Print("Failed - Test pyTrainModel");
 	ArrayFree(pymodel);
 }
 
 void OnStart(){
+    // cannot write outsie metaquotes folder but with kernel32.dll we can    
+    //kWriteFile("D:\\MetaTrader 5\\python_code.py", python_code);
     for(int i=0; i<3;i++){
         test_Unique();
         test_pyTrainModel();

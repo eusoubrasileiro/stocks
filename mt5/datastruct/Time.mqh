@@ -1,22 +1,61 @@
 #include "..\Buffers.mqh"
 
-// time equivalent to _ftime64	<sys/types.h> and <sys/timeb.h>
-
-//  mine   _ftime64
-//         dstflag	--- ignored
-//  ms     millitm	Fraction of a second in milliseconds.
-//  time   time	Time in seconds since midnight (00:00:00), January 1, 1970, coordinated universal time (UTC).
-//         timezone --- ignored
-
-
 // minimum needed for identify day of a tick timestamp in milliseconds
 // can be inserted on MoneyBar struct
 // and C++ could create array of timedays from
 // array of moneybar structs
 struct timeday {
-  int day; // day of year from MqlDateTime.day_of_year
+  int day; // day of year from MqlDateTime.day_of_year or day of week C code bellow
   long ms;
 };
+
+
+
+// from here
+//https://stackoverflow.com/questions/21593692/convert-unix-timestamp-to-date-without-system-libs
+// and here
+//http://git.musl-libc.org/cgit/musl/tree/src/time/__secs_to_tm.c?h=v0.9.15
+
+// 2000-03-01 (mod 400 year, immediately after feb29 */
+#define LEAPOCH (946684800 + 86400*(31+29))
+#define DAYS_PER_400Y (365*400 + 97)
+#define DAYS_PER_100Y (365*100 + 24)
+#define DAYS_PER_4Y   (365*4   + 1)
+
+static const char days_in_month[] = {31,30,31,30,31,31,30,31,30,31,31,29};
+long days, secs;
+int remdays, remsecs, remyears;
+int qc_cycles, c_cycles, q_cycles;
+int years, months;
+int wday, yday, leap;
+
+// get week day can be used as unique day identifier
+// for backtesting
+int timestampWDay(long t)
+{
+  // static const char days_in_month[] = {31,30,31,30,31,31,30,31,30,31,31,29};
+  // long days, secs;
+  // int remdays, remsecs, remyears;
+  // int qc_cycles, c_cycles, q_cycles;
+  // int years, months;
+  // int wday, yday, leap;
+	//* Reject time_t values whose year would overflow int */
+	//if (t < INT_MIN * 31622400LL || t > INT_MAX * 31622400LL)
+	//	return -1;
+	secs = t - LEAPOCH;
+	days = secs / 86400;
+	remsecs = secs % 86400;
+	if (remsecs < 0) {
+		remsecs += 86400;
+		days--;
+	}
+
+	wday = (3+days)%7;
+	if (wday < 0) wday += 7;
+
+	return wday;
+}
+
 
 // Same as CStructBuffer but for MqlDateTime
 // adding QuickSearch functinality
@@ -63,11 +102,11 @@ public:
 // adding QuickSearch functinality
 class CCTimeDayBuffer : public CCStructBuffer<timeday>
 {
-  MqlDateTime m_last_mqldtime;  
+  MqlDateTime m_last_mqldtime;
 
   // code from clong array
   // quick search for a sorted array
- int m_QuickSearch(long element, int start, int end) 
+ int m_QuickSearch(long element, int start, int end)
   {
    int  i,j,m=-1;
    long t_long;
@@ -88,14 +127,14 @@ class CCTimeDayBuffer : public CCStructBuffer<timeday>
       else
          i=m+1;
      }
-//--- position   
+//--- position
    return (t_long==element)? m: -1;
   }
-  
+
 public:
    timeday     m_last;
-  
-  int QuickSearch(long element_ms) 
+
+  int QuickSearch(long element_ms)
   {
     int nparts, start, end, ifound, i, parts[4];
     nparts = indexesData(0, Count(), parts);
@@ -106,22 +145,24 @@ public:
       if(ifound != -1)
         break;
     }
-    // convert to start based index              
-    return toIndex(ifound);     
+    // convert to start based index
+    return toIndex(ifound);
   }
 
   int QuickSearch(timeday &element){
      return QuickSearch(element.ms);
-  } 
+  }
 
-
+  // the only way to make this go faster is
+  // by calling in parallel when range has a certain size
   void AddTimeMs(long time_ms){
     // convert ms timestamp to linux epoch (time-zone is already accounted for)
-    TimeToStruct((datetime) time_ms/1000, m_last_mqldtime);
+    //TimeToStruct((datetime) time_ms/1000, m_last_mqldtime);
     m_last.ms = time_ms;
-    m_last.day = m_last_mqldtime.day_of_year;
+    m_last.day = timestampWDay(time_ms);    
     CCStructBuffer<timeday>::Add(m_last);
   }
+  
 
   // you may want to insert a range smaller than the full size of elements array
   void AddRangeTimeMs(long &time_ms[], int start=0, int tsize=0){
@@ -129,7 +170,7 @@ public:
     for(int i=start; i<tsize; i++)
       AddTimeMs(time_ms[i]);
   }
-  
-
 
 };
+
+

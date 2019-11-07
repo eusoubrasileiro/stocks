@@ -101,7 +101,7 @@ class CExpertRBarBands : public CExpertMain
   void Deinit(void);
 
   // start index and count of new bars that just arrived
-  bool Refresh(int start, int count);
+  bool Refresh();
 
   // will be called every < 1 second
   // OnTick + OnTimer garantee a better refresh rate

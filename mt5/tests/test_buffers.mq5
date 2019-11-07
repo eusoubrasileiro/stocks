@@ -64,8 +64,8 @@ void test_CCBuffer_Indexes_Data(){
       Print("Failed - Test CCBuffer indexesData 1");
 
    // get 1 element
-   // beginning at the 4th 
-   parts = sbuffer.indexesData(4, 1, start1, end1, start2, end2);  
+   // beginning at the 4th
+   parts = sbuffer.indexesData(4, 1, start1, end1, start2, end2);
 
    count = end1-start1;
    ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
@@ -77,18 +77,20 @@ void test_CCBuffer_Indexes_Data(){
        Print("Failed - Test CCBuffer indexesData 2");
 
    // get 2 elements
-   // beginning at 0 
-   parts = sbuffer.indexesData(0, 3, start1, end1, start2, end2);  
+   // beginning at 0
+   int arr_parts[4]; // start1, end1, start2, end2
+   parts = sbuffer.indexesData(0, 3, arr_parts);
 
-   count = end1-start1;
-   ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
-   ArrayCopy(dest, sbuffer.m_data, count, start2, end2-start2);
+   count = arr_parts[1]-arr_parts[0];
+   ArrayCopy(dest, sbuffer.m_data, 0, arr_parts[0], count);
+   ArrayCopy(dest, sbuffer.m_data, count, 
+             arr_parts[2], arr_parts[3]-arr_parts[2]);
    double assert3[3] = {0, 1, 2};
    if(parts == 1 && almostEqual(assert3, dest, 1, 1e-8))
        Print("Passed - Test CCBuffer indexesData 3");
    else
-       Print("Failed - Test CCBuffer indexesData 3");       
-   
+       Print("Failed - Test CCBuffer indexesData 3");
+
 }
 
 void OnStart()

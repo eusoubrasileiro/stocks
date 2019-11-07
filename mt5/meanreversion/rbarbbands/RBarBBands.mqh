@@ -45,13 +45,13 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
   // doesnt work so ignore it
   //m_waiting_event |= (TRADE_EVENT_POSITION_VOLUME_CHANGE|
   //  TRADE_EVENT_POSITION_CLOSE|TRADE_EVENT_POSITION_VOLUME_CHANGE);
-    
+
   // create money bars
   m_ticks = new CCBufferMqlTicks(m_symbol.Name());
   m_ticks.SetSize(Expert_BufferSize);
   m_bars = new MoneyBarBuffer(m_symbol.TickValue(),
                   m_symbol.TickSize(), Expert_MoneyBar_Size);
-  m_bars.Resize(Expert_BufferSize);
+  m_bars.SetSize(Expert_BufferSize);
   m_times = new CTimeDayBuffer();
   m_times.Resize(Expert_BufferSize);
 
@@ -97,17 +97,10 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
 }
 
 // start index and count of new bars that just arrived
-bool CExpertRBarBands::Refresh(int start, int count)
+bool CExpertRBarBands::Refresh()
 {
-  int end = start+count;
-  ArrayResize(m_mlast, count);
-  // money bars
-  for(int i=start; i<end; i++){
-      m_mlast[i-start] = m_bars.m_data[i].last; // moneybar.last price
-      // insert current times in the times buffer
-      // must be here so all buffers are aligned
-      m_times.Add(m_bars.m_data[i].time_msc); //moneybar.time_msc
-  }
+  m_bars.RefreshArrays(); // update internal latest arrays of times, prices
+  m_times.AddRange(m_bars.m_times, m_bars.m_nnew);
   bool result = true;
 
   // all bellow must be called to maintain alligment of buffers
@@ -116,16 +109,16 @@ bool CExpertRBarBands::Refresh(int start, int count)
   // features indicators
   // fracdif on bar prices order of && matter
   // first is what you want to do and second what you want to try
-  result = m_fd_mbarp.Refresh(m_mlast, 0, count) && result;
+  result = m_fd_mbarp.Refresh(m_bars.m_last, 0, m_bars.m_nnew) && result;
 
   // update all bollinger bands indicators
   for(int j=0; j<m_nbands; j++){
-      result = m_bands[j].Refresh(m_mlast, 0, count) && result;
+      result = m_bands[j].Refresh(m_bars.m_last, 0, m_bars.m_nnew) && result;
   }
 
   // called after m_ticks.Refresh() and Refreshs() above
   // garantes not called twice and bband indicators available
-  RefreshRawBandSignals(start, end);
+  RefreshRawBandSignals(m_bars.m_last, 0,  m_bars.m_nnew);
 
   return result;
 }
@@ -150,7 +143,7 @@ void CExpertRBarBands::CheckTicks(void)
         // some new ticks arrived and new bars created
         // at least one new money bar created
         // refresh whatever possible with new bars
-        if(Refresh(m_bars.Size()-m_bars.m_added, m_bars.m_added)){
+        if(Refresh()){
           // sucess of updating everything w. new data
             verifyEntry();
         }
@@ -229,12 +222,13 @@ void CExpertRBarBands::verifyEntry(){
 // only call when there's at least one signal
 // stored in the buffer of raw signal bands
 int CExpertRBarBands::lastRawSignals(){
-  int begin_added = m_bars.BeginAdded();
-  int end = begin_added+m_bars.m_added;
   int direction = 0;
   m_last_raw_signal_index = -1;
+ // to do convert m_last_raw_signal_index to
+ // circular buffer index
+ // all buffers are alligned
 
-  for(int i=begin_added; i<end; i++){
+  for(int i=0; i<m_bars.m_nnew; i++){
     for(int j=0; j<m_nbands; j++){
         m_last_raw_signal[j] = m_raw_signal[j][i];
         if(m_last_raw_signal[j] != 0){
@@ -254,6 +248,7 @@ int CExpertRBarBands::lastRawSignals(){
         }
     }
   }
+
   return m_last_raw_signal_index;
 }
 
@@ -273,7 +268,7 @@ void CExpertRBarBands::CreateBBands(){
   }
 }
 
-void CExpertRBarBands::RefreshRawBandSignals(int start, int end){
+void CExpertRBarBands::RefreshRawBandSignals(double last[], int start, int end){
 // should be called only once per refresh
 // use the last added samples
 // same of number of new indicator samples due refresh() true
@@ -285,10 +280,10 @@ for(int j=0; j<m_nbands; j++){
     //        sell -1 : crossing up-outside it's sell
     //        hold  0 : nothing usefull happend
     for(int i=start; i<end; i++){
-        if( m_bars[i].last >= m_bands[j].m_upper[i])
+        if( last[i] >= m_bands[j].m_upper[i])
             m_raw_signal[j].Add(-1.); // sell
         else
-        if( m_bars[i].last <= m_bands[j].m_down[i])
+        if( last[i] <= m_bands[j].m_down[i])
             m_raw_signal[j].Add(+1.); // buy
         else
             m_raw_signal[j].Add(0); // nothing
@@ -521,9 +516,9 @@ bool CExpertRBarBands::PythonTrainModel(){
   ArrayResize(X, m_ntraining*m_xtrain_dim);
   ArrayResize(y, m_ntraining);
   int end = m_xypairs.Size(); // because buffer might be bigger than m_ntraining
-  int start = end-m_ntraining; // most recent that only  
+  int start = end-m_ntraining; // most recent that only
   for(int i=0; i<m_ntraining;i++){ // get the oldest first
-    // X order matter forecast 
+    // X order matter forecast
      xypair = m_xypairs[i+start];
      ArrayCopy(X, xypair.X, i*m_xtrain_dim, 0, m_xtrain_dim);
      y[i] = xypair.y;
@@ -579,20 +574,20 @@ bool CExpertRBarBands::TradeEventPositionVolumeChanged(void){
     else
     if(m_volume < m_last_volume) // one less 'position'
         m_last_positions--;
-    
-    m_last_volume = m_volume;      
-    return true;  
+
+    m_last_volume = m_volume;
+    return true;
 }
 
 bool CExpertRBarBands::TradeEventPositionOpened(void){
     m_last_positions=1;
-    m_last_volume = m_volume; 
-    return true; 
+    m_last_volume = m_volume;
+    return true;
 }
 
 bool CExpertRBarBands::TradeEventPositionClosed(void){
     m_last_positions=0;
     m_volume=0;
     m_last_volume=0;
-    return true; 
+    return true;
 }

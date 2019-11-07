@@ -455,6 +455,12 @@ public:
       return 1;
     }
 
+    // parts[4] = start1, end1, start2, end2
+    int indexesData(int  begin,  int count, int &parts[])
+    {
+      return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
+    }
+    
 };
 
 // Same as above but for structs
@@ -561,6 +567,12 @@ public:
       start2 = 0;
       end2 = 0;
       return 1;
+    }
+
+    // parts[4] = start1, end1, start2, end2
+    int indexesData(int  begin,  int count, int &parts[])
+    {
+      return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
     }
 
 };

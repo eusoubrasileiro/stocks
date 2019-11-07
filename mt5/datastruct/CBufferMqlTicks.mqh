@@ -72,7 +72,7 @@ public:
     // the difference is the number of new ticks
 
     FixArrayTicks(m_copied_ticks); // firx nonsense last, ask, bid empty
-    AddRange(m_copied_ticks, 0, m_nnew);
+    AddRange(m_copied_ticks, m_nnew);
     // get last tick ms inserted on buffer
     m_last_ms = m_copied_ticks[m_ncopied-1].time_msc;
 

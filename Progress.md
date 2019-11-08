@@ -267,13 +267,15 @@ July 2019
       - Every tick
           - Creates non-sense volume ticks (do no respect the minvolume for the symbol)
           - ask-bid flutuates crazily
-      - Every tick based on reak ticks
-          - Volumes are correct but interpolates
+      - Every tick based on real ticks
+          - Volumes are correct but interpolates when there is any discrepancy
     - [x] Solution found create a custom SYMBOl (unless change do MT4 that's x86 only)
         - Import bar data M1, import tick data
         - Use every tick based on real ticks
-        - Ideally minute bars should be created from the ticks because mt5 trust them more.
+        - [x] Ideally minute bars should be created from the ticks because mt5 trust them more.
         If ticks and bars are available and differ bars are used and fake ticks are created.
+        - [x] created `python\ticksnbars.py` able to process and create optimal ticks and bars
+          for backtesting based only on exported ticks.
 
  - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
 So cpu is allways in 100%.
@@ -295,5 +297,7 @@ Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subs
 Unfortunately circular buffer is needed now.
         - [x] Created `CCBuffer` and `CCStructBuffer` using circular buffer fixed size.
         - [x] Solved new version `CCBufferMqlTicks` using circular buffer change place from 98% time used to 0.25% on profiling
-    - [ ] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size). 
+    - [x] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size).
 `ArrayCopy` of `CBuffer` is taking 95.24% on profiling.
+        - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day.
+Better than this only a C++ dll with parallel call.

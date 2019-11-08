@@ -38,3 +38,50 @@ def toMt5OptParam(dfoptparams, expert='NaiveGapExpert', fname='optNaiveGapC'):
     return txt
 
 # toMt5OptParam(optparams)
+import numpy as np
+import os
+import pandas as pd
+
+moneybar_dtype = np.dtype([
+    ("bid", np.float64),
+    ("ask", np.float64),
+    ("mlast", np.float64),
+    ("msc", np.int64)
+])
+
+# struct MqlTick
+#   {
+#    datetime     time;          // Time of the last prices update
+#    double       bid;           // Current Bid price
+#    double       ask;           // Current Ask price
+#    double       last;          // Price of the last deal (Last)
+#    ulong        volume;        // Volume for the current Last price
+#    long         time_msc;      // Time of a price last update in milliseconds
+#    uint         flags;         // Tick flags
+#    double       volume_real;   // Volume for the current Last price with greater accuracy
+#   };
+
+mqltick_dtype = np.dtype([
+    ("time", np.int64),
+    ("bid", np.float64),
+    ("ask", np.float64),
+    ("last", np.float64),
+    ("volume", np.int64),
+    ("msc", np.int64),
+    ("flags", np.int32),
+    ("vreal", np.float64)
+])
+
+def ticksnbars(tickfileinput):
+    pass
+    # return dataframe of ticks
+    #        dataframe of bars
+
+def writecsv_dfticks(ticks):
+    pass
+
+def writecsv_dfbars1m(bars):
+    pass
+
+def writemqlticks_dfticks(ticks):
+    pass

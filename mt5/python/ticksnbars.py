@@ -31,6 +31,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", "-f", type=str, required=True)
+parser.add_argument("-mqltick", "-m", dest="mqltick", default=False, action="store_true",
+                    help="also creates binary file of array of mt5 mqltick suffix _mql5tick.bin")
 args = parser.parse_args()
 tickfileinput = args.file
 # tickfileinput = 'PETR4_Ticks_201910010800_201910241759.csv' # exported from MT5
@@ -130,5 +132,8 @@ bars1m_all = bars1m_all.loc[:, ['date', 'time', 'open', 'high', 'low', 'close', 
 bars1m_all.columns = mt5colnames
 bars1m_all.to_csv(tickfileinput.split('.csv')[0]+'_m1barmt5.csv',
              index=False, sep='\t')
+
+if args.mqltick:
+    print('Writting MqlTick Array Binary File...')
 
 print('Done')

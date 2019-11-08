@@ -12,6 +12,7 @@
 #include "..\TrailingMA.mqh"
 #include "..\meanreversion\rbarbbands\CExpertRBarBBands.mqh"
 #include "..\meanreversion\rbarbbands\RBarBBands.mqh"
+#include "..\datastruct\Ticks.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -47,7 +48,12 @@ const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
 class CTestExpertRBarBands : public CExpertRBarBands
 {
-    void verifyEntry(){}; // make it do nothing
+    void verifyEntry(){// make tests here
+      MqlTick tick = m_ticks[m_ticks.Count()-1];
+
+
+
+    }; 
 };
 
 CTestExpertRBarBands cExpert = new CTestExpertRBarBands;
@@ -87,6 +93,9 @@ int OnInit(){
                           Expert_Train_StopLoss, Expert_Train_TargetProfit,
                           Expert_Run_StopLoss, Expert_Run_TargetProfit,
                           Expert_Recursive);
+
+
+
 
     return(INIT_SUCCEEDED);
 }

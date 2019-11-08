@@ -1,15 +1,16 @@
-// Download standard ticks time for specified symbols
-// write on a binary file the mqlrates array
+// Download standard ticks time for specified symbol
+// write on a binary file the MqlTick array
 #property copyright "Andre L. Ferreira June 2018"
 #property version   "1.00"
 #property script_show_inputs
-input datetime date=D'2019.01.01 00:00'; // or use 0 to get the last tickcount
-
 #include "..\datastruct\Bars.mqh"
 #include "..\datastruct\Ticks.mqh"
 
+input datetime start_date=D'2019.10.01 00:00'; // or use 0 to get the last tickcount
+input datetime end_date=D'2019.10.25 00:00';
+
 //--- global variables
-string symbols[4] = {"WINV19", "VALE3", "PETR4", "WEGE3"};
+input string input_symbol="PETR4";
 const uint tickcount=UINT_MAX>>8; //  number of ticks to copy / more than this explodes memory
 
 int file_io_hnd;
@@ -17,33 +18,37 @@ int file_io_hnd;
 void OnStart(){
    MqlTick mqlticks[];
    ArraySetAsSeries(mqlticks, true);
-   int nsymbols = ArraySize(symbols);
-   uint copied = 0;
+   int copied = 0;
+   
+   ArrayResize(mqlticks, 100e6); // 100 MM
 
-   for(int i=0; i<nsymbols; i++)
-   { // number of 3 trials of download before giving up
-       for(int try=0; try<3; try++) {
-          // -1 if it has not complet it yet
-          copied = CopyTicks(symbols[i], mqlticks, COPY_TICKS_ALL,  date, tickcount);
-          // CopyTicks
-          Print("copied ", string(copied));
-       } // ticks are allways returned no matter how few
-       if(copied == -1)
-       {
-          Print("Failed to get history data for the symbol ", symbols[i]);
-          continue;
-       }
-       Print("symbol ", symbols[i], " ticks downloaded: ", string(copied));
-       PreviewSymbol(symbols[i], mqlticks);
-       FixArrayTicks(mqlticks);
-       WriteData(symbols[i], mqlticks);
-   }
+  // number of 3 trials of download before giving up
+  for(int try=0; try<3; try++) {
+    // -1 if it has not complet it yet
+    copied = CopyTicksRange(input_symbol, mqlticks, COPY_TICKS_ALL, 
+                (long) start_date*1000, (long) end_date*1000);
+    // CopyTicks
+    Print("copied ", string(copied));
+  } // ticks are allways returned no matter how few
+  if(copied == -1){
+    Print("Failed to get history data for the symbol ", input_symbol);
+    return;
+  }
+  Print("symbol ", input_symbol, " ticks downloaded: ", string(copied));
+  PreviewSymbol(input_symbol, mqlticks);
+  FixArrayTicks(mqlticks);
+  WriteData(input_symbol, mqlticks);
+  
+  ArrayFree(mqlticks);
+
 }
 
 // write the symbol data on file
 void PreviewSymbol(string symbol, MqlTick &rates[]){
     // verbose some data 100 first
-    string format = "bid = %G, ask = %G, last = %G, volume = %d , ms = %d, flags = %u, volume real = %d";
+    string format = " bid = %G, ask = %G, last = %G,"
+                    " volume = %g, ms = %I64d, flags = %u,"
+                    " volume real = %g";    
     string out;
     int rsize = ArraySize(rates);
     if(rsize == 0)
@@ -57,18 +62,18 @@ void PreviewSymbol(string symbol, MqlTick &rates[]){
             rates[i].ask,
             rates[i].last,
             rates[i].volume,
-            rates[i].time_msc, //not printing
+            (long) rates[i].time_msc, //not printing
             rates[i].flags,
             rates[i].volume_real);
         Print(out);
     }
 }
 
-void WriteData(string symbol, MqlTick &arr[]){
+void WriteData(string isymbol, MqlTick &arr[]){
 //--- open the file
    ResetLastError();
-   StringAdd(symbol,"Tick.mt5bin");
-   int handle=FileOpen(symbol, FILE_READ|FILE_WRITE|FILE_BIN);
+   StringAdd(isymbol,"_mql5tick.bin");
+   int handle=FileOpen(isymbol, FILE_READ|FILE_WRITE|FILE_BIN);
    int size = ArraySize(arr);
    if(handle!=INVALID_HANDLE)
      {
@@ -89,7 +94,7 @@ void WriteData(string symbol, MqlTick &arr[]){
       FileClose(handle);
      }
    else
-      Print("Failed to open the file, error ",GetLastError());
+      Print("Failed to open the file, error ", GetLastError());
   }
 
   // then you read from python with

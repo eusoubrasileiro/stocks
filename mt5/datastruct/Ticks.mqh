@@ -226,3 +226,18 @@ public:
   }
 
 };
+
+
+int ReadTicks(MqlTick &mqlticks[], string filename, int file_acces=0){
+
+    ArrayResize(mqlticks, 100e6); // just to guarantee 100MM
+    int handle = FileOpen(filename, file_acces|FILE_READ|FILE_BIN);    
+    if(handle==INVALID_HANDLE)
+        return -1;    
+    int size = FileReadArray(handle, mqlticks);
+    FileClose(handle);    
+    ArrayResize(mqlticks, size);    
+    
+    
+    return size;
+}

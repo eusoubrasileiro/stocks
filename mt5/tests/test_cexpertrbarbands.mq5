@@ -49,7 +49,7 @@ const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 class CTestExpertRBarBands : public CExpertRBarBands
 {
     void verifyEntry(){// make tests here
-      MqlTick tick = m_ticks[m_ticks.Count()-1];
+      //MqlTick tick = m_ticks[m_ticks.Count()-1];
 
 
 

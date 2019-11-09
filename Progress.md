@@ -244,9 +244,10 @@ July 2019
     - Optimization can be done thorugh make.py script for multiple symbols and it stores optimizer results as xml on 'mt5\optimization'    
     - Testes with entire history from 2014 results are in general good to impressive. The earlier the history data worse the performance, I bet is due AI being more and more incorporated.
     - Backtesting is extremally sensible to the period used for testing. By using the optimizer it seams wise to use the latests years. Data from 4 years ago show results normally much better than recent years. The reasons seams be many but that force us to use more recent data. Since the recent data for some strategies is few (like gap strategies) it's better try backtesting on multiple symbols and analise the grouped the results? Use stocks is imperative since `ticksize` and `tickvalue` are equal. Some type of correction to use same ammount of money everytime will be needed, due the fact that each share have a different price. Let's use last one and half year as a standard. Also use foward option help not overfitting the parameter optimization. Let's use 1/3 as a default value.
-    - [ ] Try use Sklearn for mean regression algo based on Gustavo's robot.
-      - [ ] Working on simplified version using bollinger bands.
-      - [ ] Next step create band-signals considering increasing orders at every other band break-out
+    - [x] Try use Sklearn for mean regression algo based on Gustavo's robot.
+      - [x] Working on simplified version using bollinger bands.
+      - Thinking about came to the conclusion that: The simplified version where one reversion is explored per band is a sub-set of the increasing orders version. To avoid re-work and to explore a larger and more robust algorithm let's change for 2 or 3 increase orders for starters.
+      - [ ] Create band-signals considering increasing orders at every other band break-out.
     - [ ] Re-organize Progress file as back-log lasts first          
     - [x] Implement money based input for expert when buying stocks. `OrderSize` changed to money value in R$ in `NaiveGapExpert`
     - [ ] Unload position in parts in case the gap gets closed deeper. Everybody does that on S&P500 futures, Dow etc.
@@ -299,5 +300,4 @@ Unfortunately circular buffer is needed now.
         - [x] Solved new version `CCBufferMqlTicks` using circular buffer change place from 98% time used to 0.25% on profiling
     - [x] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size).
 `ArrayCopy` of `CBuffer` is taking 95.24% on profiling.
-        - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day.
-Better than this only a C++ dll with parallel call.
+        - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day. Better than this only a C++ dll with parallel call. Also MoneyBar or any struct/class that needs the timestamp week day should store a pointer to it. Doing so, the calculation could be left for after or being assync in parallel. The timestamp week day would be added inside class as a pointer. 

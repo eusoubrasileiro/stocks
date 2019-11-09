@@ -47,6 +47,8 @@ void FixArrayTicks(MqlTick &ticks[]){
 
 
 const int Max_Tick_Copy = 10e3;
+
+ulong gticks = 0;
 // 10k ticks maximum downloaded every time Refresh is called
 // 1 ms time-frame suggested using OnTimer
 class CBufferMqlTicks : public CStructBuffer<MqlTick>
@@ -213,6 +215,8 @@ public:
     AddRange(m_copied_ticks, 0, m_nnew);
     // get last tick ms inserted on buffer
     m_last_ms = m_copied_ticks[m_ncopied-1].time_msc;
+    
+    gticks += m_nnew;
 
     return m_nnew;
   }

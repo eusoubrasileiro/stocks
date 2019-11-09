@@ -100,7 +100,7 @@ void CExpertRBarBands::Initialize(int nbands, int bbwindow,
 bool CExpertRBarBands::Refresh()
 {
   m_bars.RefreshArrays(); // update internal latest arrays of times, prices
-  m_times.AddRangeTimeMs(m_bars.m_times, m_bars.m_nnew);
+  m_times.AddRangeTimeMs(m_bars.m_times, 0, m_bars.m_nnew);
   bool result = true;
 
   // all bellow must be called to maintain alligment of buffers

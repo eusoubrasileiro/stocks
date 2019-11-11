@@ -137,6 +137,7 @@ public:
   int QuickSearch(long element_ms)
   {
     int nparts, start, end, ifound, i, parts[4];
+    ifound = -1;
     nparts = indexesData(0, Count(), parts);
     for(i=0; i<nparts;i++){
       start = parts[i*2];
@@ -146,7 +147,7 @@ public:
         break;
     }
     // convert to start based index
-    return toIndex(ifound);
+    return (ifound!=-1)?toIndex(ifound):ifound;
   }
 
   int QuickSearch(timeday &element){

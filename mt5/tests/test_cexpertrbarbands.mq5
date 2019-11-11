@@ -13,6 +13,7 @@
 #include "..\meanreversion\rbarbbands\CExpertRBarBBands.mqh"
 #include "..\meanreversion\rbarbbands\RBarBBands.mqh"
 #include "..\datastruct\Ticks.mqh"
+#include "Tests.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -46,14 +47,51 @@ const int Expert_OrdersPerDay = 100; // Number of orders placed per day
 const double Expert_PositionExpireHours = 1.5; // Time to expire a position (close it)
 const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
+
+MqlTick pymqlticks[]; // truth
+
 class CTestExpertRBarBands : public CExpertRBarBands
 {
     void verifyEntry(){// make tests here
-      //MqlTick tick = m_ticks[m_ticks.Count()-1];
+    
+      // find begin on py array due 
+      // back testing migh start later 
+      int i, count, pysize;
+      long timestart=m_ticks[0].time_msc;
+      pysize = ArraySize(pymqlticks);
+      for(i=0; i<pysize; i++){
+        if(pymqlticks[i].time_msc==timestart)
+            break;
+      }
+  
+      count = m_ticks.Count();
+      double eps = 1e-6;
+      bool isequal = true;
 
+      // check almost equal with espsilon tolerance
+      // not checking flags yet (not filling in python)
+      // not checking time yet (wrong in python)
 
-
-    }; 
+      for(int j=0; j<count; j++){
+        if( m_ticks[j].time_msc > pymqlticks[j+i].time_msc + eps 
+        || m_ticks[j].time_msc < pymqlticks[j+i].time_msc - eps){
+          isequal = false;
+          break;
+        }
+        if( m_ticks[j].ask > pymqlticks[j+i].ask + eps 
+        || m_ticks[j].ask < pymqlticks[j+i].ask - eps){
+          isequal = false;
+          break;
+        }
+        //if( a[i].bid > b[i].bid + eps || a[i].bid < b[i].bid - eps)
+        //    return false;
+        //if( a[i].volume > b[i].volume + eps || a[i].volume < b[i].volume - eps)
+        //    return false;
+        //if( a[i].volume_real > b[i].volume_real + eps || a[i].volume_real < b[i].volume_real - eps)
+        //    return false;
+      }
+     
+    };
 };
 
 CTestExpertRBarBands cExpert = new CTestExpertRBarBands;
@@ -96,6 +134,7 @@ int OnInit(){
 
 
 
+    ReadTicks(pymqlticks, "PETR4_Ticks_201910010800_201910241759_mqltick.bin", FILE_COMMON);
 
     return(INIT_SUCCEEDED);
 }

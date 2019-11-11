@@ -28,12 +28,12 @@ void test_CCBuffer_Add(){
   CCBuffer<double> sbuffer(16); // buffer size 16
 
   for(int i=0; i<12; i++)
-       sbuffer.Add(0);
+   sbuffer.Add(0);
   for(int i=1; i<7; i++) // exceeds the buffer
    sbuffer.Add(i);
 
-  if(sbuffer[0] == 5 &&  sbuffer[1] == 6 &&
-       sbuffer[14] == 3 && sbuffer[15] == 4)
+  if(sbuffer[15] == 5 &&  sbuffer[16] == 6 &&
+       sbuffer[13] == 3 && sbuffer[14] == 4)
       Print("Passed - Test CCBuffer Add");
   else
       Print("Failed - Test CCBuffer Add");

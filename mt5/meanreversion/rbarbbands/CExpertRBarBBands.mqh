@@ -21,6 +21,7 @@ const double             Expert_Fracdif_Window  = 512; // window size fraction f
 // Net Mode Only!
 class CExpertRBarBands : public CExpertMain
 {
+protected:
 #ifdef _DEBUG
     int file_io_hnd;
 #endif
@@ -136,7 +137,7 @@ class CExpertRBarBands : public CExpertMain
   // stored in the buffer of raw signal bands
   int lastRawSignals();
   void CreateBBands();
-  void RefreshRawBandSignals(double &last[], int count);
+  void RefreshRawBandSignals(double &last[], int count, int empty);
   // Global Buffer Size (all buffers MUST have same size)
   // that's why they all use same ResizeBuffer code
   // Real Buffer Size since Expert_BufferSize is just

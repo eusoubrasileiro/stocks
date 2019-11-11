@@ -118,7 +118,7 @@ bool CExpertRBarBands::Refresh()
 
   // called after m_ticks.Refresh() and Refreshs() above
   // garantes not called twice and bband indicators available
-  RefreshRawBandSignals(m_bars.m_last, m_bars.m_nnew);
+  RefreshRawBandSignals(m_bars.m_last, m_bars.m_nnew, result);
 
   return result;
 }
@@ -263,11 +263,12 @@ void CExpertRBarBands::CreateBBands(){
   }
 }
 
-void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count){
+void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count, int empty){
     // should be called only once per refresh
     // use the last added samples
     // same of number of new indicator samples due refresh() true
     // of indicator
+    empty = (empty)? 1:0;
     for(int j=0; j<m_nbands; j++){
         //    Based on a bollinger band defined by upper-band and lower-band
         //    return signal:
@@ -276,10 +277,10 @@ void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count){
         //        hold  0 : nothing usefull happend
         for(int i=0; i<count; i++){
             if( last[i] >= m_bands[j].m_upper[i])
-                m_raw_signal[j].Add(-1.); // sell
+                m_raw_signal[j].Add(-1*empty); // sell
             else
             if( last[i] <= m_bands[j].m_down[i])
-                m_raw_signal[j].Add(+1.); // buy
+                m_raw_signal[j].Add(+1*empty); // buy
             else
                 m_raw_signal[j].Add(0); // nothing
         }

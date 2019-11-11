@@ -380,7 +380,7 @@ public:
     ~CCBuffer(void) { ArrayFree(m_data); }
 
     Type operator[](const int index) const {
-        return m_data[(m_cposition+index)%m_data_max];
+        return m_data[ (isfull!=0)?(m_cposition+index-1)%m_data_max : index];
     }
     // convert to index based on start of data
     // from absolute index
@@ -510,7 +510,7 @@ public:
 
     // correct index to start of data
     Type operator[](const int index) const {
-        return m_data[(m_cposition+index)%m_data_max];
+        return m_data[ (isfull!=0)?(m_cposition+index-1)%m_data_max : index];
     }
 
     // convert to index based on start of data

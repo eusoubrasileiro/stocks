@@ -207,9 +207,24 @@ mqltick_dtype = np.dtype([
 
 def writebin_mql5ticks(dfticks_, mqlticksfilename):
     dfticks = dfticks_.copy() # avoid modifications on orignal
+    # Create mqltick fake flags but this is unacessary figure out now
+    # for not to say useless  only flag_buy and flag_sell would be useful
+    # but they are rare
+    # // 2      TICK_FLAG_BID –  tick has changed a Bid price
+    # // 4      TICK_FLAG_ASK  – a tick has changed an Ask price
+    # // 8      TICK_FLAG_LAST – a tick has changed the last deal price
+    # // 16     TICK_FLAG_VOLUME – a tick has changed a volume
+    # // 32     TICK_FLAG_BUY – a tick is a result of a buy deal  -- cannot be calculated
+    # // 64     TICK_FLAG_SELL – a tick is a result of a sell deal  -- cannot be calculated
+    flags = np.not_equal(ticks.iloc[1:, [2, 3, 4, 5]].values, ticks.iloc[:-1, [2, 3, 4, 5]].values)
+    flags = np.sum(flags*np.array([2, 4, 8, 16]), axis=-1)
+    dfticks['flags'] = np.int32(0) # to be created or not
+    dfticks.loc[1:, 'flags'] = flags
+    # the first tick is by definition above created when at least volume
+    # changed from 0 to something > 0 so  set accordingly
+    dfticks.loc[0, 'flags'] = np.int32(16)
     dfticks['vreal'] = dfticks['vol']
     dfticks['vol'] = dfticks['vol'].astype(np.int64)
-    dfticks['flags'] = np.int32(0) # to be created or not
     dfticks['ms'] = (dfticks.index.astype(np.int64)//1000000) # datetime unit='ns' nano e9 seconds to ms e3
     dfticks['time'] = dfticks['ms']//1000 # ms to seconds
     # dfticks.dtypes[[1, 2, 3, 4, 5, 8, 7, 6]] # compatible with above definition

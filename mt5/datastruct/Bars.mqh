@@ -98,12 +98,9 @@ public:
     // return number created
     int AddTick(MqlTick &tick){
       m_nnew = 0;
-      // flags bellow < 16 are only re-quotes
-      if(tick.flags > 12){ // at last volume changed - so there was a deal
+      if(tick.volume > 0){ // there was a deal
           m_count_money += tick.volume_real*tick.last*m_point_value;
           while(m_count_money>=m_moneybarsize){ // may need to create many bars for one tick
-              // if(ibars == nticks)// ibars may explode if moneybarsize too small
-              //   return -1; // dont explode this is a buffer delete older ones
               m_bar.bid = tick.bid;
               m_bar.ask = tick.ask;
               m_bar.last = tick.last;

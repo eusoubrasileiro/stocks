@@ -262,6 +262,8 @@ July 2019
       - [x] Implement buffer of ticks     
       - [x] Implement talib C indicators
       - [x] Implement fractional differences indicator    
+  - [ ] Verified that I am using wrongly `CopyTicksRange` checking last tick minus 1 ms isnt enough
+  to get all ticks without repeating some. Need to fix. 
   - Verified that mt5 has problems with optimization when using `CopyTicksRange`.
     - Every tick / Every tick based on real ticks - is useless
       - volumes negotiated have nothing to-do with reality
@@ -270,13 +272,23 @@ July 2019
           - ask-bid flutuates crazily
       - Every tick based on real ticks
           - Volumes are correct but interpolates when there is any discrepancy
-    - [x] Solution found create a custom SYMBOl (unless change do MT4 that's x86 only)
+    - [x] Failed - First solution found create a custom SYMBOl (unless change do MT4 that's x86 only)
         - Import bar data M1, import tick data
         - Use every tick based on real ticks
         - [x] Ideally minute bars should be created from the ticks because mt5 trust them more.
         If ticks and bars are available and differ bars are used and fake ticks are created.
         - [x] created `python\ticksnbars.py` able to process and create optimal ticks and bars
           for backtesting based only on exported ticks.
+        - Failed becase metatrader still creates fake ticks with non-sense volumes altough
+        1 minute bars and ticks are correclty adjusted.
+    - [ ] Sucess - Second Solution use only the times created by `CopyTicksRange` and
+copy ticks from file created by python from original cleanned ticks. Doing so `bid` and `ask` will have nothing
+to do with reality but only for the execution of orders. Everything else can be useful.
+    - Another alternative is to give up metatrader backtesting because x86 version of MT4 according to
+Hindenburgo lack and fails in optimization. And use C code backtest engine created. Since my algos are not
+complicated for execution that would not be very throublesome.
+    - Also notice that mql5 code of my experts can be easily ported almost entirely to c++. Only data capture and
+    order execution will still be needed be done on mql5/mql4.
 
  - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
 So cpu is allways in 100%.
@@ -300,4 +312,4 @@ Unfortunately circular buffer is needed now.
         - [x] Solved new version `CCBufferMqlTicks` using circular buffer change place from 98% time used to 0.25% on profiling
     - [x] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size).
 `ArrayCopy` of `CBuffer` is taking 95.24% on profiling.
-        - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day. Better than this only a C++ dll with parallel call. Also MoneyBar or any struct/class that needs the timestamp week day should store a pointer to it. Doing so, the calculation could be left for after or being assync in parallel. The timestamp week day would be added inside class as a pointer. 
+        - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day. Better than this only a C++ dll with parallel call. Also MoneyBar or any struct/class that needs the timestamp week day should store a pointer to it. Doing so, the calculation could be left for after or being assync in parallel. The timestamp week day would be added inside class as a pointer.

@@ -8,11 +8,11 @@
 
 //Inputs
 //number of bollinger bands
-input int                      Expert_NBands          = 6;
+input int                      Expert_NBands          = 3;
 // reference window for bbands
 input int                      Expert_Window          = 21;
 // "memory" of patterns for training sklearn model
-input int                  Expert_Batch_Size          = 15;
+input int                  Expert_Batch_Size          = 5;
 // minimum number of samples for training
 input int                   Expert_NTraining          = 600;
 // orderSize in $$$
@@ -24,7 +24,7 @@ input double              Expert_Train_TargetProfit   = 15;
 // stop loss for each order $$$
 input double              Expert_Run_TargetProfit     = 15;
 // target profit per order $$$
-input double              Expert_Run_StopLoss        = 15;
+input double              Expert_Run_StopLoss        = 100;
 // recursive == kalman filter option
 input bool                Expert_Recursive           = false;
 

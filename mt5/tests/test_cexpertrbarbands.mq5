@@ -48,8 +48,6 @@ const double Expert_PositionExpireHours = 1.5; // Time to expire a position (clo
 const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
 
-MqlTick pymqlticks[]; // truth
-
 class CTestExpertRBarBands : public CExpertRBarBands
 {
     void verifyEntry()

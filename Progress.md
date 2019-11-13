@@ -288,6 +288,7 @@ to do with reality but only for the execution of orders. Everything else can be 
 Hindenburgo lack and fails in optimization. And use C code backtest engine created + python packages for genetic (minimization/optimization). Since my algos are not complicated for execution that would not be very throublesome.
     - Also notice that mql5 code of my experts can be easily ported almost entirely to c++. Only data capture and
     order execution will still be needed to be done on mql5/mql4.
+  - Advantage of passing most code to C++ is writting code and tests much easier. I can even call python .dll and mock a signature of `CopyTicksRange` reading MqlTicks from file. 
 
  - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
 So cpu is allways in 100%.

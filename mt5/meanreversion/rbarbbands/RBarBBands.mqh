@@ -169,15 +169,15 @@ void CExpertRBarBands::verifyEntry(){
   // raw signals added bars
   if(lastRawSignals() != -1)
   {
-      int m_xypair_count_old = m_xypairs.Size();
+      int m_xypair_count_old = m_xypairs.Count();
       // only when a new entry signal recalc classes
       // only when needed
       CreateYTargetClasses();
       CreateXFeatureVectors(m_xypairs);
       // add number of xypairs added (cannot decrease)
-      m_xypair_count += (m_xypairs.Size()-m_xypair_count_old);
+      m_xypair_count += (m_xypairs.Count()-m_xypair_count_old);
       // update/train model if needed/possible
-      if(m_xypairs.Size() >= m_ntraining){
+      if(m_xypairs.Count() >= m_ntraining){
         // first time training
         if(!m_model.isready){
          // time to train the model for the first time
@@ -338,7 +338,7 @@ void CExpertRBarBands::BandCreateYTargetClasses(CCBuffer<int> &bandsg_raw,
       // OR
       // For not adding again the same signal
       // Starts where it stop the last time
-      if(xypairs.Size() > 0){
+      if(xypairs.Count() > 0){
         int last_buff_index = m_times.QuickSearch(xypairs.GetData(0).time);
         if(last_buff_index < 0){
             Print("This was not implemented and should never happen!");
@@ -443,7 +443,7 @@ void CExpertRBarBands::CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs)
   // assembly the X array of features for it
   // from more recent to oldest
   // if it is already filled (ready) stop
-  for(int i=0; i<xypairs.Size(); i++){
+  for(int i=0; i<xypairs.Count(); i++){
     // no need to assembly any other if this is already ready
     // olders will also be ready
     if(!CreateXFeatureVector(xypairs.GetData(i)))
@@ -513,7 +513,7 @@ bool CExpertRBarBands::PythonTrainModel(){
   XyPair xypair;
   ArrayResize(X, m_ntraining*m_xtrain_dim);
   ArrayResize(y, m_ntraining);
-  int end = m_xypairs.Size(); // because buffer might be bigger than m_ntraining
+  int end = m_xypairs.Count(); // because buffer might be bigger than m_ntraining
   int start = end-m_ntraining; // most recent that only
   for(int i=0; i<m_ntraining;i++){ // get the oldest first
     // X order matter forecast

@@ -168,7 +168,7 @@ public:
 
     Type *operator[](const int index) const { return m_data[index]; }
 
-    int Size(void){ return m_data_total; }
+    int Count(void){ return m_data_total; }
 
     void RemoveLast(void){
         if(m_data_total>0){

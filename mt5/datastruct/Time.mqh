@@ -158,12 +158,11 @@ public:
   // by calling in parallel when range has a certain size
   void AddTimeMs(long time_ms){
     // convert ms timestamp to linux epoch (time-zone is already accounted for)
-    //TimeToStruct((datetime) time_ms/1000, m_last_mqldtime);
     m_last.ms = time_ms;
-    m_last.day = timestampWDay(time_ms);    
-    CCStructBuffer<timeday>::Add(m_last);
+    m_last.day = timestampWDay(time_ms/1000);
+    Add(m_last);
   }
-  
+
 
   // you may want to insert a range smaller than the full size of elements array
   void AddRangeTimeMs(long &time_ms[], int start=0, int tsize=0){
@@ -173,5 +172,3 @@ public:
   }
 
 };
-
-

@@ -138,13 +138,14 @@ protected:
   int lastRawSignals();
   void CreateBBands();
   void RefreshRawBandSignals(double &last[], int count, int empty);
-  // Global Buffer Size (all buffers MUST have same size)
-  // that's why they all use same ResizeBuffer code
-  // Real Buffer Size since Expert_BufferSize is just
-  // an initilization parameter and Resize functions make
-  // buffer a little bigger
+// Global Buffer Size (all buffers MUST and HAVE same size)
+// that's why they all use same SetSize for setting
+// Expert_BufferSize 
+// All are updated after bars so that's the main
+// begin of new bar is also begin of new data on all buffers
   int BufferSize();
   int BufferTotal();
+  int BeginNewData();
   
   // events
   bool TradeEventPositionOpened();

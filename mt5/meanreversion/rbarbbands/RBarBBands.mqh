@@ -223,28 +223,28 @@ int CExpertRBarBands::lastRawSignals(){
   int direction = 0;
   m_last_raw_signal_index = -1;
  // m_last_raw_signal_index is index based
- // on circular buffers start of data index alligned
-  for(int i=0; i<m_bars.m_nnew; i++){
+ // on circular buffers index alligned on all 
     for(int j=0; j<m_nbands; j++){
-        m_last_raw_signal[j] = m_raw_signal[j][i];
-        if(m_last_raw_signal[j] != 0){
-          if(direction==0){
-              direction = m_last_raw_signal[j];
-              m_last_raw_signal_index = i;
-          }
-          else
-          // two signals with oposite directions on last added bars
-          // lets keep it simple now - lets ignore them
-          if(m_last_raw_signal[j] != direction){
-              m_last_raw_signal_index = -1;
-              return -1;
-          }
-          else
-            // same direction only update index to get last
-            m_last_raw_signal_index = i;
-        }
-    }
-  }
+        for(int i=BeginNewData(); i<BufferTotal(); i++){
+            m_last_raw_signal[j] = m_raw_signal[j][i];
+            if(m_last_raw_signal[j] != 0){
+              if(direction==0){
+                  direction = m_last_raw_signal[j];
+                  m_last_raw_signal_index = i;
+              }
+              else
+              // two signals with oposite directions on last added bars
+              // lets keep it simple now - lets ignore them
+              if(m_last_raw_signal[j] != direction){
+                  m_last_raw_signal_index = -1;
+                  return -1;
+              }
+              else
+                // same direction only update index to get last
+                m_last_raw_signal_index = i;
+            }
+       }
+   }
   return m_last_raw_signal_index;
 }
 
@@ -269,7 +269,7 @@ void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count, int empt
     // same of number of new indicator samples due refresh() true
     // of indicator
     empty = (empty)? 1:0;
-    int start_new = BufferTotal()-count;
+    int start_new = BeginNewData();
     for(int j=0; j<m_nbands; j++){
         //    Based on a bollinger band defined by upper-band and lower-band
         //    return signal:
@@ -289,13 +289,14 @@ void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count, int empt
 }
 
 
-// Global Buffer Size (all buffers MUST have same size)
-// that's why they all use same ResizeBuffer code
-// Real Buffer Size since Expert_BufferSize is just
-// an initilization parameter and Resize functions make
-// buffer a little bigger
-int CExpertRBarBands::BufferSize(){ return m_times.Size(); }
-int CExpertRBarBands::BufferTotal(){ return m_times.Count(); }
+// Global Buffer Size (all buffers MUST and HAVE same size)
+// that's why they all use same SetSize for setting
+// Expert_BufferSize 
+// All are updated after bars so that's the main
+// begin of new bar is also begin of new data on all buffers
+int CExpertRBarBands::BufferSize(){ return m_bars.Size(); }
+int CExpertRBarBands::BufferTotal(){ return m_bars.Count(); }
+int CExpertRBarBands::BeginNewData(){ return m_bars.Count()-m_bars.m_nnew;}
 
 void CExpertRBarBands::CreateOtherFeatureIndicators(){
     // only fracdiff on prices
@@ -347,7 +348,7 @@ void CExpertRBarBands::BandCreateYTargetClasses(CCBuffer<int> &bandsg_raw,
         i = last_buff_index + 1;
       }
       // net mode ONLY
-      for(; i<bandsg_raw.Size(); i++){ // from past to present
+      for(; i<bandsg_raw.Count(); i++){ // from past to present
           time = m_times[i].ms;
           day = m_times[i].day; // unique day identifier
           if(day != previous_day){ // a new day reset everything

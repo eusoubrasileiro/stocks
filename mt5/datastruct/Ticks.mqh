@@ -69,7 +69,8 @@ protected:
   int m_trash_count;
 
 public:
-  long m_last_ms;
+  long m_cmpbegin_time;
+  int m_cmpbegin;
 
   CCBufferMqlTicks(void);
 
@@ -79,7 +80,8 @@ public:
       m_ncopied = 0;
       // time now in ms - 0 will work 'coz next tick.ms value will be bigger
       // and will take its place
-      m_last_ms = long (TimeCurrent())*1000; // turn in 'fake' ms
+      m_cmpbegin_time = long (TimeCurrent())*1000; // turn in 'fake' ms
+      m_cmpbegin = 0;
       m_nnew = 0;
       isbacktest = false;
       if(MQLInfoInteger(MQL_TESTER)){ // must load specific file with ticks
@@ -92,7 +94,7 @@ public:
         StringAdd(m_refcticks_file,"_mqltick.bin");
         m_refsize = ReadTicks(m_refticks, m_refcticks_file, FILE_COMMON);
         // find begin for current backtest
-        long timebegin_ms = (long) TimeCurrent()*1000;        
+        long timebegin_ms = (long) TimeCurrent()*1000;
         for(m_refpos = 0; m_refpos<m_refsize; m_refpos++)
             if(m_refticks[m_refpos].time_msc >= timebegin_ms) break;
         m_trash_count = 0;
@@ -107,7 +109,7 @@ public:
    // copy all ticks from last copy time - 1 milisecond to now
    // to avoid missing ticks on same ms)
    m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
-        COPY_TICKS_ALL, m_last_ms-1, 0);
+        COPY_TICKS_ALL, m_cmpbegin_time, 0);
 
    if(m_ncopied < 1){
       int error = GetLastError();
@@ -130,16 +132,19 @@ public:
     // ticks are indexed from the past to the present,
     ArraySetAsSeries(m_copied_ticks, false); // cancel this
 
-    // find index of first tick with time greater than last copied
-    // begin of new ticks
-    m_bgidx = 0;
-    if(m_ncopied > 1){
-      for(int i=0; i<m_ncopied; i++)
-        if(m_copied_ticks[i].time_msc > m_last_ms){
-          m_bgidx = i;
-          break;
-        }
-    }
+    // find index of first tick different
+    // from what we already have using the comparision indexes
+    //if(m_copied_ticks[0].time_msc != At(m_cmpbegin).time_msc)
+    //  return 0; 
+    m_bgidx = 1;
+    int i;
+    for(i=0; i<m_ncopied; i++)
+      if(m_copied_ticks[i].time_msc != At(m_cmpbegin+i).time_msc){
+        m_bgidx = i;
+        break;
+      }
+    if(i==0) // failed first check 
+        return 0; 
     m_nnew = m_ncopied - m_bgidx;
     // allign array of new ticks to zero
     ArrayCopy(m_copied_ticks, m_copied_ticks, 0, m_bgidx, m_nnew);
@@ -152,8 +157,8 @@ public:
     if(isbacktest){
       int real_nnew = 0;
       int begin_refpos = m_refpos;
-      for(int i=0; i<m_nnew && m_refpos < m_refsize; i++){
-        if(m_copied_ticks[i].time_msc 
+      for(i=0; i<m_nnew && m_refpos < m_refsize; i++){
+        if(m_copied_ticks[i].time_msc
             == m_refticks[m_refpos].time_msc){
           real_nnew++; m_refpos++;
         }
@@ -166,14 +171,25 @@ public:
     }
     if(m_nnew==0){
         m_trash_count++;
-        return 0; 
-    }        
+        return 0;
+    }
     if(m_trash_count > 0){
-        Print("Ignored created trash : ", m_trash_count, " samples at ", (datetime) m_last_ms/1000);
+        Print("Ignored created trash : ",
+        m_trash_count, " samples at ",
+        (datetime) m_cmpbegin_time/1000);
         m_trash_count = 0;
     }
-    // get last tick ms inserted on buffer
-    m_last_ms = m_copied_ticks[m_nnew-1].time_msc;
+
+    // get begin time of comparison to check for new ticks
+    // last tick ms -1 on buffer
+    // get index of first tick with time >= (last tick ms) - (1 ms)
+    m_cmpbegin_time = m_copied_ticks[m_nnew-1].time_msc-1;
+    m_cmpbegin = 0;
+    for(i=Count()-1; i>=0; i--)
+      if(At(i).time_msc < m_cmpbegin_time){
+        m_cmpbegin = i+1; break;
+      }
+
     gticks += m_nnew;
 
     return m_nnew;

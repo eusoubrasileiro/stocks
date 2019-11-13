@@ -513,6 +513,10 @@ public:
         return m_data[ (isfull!=0)?(m_cposition+index-1)%m_data_max : index];
     }
 
+    Type At(const int index) const {
+      return m_data[ (isfull!=0)?(m_cposition+index-1)%m_data_max : index];
+    }
+
     // convert to index based on start of data
     // from absolute index
     int toIndex(int abs_index)

@@ -96,10 +96,6 @@ int OnInit(){
                           Expert_Run_StopLoss, Expert_Run_TargetProfit,
                           Expert_Recursive);
 
-
-
-    ReadTicks(pymqlticks, "PETR4_BACKTESTING_mqltick.bin", FILE_COMMON);
-
     return(INIT_SUCCEEDED);
 }
 

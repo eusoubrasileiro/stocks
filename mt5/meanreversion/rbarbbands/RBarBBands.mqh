@@ -239,12 +239,12 @@ int CExpertRBarBands::lastRawSignals(){
               m_last_raw_signal_index = -1;
               return -1;
           }
-          // same direction only update index to get last
-          m_last_raw_signal_index = i;
+          else
+            // same direction only update index to get last
+            m_last_raw_signal_index = i;
         }
     }
   }
-
   return m_last_raw_signal_index;
 }
 
@@ -269,6 +269,7 @@ void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count, int empt
     // same of number of new indicator samples due refresh() true
     // of indicator
     empty = (empty)? 1:0;
+    int start_new = BufferTotal()-count;
     for(int j=0; j<m_nbands; j++){
         //    Based on a bollinger band defined by upper-band and lower-band
         //    return signal:
@@ -276,10 +277,10 @@ void CExpertRBarBands::RefreshRawBandSignals(double &last[], int count, int empt
         //        sell -1 : crossing up-outside it's sell
         //        hold  0 : nothing usefull happend
         for(int i=0; i<count; i++){
-            if( last[i] >= m_bands[j].m_upper[i])
+            if( last[i] >= m_bands[j].m_upper[start_new+i])
                 m_raw_signal[j].Add(-1*empty); // sell
             else
-            if( last[i] <= m_bands[j].m_down[i])
+            if( last[i] <= m_bands[j].m_down[start_new+i])
                 m_raw_signal[j].Add(+1*empty); // buy
             else
                 m_raw_signal[j].Add(0); // nothing

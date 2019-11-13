@@ -19,13 +19,13 @@ void OnStart(){
    MqlTick mqlticks[];
    ArraySetAsSeries(mqlticks, true);
    int copied = 0;
-   
+
    ArrayResize(mqlticks, 100e6); // 100 MM
 
   // number of 3 trials of download before giving up
   for(int try=0; try<3; try++) {
     // -1 if it has not complet it yet
-    copied = CopyTicksRange(input_symbol, mqlticks, COPY_TICKS_ALL, 
+    copied = CopyTicksRange(input_symbol, mqlticks, COPY_TICKS_ALL,
                 (long) start_date*1000, (long) end_date*1000);
     // CopyTicks
     Print("copied ", string(copied));
@@ -36,9 +36,9 @@ void OnStart(){
   }
   Print("symbol ", input_symbol, " ticks downloaded: ", string(copied));
   PreviewSymbol(input_symbol, mqlticks);
-  FixArrayTicks(mqlticks);
+  fixArrayTicks(mqlticks);
   WriteData(input_symbol, mqlticks);
-  
+
   ArrayFree(mqlticks);
 
 }
@@ -48,7 +48,7 @@ void PreviewSymbol(string symbol, MqlTick &rates[]){
     // verbose some data 100 first
     string format = " bid = %G, ask = %G, last = %G,"
                     " volume = %g, ms = %I64d, flags = %u,"
-                    " volume real = %g";    
+                    " volume real = %g";
     string out;
     int rsize = ArraySize(rates);
     if(rsize == 0)

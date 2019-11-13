@@ -1,5 +1,4 @@
 #include "..\Buffers.mqh"
-#include "Ticks.mqh"
 
 // struct MqlTick
 //   {
@@ -23,7 +22,7 @@
 // Fix array of ticks so if last ask, bid or last is 0
 // they get filled with previous non-zero value as should be
 // volume i dont care because it will only be usefull in change if flag >= 16
-void FixArrayTicks(MqlTick &ticks[]){
+void fixArrayTicks(MqlTick &ticks[]){
   int nticks = ArraySize(ticks);
   double       bid = 0;           // Current Bid price
   double       ask = 0;           // Current Ask price
@@ -54,12 +53,17 @@ const int Max_Tick_Copy = 10e3;
 class CCBufferMqlTicks : public CCStructBuffer<MqlTick>
 {
 protected:
-
-  int m_bgidx; // temp:: where the new ticks starts on array m_copied_ticks
   string m_symbol;
   MqlTick m_copied_ticks[]; // fixed size number of ticks copied every x seconds
   int m_ncopied; // last count of ticks copied on buffer
   int m_nnew; // number of new ticks last copied
+  bool scheck; // security check of sync with data server
+  long m_cmpbegin_time;
+  int m_cmpbegin;
+  int m_bgidx; // temp:: where the new ticks starts on array m_copied_ticks
+
+  //////////////////////////////////////////////
+  ////// backtest workaround for stupid mt5 fake ticks creation
   bool isbacktest;
   MqlTick m_refticks[]; // correct ticks without stupid modifications
   int m_refsize; // size of reference data
@@ -68,9 +72,78 @@ protected:
   int m_refpos; // position on reference ticks file
   int m_trash_count;
 
+  bool correctMt5UnrealTicks(){
+    int real_nnew = 0;
+    int begin_refpos = m_refpos;
+    for(int i=0; i<m_nnew && m_refpos < m_refsize; i++){
+      if(m_copied_ticks[i].time_msc
+          == m_refticks[m_refpos].time_msc){
+        real_nnew++; m_refpos++;
+      }
+    }
+    AddRange(m_refticks, begin_refpos, m_refpos);
+    m_nnew = real_nnew;
+    if(m_nnew==0){ // number of trash ticks created by Metatrader
+      m_trash_count++;
+      return false;
+    }
+    if(m_trash_count > 0){
+      Print("Ignored metatrader 5 created unreal ticks : ",
+      m_trash_count, " at ",
+      (datetime) m_cmpbegin_time/1000);
+      m_trash_count = 0;
+    }
+    return true;
+  }
+
+  void loadCorrectTicks(string symbol){
+    isbacktest = false;
+    if(MQLInfoInteger(MQL_TESTER)){ // must load specific file with ticks
+      // located on COMMON folder
+      // if ticks on this file is not compatible with
+      // your tick history problems will come
+      // advised to use a custom symbol to avoid that
+      isbacktest = true;
+      StringAdd(m_refcticks_file, symbol);
+      StringAdd(m_refcticks_file,"_mqltick.bin");
+      m_refsize = ReadTicks(m_refticks, m_refcticks_file, FILE_COMMON);
+      // find begin for current backtest
+      long timebegin_ms = (long) TimeCurrent()*1000;
+      for(m_refpos = 0; m_refpos<m_refsize; m_refpos++)
+          if(m_refticks[m_refpos].time_msc >= timebegin_ms) break;
+      m_trash_count = 0;
+    }
+  }
+
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
+  bool beginNewTicks(){
+    scheck = false;
+    // ticks are indexed from the past to the present,
+    ArraySetAsSeries(m_copied_ticks, false); // cancel this
+    // find index of first tick different
+    // from what we already have using the comparision indexes
+    if(isfull == 0 && m_cposition == 0){ // we have nothing - copy everything
+      m_bgidx = 0; scheck = true;
+    }
+    else{
+      for(int i=0; i<m_ncopied; i++)
+        if(m_copied_ticks[i].time_msc == At(m_cmpbegin+i).time_msc){
+          scheck=true; // must have at least one sample equal
+          // for security check of sync with server
+        }
+        else{ // found begin new data
+          m_bgidx = i;
+          break;
+        }
+    }
+    // the difference is the number of new ticks
+    m_nnew = m_ncopied - m_bgidx;
+    return (scheck);
+  }
+
 public:
-  long m_cmpbegin_time;
-  int m_cmpbegin;
 
   CCBufferMqlTicks(void);
 
@@ -78,27 +151,13 @@ public:
       m_symbol = symbol;
       ArrayResize(m_copied_ticks, Max_Tick_Copy);
       m_ncopied = 0;
-      // time now in ms - 0 will work 'coz next tick.ms value will be bigger
-      // and will take its place
-      m_cmpbegin_time = long (TimeCurrent())*1000; // turn in 'fake' ms
-      m_cmpbegin = 0;
       m_nnew = 0;
-      isbacktest = false;
-      if(MQLInfoInteger(MQL_TESTER)){ // must load specific file with ticks
-        // located on COMMON folder
-        // if ticks on this file is not compatible with
-        // your tick history problems will come
-        // advised to use a custom symbol to avoid that
-        isbacktest = true;
-        StringAdd(m_refcticks_file, symbol);
-        StringAdd(m_refcticks_file,"_mqltick.bin");
-        m_refsize = ReadTicks(m_refticks, m_refcticks_file, FILE_COMMON);
-        // find begin for current backtest
-        long timebegin_ms = (long) TimeCurrent()*1000;
-        for(m_refpos = 0; m_refpos<m_refsize; m_refpos++)
-            if(m_refticks[m_refpos].time_msc >= timebegin_ms) break;
-        m_trash_count = 0;
-      }
+      // time now in ms will work 'coz next tick.ms value will be bigger
+      // and will take its place
+      m_cmpbegin_time = long (TimeCurrent())*1000; // turn in ms
+      m_cmpbegin = 0;
+
+      loadCorrectTicks(symbol);
   }
 
   ~CCBufferMqlTicks(){ArrayFree(m_copied_ticks);}
@@ -129,55 +188,25 @@ public:
       return -1;
    }
 
-    // ticks are indexed from the past to the present,
-    ArraySetAsSeries(m_copied_ticks, false); // cancel this
+   if(!beginNewTicks()){
+     Print("Data Without Sync With Server!");
+     Print("Forcing Stop");
+     int error = 0; error = 1/error;  // division by 0 stops EA
+   }
 
-    // find index of first tick different
-    // from what we already have using the comparision indexes
-    //if(m_copied_ticks[0].time_msc != At(m_cmpbegin).time_msc)
-    //  return 0; 
-    m_bgidx = 1;
-    int i;
-    for(i=0; i<m_ncopied; i++)
-      if(m_copied_ticks[i].time_msc != At(m_cmpbegin+i).time_msc){
-        m_bgidx = i;
-        break;
-      }
-    if(i==0) // failed first check 
-        return 0; 
-    m_nnew = m_ncopied - m_bgidx;
     // allign array of new ticks to zero
     ArrayCopy(m_copied_ticks, m_copied_ticks, 0, m_bgidx, m_nnew);
-    // count ticks from last.time_msc-1 to end
-    // the difference is the number of new ticks
+    // fix nonsense last, ask, bid empty
+    fixArrayTicks(m_copied_ticks);
 
-    FixArrayTicks(m_copied_ticks); // fix nonsense last, ask, bid empty
     // if on back-test
-    // check if should add and what should be added
+    // dont use ticks from metatrader, only times!
     if(isbacktest){
-      int real_nnew = 0;
-      int begin_refpos = m_refpos;
-      for(i=0; i<m_nnew && m_refpos < m_refsize; i++){
-        if(m_copied_ticks[i].time_msc
-            == m_refticks[m_refpos].time_msc){
-          real_nnew++; m_refpos++;
-        }
-      }
-      AddRange(m_refticks, begin_refpos, m_refpos);
-      m_nnew = real_nnew;
+      if(!correctMt5UnrealTicks())
+        return 0; // no new ticks
     }
     else{ // real time operation
       AddRange(m_copied_ticks, 0, m_nnew);
-    }
-    if(m_nnew==0){
-        m_trash_count++;
-        return 0;
-    }
-    if(m_trash_count > 0){
-        Print("Ignored created trash : ",
-        m_trash_count, " samples at ",
-        (datetime) m_cmpbegin_time/1000);
-        m_trash_count = 0;
     }
 
     // get begin time of comparison to check for new ticks
@@ -185,7 +214,7 @@ public:
     // get index of first tick with time >= (last tick ms) - (1 ms)
     m_cmpbegin_time = m_copied_ticks[m_nnew-1].time_msc-1;
     m_cmpbegin = 0;
-    for(i=Count()-1; i>=0; i--)
+    for(int i=Count()-1; i>=0; i--)
       if(At(i).time_msc < m_cmpbegin_time){
         m_cmpbegin = i+1; break;
       }

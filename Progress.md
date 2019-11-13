@@ -262,8 +262,6 @@ July 2019
       - [x] Implement buffer of ticks     
       - [x] Implement talib C indicators
       - [x] Implement fractional differences indicator    
-  - [ ] Verified that I am using wrongly `CopyTicksRange` checking last tick minus 1 ms isnt enough
-  to get all ticks without repeating some. Need to fix. 
   - Verified that mt5 has problems with optimization when using `CopyTicksRange`.
     - Every tick / Every tick based on real ticks - is useless
       - volumes negotiated have nothing to-do with reality
@@ -272,7 +270,9 @@ July 2019
           - ask-bid flutuates crazily
       - Every tick based on real ticks
           - Volumes are correct but interpolates when there is any discrepancy
-    - [x] Failed - First solution found create a custom SYMBOl (unless change do MT4 that's x86 only)
+    - [x] Verified that I am using wrongly `CopyTicksRange` checking last tick minus 1 ms isnt enough
+          to get all ticks without repeating some. Fixed by comparing equality between samples in server and locally.
+    - [x] Failed - First solution found create a custom SYMBOL (unless change do MT4 that's x86 only)
         - Import bar data M1, import tick data
         - Use every tick based on real ticks
         - [x] Ideally minute bars should be created from the ticks because mt5 trust them more.
@@ -281,14 +281,13 @@ July 2019
           for backtesting based only on exported ticks.
         - Failed becase metatrader still creates fake ticks with non-sense volumes altough
         1 minute bars and ticks are correclty adjusted.
-    - [ ] Sucess - Second Solution use only the times created by `CopyTicksRange` and
+    - [x] Sucess - Second Solution use only the times created by `CopyTicksRange` and
 copy ticks from file created by python from original cleanned ticks. Doing so `bid` and `ask` will have nothing
-to do with reality but only for the execution of orders. Everything else can be useful.
+to do with reality but only for the execution of orders. Everything else can be used.
     - Another alternative is to give up metatrader backtesting because x86 version of MT4 according to
-Hindenburgo lack and fails in optimization. And use C code backtest engine created. Since my algos are not
-complicated for execution that would not be very throublesome.
+Hindenburgo lack and fails in optimization. And use C code backtest engine created + python packages for genetic (minimization/optimization). Since my algos are not complicated for execution that would not be very throublesome.
     - Also notice that mql5 code of my experts can be easily ported almost entirely to c++. Only data capture and
-    order execution will still be needed be done on mql5/mql4.
+    order execution will still be needed to be done on mql5/mql4.
 
  - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
 So cpu is allways in 100%.

@@ -71,6 +71,11 @@ protected:
   string m_refcticks_file;
   int m_refpos; // position on reference ticks file
   int m_trash_count;
+  ////////////////////////////////////////////
+  ////// for testing against Python/C++ since i need to
+  ////// know boundaries of new ticks (since data comes in chuncks)
+  int m_bound_ticks[];
+  int ib_tick; // count of calls to AddRange
 
   bool correctMt5UnrealTicks(){
     int real_nnew = 0;
@@ -81,6 +86,9 @@ protected:
         real_nnew++; m_refpos++;
       }
     }
+    // testing needs boundaries of data chuncks
+    m_bound_ticks[ib_tick++] = m_refpos;
+    ///////
     AddRange(m_refticks, begin_refpos, m_refpos);
     m_nnew = real_nnew;
     if(m_nnew==0){ // number of trash ticks created by Metatrader
@@ -112,6 +120,9 @@ protected:
       for(m_refpos = 0; m_refpos<m_refsize; m_refpos++)
           if(m_refticks[m_refpos].time_msc >= timebegin_ms) break;
       m_trash_count = 0;
+
+      ArrayResize(m_bound_ticks, m_refsize); // certainly will be smaller
+      ib_tick = 0;
     }
   }
 
@@ -160,7 +171,9 @@ public:
       loadCorrectTicks(symbol);
   }
 
-  ~CCBufferMqlTicks(){ArrayFree(m_copied_ticks);}
+  ~CCBufferMqlTicks(){
+    ArrayFree(m_copied_ticks);
+  }
 
   int nNew(){ return m_nnew; } // number of new ticks after calling Refresh()
 

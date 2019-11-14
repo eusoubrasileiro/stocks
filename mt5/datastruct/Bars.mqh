@@ -43,6 +43,31 @@ int MoneyBars(MqlTick &ticks[], double tickvalue, double moneybarsize, MoneyBar 
   return ibars;
 }
 
+
+
+int MoneyBarsAddTick(MqlTick tick,  double point_value, double moneybarsize,
+                 MoneyBar &bars[], int &ibars, double &count_money,
+                 CCStructBuffer<MoneyBar> *buffbars)
+{
+  int nnew=0;
+  MoneyBar m_bar;
+  if(tick.volume > 0){ // there was a deal
+      m_count_money += tick.volume_real*tick.last*point_value;
+      while(count_money>=moneybarsize){ // may need to create many bars for one tick
+          m_bar.bid = tick.bid;
+          m_bar.ask = tick.ask;
+          m_bar.last = tick.last;
+          m_bar.time_msc = tick.time_msc;
+          buffbars.Add(m_bar);
+          count_money -= moneybarsize;
+          nnew++;
+      }
+  }
+  return nnew;
+}
+
+
+
 class MoneyBarBuffer : public CCStructBuffer<MoneyBar>
 {
 protected:
@@ -64,9 +89,9 @@ public:
     }
 
     // copy last data of new bars m_nnew
-    // to local arrays 
+    // to local arrays
     void RefreshArrays(){
-      int parts[4]; 
+      int parts[4];
       int i, j, k, nparts, start, end;
       nparts = indexesNewBars(parts);
       for(i=0, k=0; i<nparts;i++){
@@ -79,7 +104,7 @@ public:
         }
       }
     }
-    
+
     // local arrays have max size equal buffer size
     void SetSize(int size){
       CCStructBuffer<MoneyBar>::SetSize(size);

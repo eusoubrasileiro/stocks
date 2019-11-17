@@ -5,7 +5,7 @@
 // and C++ could create array of timedays from
 // array of moneybar structs
 struct timeday {
-	int day; // day of year from MqlDateTime.day_of_year or day of week C code bellow
+	int day; // day of week C code bellow
 	long ms;
 };
 
@@ -60,7 +60,7 @@ int timestampWDay(long t)
 // Circular Buffer Version
 // Same as CStructBuffer but for timeday struct
 // adding QuickSearch functinality
-class CCTimeDayBuffer : public CCStructBuffer<timeday>
+class CCTimeDayBuffer : public CCBuffer<timeday>
 {
 
 	// code from clong array

@@ -28,6 +28,7 @@ protected:
 		// copy data overwriting the oldest sample - overwriting the firsts
 		// (shift left array)  making space for new samples in the end
 		// dst, src, dst_idx_srt, src_idx_srt, count_to_copy
+        // void * memcpy ( void * destination, const void * source, size_t num );
 		ArrayCopy(m_data, m_data, 0, space_needed, m_data_total - space_needed);
 		m_data_total -= space_needed;
 	}
@@ -145,7 +146,7 @@ protected:
 	int m_intdiv;
 
 public:
-	Type *m_data;
+	std::vector<Type> m_data;
 	int m_cposition; // current position of end of data
 	int isfull;
 
@@ -159,10 +160,10 @@ public:
 		isfull = 0;
 		m_data_max = size;
 		m_cposition = 0;
-		ArrayResize(m_data, size);
-	}
+        m_data.resize(size);
+    }
 
-	~CCBuffer(void) { ArrayFree(m_data); }
+    ~CCBuffer(void) { ~m_data(); }
 
 	Type operator[](const int index) const {
 		return m_data[(isfull != 0) ? (m_cposition + index - 1) % m_data_max : index];
@@ -203,193 +204,67 @@ public:
 			Add(elements[i]);
 	}
 
-	void AddEmpty(int count) { // and count samples with EMPTY value
+	int Size() { return m_data_max; }
+
+	// given begin
+	// -- index based on start of data
+	// and count
+	// -- number of elements to copy
+	// returns indexes of data to performs copy
+	// in two parts or one part
+	// start and end of two parts
+	// depending on the m_cposition
+	// return 1 or 2 depending if two parts
+	// or only 1 part needed to be copied
+	int indexesData(int  begin, int count,
+		int& start1, int& end1,
+		int& start2, int& end2) {
+		int tmpcount = Count();
+		if (count > m_data_max || count > tmpcount || tmpcount == 0)
+			return 0;
+		if (m_cposition != 0 && isfull != 0) {
+			// buffer has two parts full filled
+			start1 = (m_cposition + begin);
+			if (start1 > m_data_max) {
+				start1 %= m_data_max;
+				end1 = start1 + count; // cannot go around again
+				// otherwise count would be bigger than m_data_max
+				start2 = 0;
+				end2 = 0;
+				return 1;
+			}
+			end1 = start1 + count;
+			if (end1 > m_data_max) {
+				start2 = 0;
+				end2 = end1 % m_data_max;
+				end1 = m_data_max;
+				return 2;
+			}
+			start2 = 0;
+			end2 = 0;
+			return 1;
+		}
+		// one part only
+		start1 = begin;
+		end1 = begin + count;
+		start2 = 0;
+		end2 = 0;
+		return 1;
+	}
+
+	// parts[4] = start1, end1, start2, end2
+	int indexesData(int  begin, int count, int parts[])
+	{
+		return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
+	}
+
+    void AddEmpty(int count);
+
+};
+
+// template specialization for double
+template<>
+void CCBuffer<double>::AddEmpty(int count) { // add count samples with EMPTY value
 		for (int i = 0; i < count; i++)
 			Add(EMPTY_VALUE);
-	}
-
-	int Size() { return m_data_max; }
-
-	// given begin
-	// -- index based on start of data
-	// and count
-	// -- number of elements to copy
-	// returns indexes of data to performs copy
-	// in two parts or one part
-	// start and end of two parts
-	// depending on the m_cposition
-	// return 1 or 2 depending if two parts
-	// or only 1 part needed to be copied
-	int indexesData(int  begin, int count,
-		int& start1, int& end1,
-		int& start2, int& end2) {
-		int tmpcount = Count();
-		if (count > m_data_max || count > tmpcount || tmpcount == 0)
-			return 0;
-		if (m_cposition != 0 && isfull != 0) {
-			// buffer has two parts full filled
-			start1 = (m_cposition + begin);
-			if (start1 > m_data_max) {
-				start1 %= m_data_max;
-				end1 = start1 + count; // cannot go around again
-				// otherwise count would be bigger than m_data_max
-				start2 = 0;
-				end2 = 0;
-				return 1;
-			}
-			end1 = start1 + count;
-			if (end1 > m_data_max) {
-				start2 = 0;
-				end2 = end1 % m_data_max;
-				end1 = m_data_max;
-				return 2;
-			}
-			start2 = 0;
-			end2 = 0;
-			return 1;
-		}
-		// one part only
-		start1 = begin;
-		end1 = begin + count;
-		start2 = 0;
-		end2 = 0;
-		return 1;
-	}
-
-	// parts[4] = start1, end1, start2, end2
-	int indexesData(int  begin, int count, int parts[])
-	{
-		return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
-	}
-
-};
-
-// Same as above but for structs
-// without  AddEmpty
-template<class Type>
-class CCStructBuffer
-{
-protected:
-	int m_data_max;
-	int m_intdiv;
-
-public:
-	Type *m_data;
-	int m_cposition; // current position of end of data
-	int isfull;
-
-	CCStructBuffer() { isfull = 0; m_cposition = 0; };
-
-	CCStructBuffer(int size) {
-		SetSize(size);
-	}
-
-	void SetSize(int size) {
-		isfull = 0;
-		m_data_max = size;
-		m_cposition = 0;
-		ArrayResize(m_data, size);
-	}
-
-	~CCStructBuffer(void) { ArrayFree(m_data); }
-
-	// correct index to start of data
-	Type operator[](const int index) const {
-		return m_data[(isfull != 0) ? (m_cposition + index - 1) % m_data_max : index];
-	}
-
-	Type At(const int index) const {
-		return m_data[(isfull != 0) ? (m_cposition + index - 1) % m_data_max : index];
-	}
-
-	// convert to index based on start of data
-	// from absolute index
-	int toIndex(int abs_index)
-	{
-		if (isfull != 0 && m_cposition != 0)
-			return (abs_index >= m_cposition) ? abs_index - m_cposition : abs_index + (m_data_max - m_cposition);
-		return abs_index;
-	}
-
-	int Count(void) { return (isfull != 0) ? m_data_max : m_cposition; }
-
-	void RemoveLast(void) {
-		if (m_cposition == 0)
-			m_cposition = m_data_max - 1;
-		else
-			m_cposition--;
-	}
-
-	void Add(Type& element) {
-		//--- add data in the end
-		m_data[m_cposition] = element;
-		m_cposition++;
-		// integer division
-		m_intdiv = m_cposition / m_data_max; // if bigger is gonna be 1
-		m_cposition -= m_intdiv * m_data_max; // same as making (m_cposition +1)%m_data_max
-		isfull = (isfull != 0) ? isfull : m_intdiv;
-	}
-
-	// you may want to insert a range smaller than the full size
-	// of elements array
-	void AddRange(Type elements[], int start = 0, int tsize = 0) {
-		tsize = (tsize <= 0) ? ArraySize(elements) : tsize;
-		for (int i = start; i < tsize; i++)
-			Add(elements[i]);
-	}
-
-	int Size() { return m_data_max; }
-
-	// given begin
-	// -- index based on start of data
-	// and count
-	// -- number of elements to copy
-	// returns indexes of data to performs copy
-	// in two parts or one part
-	// start and end of two parts
-	// depending on the m_cposition
-	// return 1 or 2 depending if two parts
-	// or only 1 part needed to be copied
-	int indexesData(int  begin, int count,
-		int& start1, int& end1,
-		int& start2, int& end2) {
-		int tmpcount = Count();
-		if (count > m_data_max || count > tmpcount || tmpcount == 0)
-			return 0;
-		if (m_cposition != 0 && isfull != 0) {
-			// buffer has two parts full filled
-			start1 = (m_cposition + begin);
-			if (start1 > m_data_max) {
-				start1 %= m_data_max;
-				end1 = start1 + count; // cannot go around again
-				// otherwise count would be bigger than m_data_max
-				start2 = 0;
-				end2 = 0;
-				return 1;
-			}
-			end1 = start1 + count;
-			if (end1 > m_data_max) {
-				start2 = 0;
-				end2 = end1 % m_data_max;
-				end1 = m_data_max;
-				return 2;
-			}
-			start2 = 0;
-			end2 = 0;
-			return 1;
-		}
-		// one part only
-		start1 = begin;
-		end1 = begin + count;
-		start2 = 0;
-		end2 = 0;
-		return 1;
-	}
-
-	// parts[4] = start1, end1, start2, end2
-	int indexesData(int  begin, int count, int parts[])
-	{
-		return indexesData(begin, count, parts[0], parts[1], parts[2], parts[3]);
-	}
-
-};
+}

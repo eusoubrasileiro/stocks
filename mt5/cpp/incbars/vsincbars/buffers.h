@@ -1,6 +1,11 @@
 #pragma once
+#ifndef BUFFERS_H
+#define BUFFERS_H
 
+#include <float.h>
+#include <vector>
 #define EMPTY_VALUE DBL_MAX
+
 // FIFO first in first out
 // Buffer single is an array when new data is added
 // it deletes the oldest bigger than buffer size
@@ -163,8 +168,6 @@ public:
         m_data.resize(size);
     }
 
-    ~CCBuffer(void) { ~m_data(); }
-
 	Type operator[](const int index) const {
 		return m_data[(isfull != 0) ? (m_cposition + index - 1) % m_data_max : index];
 	}
@@ -196,12 +199,13 @@ public:
 		isfull = (isfull != 0) ? isfull : m_intdiv;
 	}
 
-	// you may want to insert a range smaller than the full size
-	// of elements array
-	void AddRange(Type elements[], int start = 0, int tsize = 0) {
-		tsize = (tsize <= 0) ? ArraySize(elements) : tsize;
-		for (int i = start; i < tsize; i++)
-			Add(elements[i]);
+	// you may want to insert a range smaller than 
+	// the full size of elements array 
+	// e. g. AddRange(v.begin()+2, v.end());
+	void AddRange(typename std::vector<Type>::iterator start, 
+		typename std::vector<Type>::iterator end){
+		for (auto element = start; element != end; ++element)
+			Add(*element);
 	}
 
 	int Size() { return m_data_max; }
@@ -262,9 +266,4 @@ public:
 
 };
 
-// template specialization for double
-template<>
-void CCBuffer<double>::AddEmpty(int count) { // add count samples with EMPTY value
-		for (int i = 0; i < count; i++)
-			Add(EMPTY_VALUE);
-}
+#endif 

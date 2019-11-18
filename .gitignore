@@ -34,3 +34,5 @@
 *.idb
 *.enc
 *.TMP
+packages/
+ # nuget packages

@@ -71,7 +71,7 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="include\bars.h" />
     <ClInclude Include="include\buffers.h" />
-    <ClInclude Include="include\cwindicator.h" />
+    <ClInclude Include="include\cwindicators.h" />
     <ClInclude Include="include\ticks.h" />
     <ClInclude Include="include\time.h" />
   </ItemGroup>

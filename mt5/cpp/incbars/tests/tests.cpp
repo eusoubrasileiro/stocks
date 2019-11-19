@@ -1,5 +1,6 @@
 #include "pch.h"
-#include "../vsincbars/include/buffers.h"
+#include "..\vsincbars\include\buffers.h"
+#include "..\vsincbars\include\cwindicators.h"
 #include <array>
 
 // dst, src, dst_start, src_start, count
@@ -9,7 +10,21 @@ void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count) {
     memcpy((Type*)dst + dst_start, (Type*)src + src_start, count * sizeof(Type));
 }
 
-TEST(TestCCBuffer, Add) {
+TEST(CBuffer, Add) {
+    CBuffer<double> sbuffer;
+    sbuffer.Resize(4);
+    for (int i = 0; i < 12; i++) // minimum buffer size is 16
+        sbuffer.Add(0);
+    for (int i = 1; i < 7; i++) // exceeds the buffer
+        sbuffer.Add(i);
+
+    EXPECT_EQ(sbuffer.GetData(0), 6);
+    EXPECT_EQ(sbuffer.GetData(1), 5);
+    EXPECT_EQ(sbuffer.GetData(3), 3);
+    EXPECT_EQ(sbuffer.GetData(2), 4);
+}
+
+TEST(CCBuffer, Add) {
 
     CCBuffer<double> sbuffer(16); // buffer size 16
     for (int i = 0; i < 12; i++)
@@ -22,20 +37,6 @@ TEST(TestCCBuffer, Add) {
     EXPECT_EQ(sbuffer[13], 3);
     EXPECT_EQ(sbuffer[14], 4);
     //EXPECT_TRUE(true);
-}
-
-TEST(TestCBuffer, Add){
-    CBuffer<double> sbuffer;
-    sbuffer.Resize(4);
-    for (int i = 0; i < 12; i++) // minimum buffer size is 16
-        sbuffer.Add(0);
-    for (int i = 1; i < 7; i++) // exceeds the buffer
-        sbuffer.Add(i);
-
-    EXPECT_EQ(sbuffer.GetData(0), 6);
-    EXPECT_EQ(sbuffer.GetData(1), 5);
-    EXPECT_EQ(sbuffer.GetData(3), 3);
-    EXPECT_EQ(sbuffer.GetData(2), 4);
 }
 
 TEST(CCBuffer, Indexes_Data) {
@@ -96,3 +97,148 @@ TEST(CCBuffer, Indexes_Data) {
     ASSERT_THAT(array_dest, testing::ElementsAre(0, 1, 2));
     EXPECT_EQ(parts, 1);
 }
+
+//ENUM_DEFINE(TA_MAType_SMA, Sma) = 0,
+//ENUM_DEFINE(TA_MAType_EMA, Ema) = 1,
+//ENUM_DEFINE(TA_MAType_WMA, Wma) = 2,
+//ENUM_DEFINE(TA_MAType_DEMA, Dema) = 3,
+//ENUM_DEFINE(TA_MAType_TEMA, Tema) = 4,
+//ENUM_DEFINE(TA_MAType_TRIMA, Trima) = 5,
+//ENUM_DEFINE(TA_MAType_KAMA, Kama) = 6,
+//ENUM_DEFINE(TA_MAType_MAMA, Mama) = 7,
+//ENUM_DEFINE(TA_MAType_T3, T3) = 8
+TEST(Indicators, CFracDiffIndicator){
+    // from Python
+    double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
+                   0.02537023, 0.7332872 , 0.4622992 , 0.96278162, 0.33838066,   // a
+                   0.89851506, 0.90982346, 0.54238173, 0.68145741, 0.95061314,  // b
+                   0.93442722, 0.2614748 , 0.00405999, 0.75008525, 0.64118048,  // b
+                   0.32741177, 0.77945483, 0.10501869, 0.52248356, 0.569884  ,  // b
+                   0.3254099 , 0.2309258 , 0.88311545, 0.5860409 , 0.8447372 ,  // b
+                   0.81948561, 0.33338482, 0.30032552, 0.82731009, 0.68584524,  // b
+                   0.99592614, 0.69919862, 0.88728765, 0.6370904 , 0.25931114,  // b
+                   0.77664975, 0.00191125, 0.06043727, 0.81997762, 0.62892824,  // c
+                   0.08543346, 0.77194193, 0.93350418, 0.41672853, 0.89452214,  // c
+                   0.9859954 ,                                                  // c
+                   0.23336376, 0.50903137, 0.36534072, 0.36527723,              // d
+                   0.51881977, 0.38566805, 0.59163601, 0.8162303 , 0.48761801, // d
+                   0.05340729, 0.80001708, 0.86127951, 0.72706986, 0.36959402, // d
+                   0.11954723, 0.00799683, 0.56896299, 0.40747309, 0.50314072, // d
+                   0.31325538, 0.3277913 , 0.75168065, 0.61296086, 0.16180291, // d
+                   0.53711416, 0.37934352, 0.36650789, 0.22024702, 0.52589008, // d
+                   0.12388826, 0.87836527, 0.20104567, 0.77184266, 0.28660699, // d
+                   0.40697238, 0.11326645, 0.43511667, 0.96272681, 0.60386761, // d
+                   0.01621923, 0.04200219, 0.93858386, 0.88837139, 0.20881766, // d
+                   0.77023781, 0.30574534, 0.74073346, 0.62654889, 0.64183077 }; // d
+
+    double pyfractruth[91] = { -0.35131172,
+                    0.49928454,  0.25017423, -0.17289674,  0.15147366,
+                    0.37461599,  0.1987023 , -0.49814806, -0.39431162,  0.57265172,
+                    0.10862605, -0.19898058,  0.42240801, -0.4724218 ,  0.28296601,
+                    0.16482447, -0.12555987, -0.09936503,  0.62507281, -0.01262697,
+                    0.34505668,  0.17906916, -0.32295314, -0.1007382 ,  0.49591081,
+                    0.08619913,  0.42358569, -0.05327547,  0.26209244, -0.07781242,
+                   -0.33216276,
+                   0.41951532, -0.5924319 , -0.13944678,  0.6705722 ,
+                    0.0858732 , -0.42139628,  0.56218567,  0.40226974, -0.26175034,
+                    0.4584858 ,  0.3245855 , -0.52701549,  0.13536349, -0.08450255,
+                   -0.00425219,  0.16583032, -0.04016165,  0.23173595,  0.35197123,
+                   -0.11896925, -0.40198151,  0.60707809,  0.31157253,  0.07938527,
+                   -0.23780636, -0.28918318, -0.22134125,  0.45148736,  0.01694105,
+                    0.1555569 , -0.09026478,  0.02155778,  0.45794614,  0.0894013 ,
+                   -0.33406492,  0.28526841, -0.03589293,  0.01742604, -0.11140591,
+                    0.282847  , -0.26990253,  0.68218233, -0.37655569,  0.49942645,
+                   -0.25859327,  0.08411683, -0.24043617,  0.24573357,  0.62889871,
+                   -0.04567096, -0.50740424, -0.13925831,  0.81331429,  0.2939484 ,
+                   -0.45141761,  0.45552484, -0.26285934,  0.38984909,  0.07518225,
+                    0.11830923 };
+        double eps = 0.0001; // error tolerance in comparison
+        int fsize = 10;
+        CFracDiffIndicator c_fdiff(fsize, 0.56);
+        c_fdiff.SetSize(200); // whatever buffer size just need to be enough
+
+        // partial calls until total array calculated
+        double a[7];
+        // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
+        ArrayCopy<double>(a, in, 0, 0, 7);
+        double b[33];
+        ArrayCopy<double>(b, in, 0, 7, 33); // 7:40 [left open - not included
+        double c[11];
+        ArrayCopy<double>(c, in, 0, 40, 11); // 40:51
+        double d[49];
+        ArrayCopy<double>(d, in, 0, 51, 49); // 51:100 = 49
+
+        c_fdiff.Refresh(a, 0, 7);
+        c_fdiff.Refresh(b, 0, 33);
+        c_fdiff.Refresh(c, 0, 11);
+        c_fdiff.Refresh(d, 0, 49);
+
+        std::vector<double> pyfractruth_indicator; 
+        pyfractruth_indicator.resize(100);
+        // prepend (size - 1) EMPTY_VALUES of indicator
+        std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), EMPTY_VALUE);
+        
+        ArrayCopy<double>(pyfractruth_indicator.data(), pyfractruth, fsize - 1, 0, 100-(fsize-1));
+
+        // make almost equal google tests
+        if (!almostEqual(pyfractruth_indicator, c_fdiff.m_data, c_fdiff.Count(), 1e-6))
+            Print("Failed - Test CFracDiffIndicator");
+        else
+            Print("Passed - Test CFracDiffIndicator");
+ }
+
+TEST(Indicators, CTaMAIndicator){
+    double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
+    double ta_truth[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    int size = 8;
+    int window = 2;
+    double out[10];
+    CTaMAIndicator cta_MA(window, 0);	 // simple MA
+    cta_MA.SetSize(10);
+
+    // partial calls until total array calculated
+    double a[] = { 1 };
+    double b[] = { 1 };
+    double c[] = { 2, 3, 4, 5, 5 };
+    double d[] = { 3, 1 };
+    cta_MA.Refresh(a);
+    cta_MA.Refresh(b);
+    cta_MA.Refresh(c);
+    cta_MA.Refresh(d);
+
+    if (!almostEqual(ta_truth, cta_MA.m_data, 8, 1e-6))
+        Print("Failed - Test CTaMAIndicator");
+    else
+        Print("Passed - Test CTaMAIndicator");
+}
+
+TEST(Indicators, CTaBBANDSIndicator){
+    double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
+    double ta_truth_upper[] = { EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
+    double ta_truth_middle[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    double ta_truth_down[] = { EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
+
+    int size = 8;
+    int window = 2;
+    double out[10];
+    CTaBBANDS cta_BBANDS(window, 2.5, 0); // simple MA + 2.5 deviations
+    cta_BBANDS.SetSize(10);
+
+    // partial calls until total array calculated
+    double a[] = { 1 };
+    double b[] = { 1 };
+    double c[] = { 2, 3, 4, 5, 5 };
+    double d[] = { 3, 1 };
+    cta_BBANDS.Refresh(a);
+    cta_BBANDS.Refresh(b);
+    cta_BBANDS.Refresh(c);
+    cta_BBANDS.Refresh(d);
+
+    if (!almostEqual(ta_truth_upper, cta_BBANDS.m_upper.m_data, 8, 1e-6) ||
+        !almostEqual(ta_truth_middle, cta_BBANDS.m_middle.m_data, 8, 1e-6) ||
+        !almostEqual(ta_truth_down, cta_BBANDS.m_down.m_data, 8, 1e-6))
+        Print("Failed - Test CTaBBANDSIndicator");
+    else
+        Print("Passed - Test CTaBBANDSIndicator");
+}
+

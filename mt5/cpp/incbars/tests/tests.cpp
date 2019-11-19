@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
+#include "pch.h"
 #include "../vsincbars/buffers.h"
 #include <array>
 
@@ -54,10 +53,10 @@ TEST(CCBuffer, Indexes_Data) {
     //ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
     memcpy(dest, &sbuffer.m_data[start1], count*sizeof(double));
     //ArrayCopy(dest, sbuffer.m_data, count, start2, end2 - start2);
-    memcpy(dest, &sbuffer.m_data[start2], (end2-start2) * sizeof(double));
+    memcpy(&dest[count], &sbuffer.m_data[start2], (end2-start2) * sizeof(double));
 
     std::array<double, 4> array_dest;
-    std::copy_n(std::begin(array_dest), 4, dest);
+    memcpy(array_dest.data(), dest, 4*sizeof(double));
 
     ASSERT_THAT(array_dest, testing::ElementsAre(0, 1, 2, 3));
     EXPECT_EQ(parts, 2);

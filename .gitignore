@@ -34,5 +34,6 @@
 *.idb
 *.enc
 *.TMP
+*.pch
 packages/
  # nuget packages

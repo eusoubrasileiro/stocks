@@ -8,7 +8,6 @@
 #include <windows.h>
 #include <iostream>
 
-
 /*  To use this exported function of dll, include this header
  *  in your project.
  */
@@ -19,8 +18,7 @@
 #define DLL_EXPORT __declspec(dllimport)
 #endif
 
-extern "C"
-{ // for C++/MQL5 call
+// for C++/MQL5 call
 	int DLL_EXPORT __stdcall Unique(double arr[], int n);
 	int DLL_EXPORT __stdcall pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 		char* model, int pymodel_size_max);
@@ -28,7 +26,5 @@ extern "C"
 		char* model, int pymodel_size);
   // for Python use  __cdecl
 	
-}
-
 
 #endif //EXPORTS_H

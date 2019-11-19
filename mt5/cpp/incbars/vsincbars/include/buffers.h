@@ -34,12 +34,12 @@ protected:
 		// (shift left array)  making space for new samples in the end
 		// dst, src, dst_idx_srt, src_idx_srt, count_to_copy
         // void * memcpy ( void * destination, const void * source, size_t num );
-		ArrayCopy(m_data, m_data, 0, space_needed, m_data_total - space_needed);
+		ArrayCopy<Type>(m_data.data(), m_data.data(), 0, space_needed, m_data_total - space_needed);
 		m_data_total -= space_needed;
 	}
 
 public:
-	Type *m_data;
+	std::vector<Type> m_data;
 
 	CBuffer(void) {
 		// ArrayResize(m_data, 16); // minimu size if specified by Resize
@@ -47,7 +47,6 @@ public:
 		m_data_max = 0;
 		m_step_resize = 16;
 	}
-	~CBuffer(void) { ArrayFree(m_data); }
 
 	Type operator[](const int index) const { return m_data[index]; }
 
@@ -78,45 +77,10 @@ public:
 			Add(elements[i]);
 	}
 
-	void AddEmpty(int count) { // and count samples with EMPTY value
-		int space_needed = (m_data_total + count) - m_data_max;
-
-		if (space_needed > 0)// m_data
-			MakeSpace(space_needed);
-
-		ArrayFill(m_data, m_data_total, count, EMPTY_VALUE);
-		m_data_total += count;
-	}
-
-	// this to garantee compatibility with Resize of
-	// buffers of CIndicators and default mql5 libraries
-	// and CExpert, CExpertBase etc.
-	bool Resize(const int size)
-	{
-		int new_size;
-		//--- check
-		if (size < 0)
-			return(false);
-		//--- resize array
-		new_size = m_step_resize * (1 + size / m_step_resize);
-		if (m_data_max != new_size)
-		{
-			if ((m_data_max = ArrayResize(m_data, new_size)) == -1)
-			{
-				m_data_max = ArraySize(m_data);
-				return(false);
-			}
-		}
-		if (m_data_total > size)
-			m_data_total = size;
-		//--- result
-		return(m_data_max == new_size);
-	}
-
-	bool ResizeFixed(const int size)
+	void Resize(const int size)
 	{
 		m_data_max = size;
-		return ArrayResize(m_data, size) != -1;
+		m_data.resize(size);
 	}
 
 	// Get Data At index position using Array As Series Convention
@@ -132,7 +96,6 @@ public:
 	}
 
 	int BufferSize() { return m_data_max; }
-
 
 };
 
@@ -265,5 +228,8 @@ public:
     void AddEmpty(int count);
 
 };
+
+template<class Type>
+void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count);
 
 #endif 

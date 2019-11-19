@@ -136,7 +136,7 @@
     <ClCompile Include="pytorch.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="exports.h" />
+    <ClInclude Include="pytorchcpp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

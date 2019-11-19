@@ -44,7 +44,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\ctalib;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\pytorchcpp\pytorch</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CallingConvention>
       </CallingConvention>
@@ -57,8 +57,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python37.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ForceFileOutput>
       </ForceFileOutput>
       <OutputFile>$(ProjectName).dll</OutputFile>
@@ -68,11 +68,12 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="buffers.h" />
-    <ClInclude Include="datastruct\bars.h" />
-    <ClInclude Include="datastruct\ticks.h" />
-    <ClInclude Include="datastruct\time.h" />
     <ClInclude Include="exports.h" />
+    <ClInclude Include="include\bars.h" />
+    <ClInclude Include="include\buffers.h" />
+    <ClInclude Include="include\cwindicator.h" />
+    <ClInclude Include="include\ticks.h" />
+    <ClInclude Include="include\time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buffers.cpp" />
@@ -80,6 +81,8 @@
     <ClCompile Include="datastruct\ticks.cpp" />
     <ClCompile Include="datastruct\time.cpp" />
     <ClCompile Include="incbars.cpp" />
+    <ClCompile Include="indicators\csindicators.cpp" />
+    <ClCompile Include="indicators\ctindicators.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

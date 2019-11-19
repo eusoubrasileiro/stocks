@@ -1,7 +1,9 @@
 #include "ta_libc.h"
-#include "exports.h"
 #include <malloc.h>
 #include <iostream>
+
+#define CTALIB_DLL
+#include "ctalib.h"
 
 using namespace std;
 
@@ -153,7 +155,7 @@ int DLL_EXPORT taBBANDS(int  startIdx, // start the calculation at index
   int outBegIdx; // index based on the input array inReal where we start having valid MA values
   int outNBElement; // number of elements on the output discounting for initial window values needed
 	TA_BBANDS(startIdx, endIdx, inReal, // number deviations upper and down
-		optInTimePeriod, optInNbDev, optInNbDev, (TA_MAType) optInMAType, 
+		optInTimePeriod, optInNbDev, optInNbDev, (TA_MAType) optInMAType,
 		&outBegIdx, &outNBElement, outRealUpperBand, outRealMiddleBand, outRealLowerBand);
 	return outNBElement-1;
 }

@@ -50,7 +50,8 @@
       <PreprocessorDefinitions>BUILDING_DLL</PreprocessorDefinitions>
       <LanguageStandard>Default</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <CallingConvention>Cdecl</CallingConvention>
+      <CallingConvention>
+      </CallingConvention>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ta_libc_cdr_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -133,7 +134,7 @@
     <ClCompile Include="ctalib.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="exports.h" />
+    <ClInclude Include="ctalib.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

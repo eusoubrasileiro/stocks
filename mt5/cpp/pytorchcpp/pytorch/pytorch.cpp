@@ -1,7 +1,8 @@
 #pragma warning (disable : 4146)
-#include "exports.h"
 #include <iostream>
 #include <torch\torch.h>
+#define PYTORCHCPP_DLL
+#include "pytorchcpp.h"
 
 auto double_option = torch::TensorOptions().dtype(torch::kFloat64);
 torch::Tensor thfdcoefs;
@@ -17,7 +18,7 @@ void setFracDifCoefs(double d, int size){
     w[0] = 1.;
     for(int k=1; k<size; k++)
         w[k]=-w[k-1]/k*(d-k+1);
-    std::reverse(w, w+size); 
+    std::reverse(w, w+size);
     thfdcoefs = torch::from_blob(w, {1, 1, size}, double_option);
 	// to GPU or not
     thfdcoefs.to(device);

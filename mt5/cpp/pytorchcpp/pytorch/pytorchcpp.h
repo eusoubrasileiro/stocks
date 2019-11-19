@@ -1,9 +1,15 @@
-#ifndef EXPORTS_H
-#define EXPORTS_H
+#ifndef PYTORCHCPP_EXPORTS_H
+#define PYTORCHCPP_EXPORTS_H
+
+#ifdef PYTORCHCPP_DLL
+#define DLL_EXPORT __declspec(dllexport)
+#else
+#define DLL_EXPORT __declspec(dllimport)
+#endif
 
 #define NOMINMAX
-
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+
 // Windows Header Files
 #include <windows.h>
 #include <iostream>
@@ -13,16 +19,10 @@
  *  in your project.
  */
 
-#ifdef BUILDING_DLL
-#define DLL_EXPORT __declspec(dllexport)
-#else
-#define DLL_EXPORT __declspec(dllimport)
-#endif
-
-extern "C"
+extern "C" // removes decoration of functions __stdcall would mess up but in x64 it is ignored
 {
-	int DLL_EXPORT FracDifApply(double signal[], int size, double output[]);
-	void DLL_EXPORT setFracDifCoefs(double d, int size);
+    DLL_EXPORT int  __stdcall FracDifApply(double signal[], int size, double output[]);
+    DLL_EXPORT void __stdcall setFracDifCoefs(double d, int size);
 }
 
-#endif //EXPORTS_H
+#endif //PYTORCHCPP_EXPORTS_H

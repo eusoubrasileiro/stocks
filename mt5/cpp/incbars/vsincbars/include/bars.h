@@ -1,5 +1,5 @@
 #pragma once
-#include "..\buffers.h"
+#include "buffers.h"
 #include "ticks.h"
 
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$

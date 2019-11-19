@@ -6,6 +6,10 @@
 #include <vector>
 #define EMPTY_VALUE DBL_MAX
 
+
+template<class Type>
+void ArrayCopy(void *dst, void *src, int dst_start, int src_start, int count);
+
 // FIFO first in first out
 // Buffer single is an array when new data is added
 // it deletes the oldest bigger than buffer size
@@ -64,16 +68,9 @@ public:
 
 	// you may want to insert a range smaller than the full size
 	// of elements array
-	void AddRange(Type elements[], int start = 0, int tsize = 0) {
-		tsize = (tsize <= 0) ? ArraySize(elements) : tsize;
-		//int tsize = ArraySize(elements);
-		// int space_needed = (m_data_total+tsize)-m_data_max;
-		// // 5 + 6 - 10 = 1
-		// if(space_needed > 0)// m_data
-		//   MakeSpace(space_needed);
-		// garantee not resizing m_data
+	void AddRange(Type elements[], int start, int end) {		
 		//start = (tsize > m_data_max)? tsize-m_data_max : start;
-		for (int i = start; i < tsize; i++)
+		for (int i = start; i < end; i++)
 			Add(elements[i]);
 	}
 
@@ -173,7 +170,7 @@ public:
 
 	int Size() { return m_data_max; }
 
-	// given begin
+	// given begin - (included)
 	// -- index based on start of data
 	// and count
 	// -- number of elements to copy
@@ -229,7 +226,6 @@ public:
 
 };
 
-template<class Type>
-void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count);
+
 
 #endif 

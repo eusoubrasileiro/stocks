@@ -101,3 +101,78 @@ public:
     }
 
 };
+
+
+
+//
+// Indicators based on Ctalib
+//
+
+
+class CTaSTDDEV : public CWindowIndicator{
+public:
+    CTaSTDDEV(int window);
+
+    int Calculate(double indata[], int size, double outdata[]);
+};
+
+
+
+
+class CTaMAIndicator : public CWindowIndicator {
+
+protected:
+    int m_tama_type;
+
+public:
+    CTaMAIndicator(int window, int tama_type);
+
+    int Calculate(double indata[], int size, double outdata[]);
+};
+
+
+
+class CTaBBANDS : public IWindowIndicator 
+{
+protected:
+    int m_tama_type;
+    double m_devs; // number of deviatons from the mean
+    std::vector<double> m_out_upper;
+    std::vector<double> m_out_middle;
+    std::vector<double> m_out_down;
+
+public:
+
+    CCBuffer<double> m_upper;
+    CCBuffer<double> m_middle;
+    CCBuffer<double> m_down;
+
+    CTaBBANDS(int window, double devs, int ma_type);
+
+    void AddEmpty(int count);
+
+    int Calculate(double indata[], int size, double outdata[]);
+
+    void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end);
+
+    void SetSize(const int size);
+
+    int Size();
+};
+
+
+//
+// FracDiff
+// 
+
+class CFracDiffIndicator : public CWindowIndicator
+{
+protected:
+    double m_dfraction; // fractional difference
+
+public:
+    CFracDiffIndicator(int window, double dfraction);
+
+    int Calculate(double indata[], int size, double outdata[]);
+
+};

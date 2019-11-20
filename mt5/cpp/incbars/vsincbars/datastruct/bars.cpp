@@ -28,6 +28,13 @@ void MoneyBarBuffer::SetSize(int size) {
     m_times.resize(size);
 }
 
+MoneyBarBuffer::MoneyBarBuffer() {
+    m_point_value = 1;
+    m_moneybarsize = 100;
+    m_count_money = 0; // count_money amount to form 1 money bar
+    m_nnew = 0;
+}
+
 MoneyBarBuffer::MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize) {
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;

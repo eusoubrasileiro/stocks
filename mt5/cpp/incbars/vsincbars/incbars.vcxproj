@@ -68,18 +68,21 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="eincbands.h" />
     <ClInclude Include="exports.h" />
     <ClInclude Include="include\bars.h" />
     <ClInclude Include="include\buffers.h" />
     <ClInclude Include="include\cwindicators.h" />
     <ClInclude Include="include\ticks.h" />
     <ClInclude Include="include\time.h" />
+    <ClInclude Include="xypair.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buffers.cpp" />
     <ClCompile Include="datastruct\bars.cpp" />
     <ClCompile Include="datastruct\ticks.cpp" />
     <ClCompile Include="datastruct\time.cpp" />
+    <ClCompile Include="eincbands.cpp" />
     <ClCompile Include="incbars.cpp" />
     <ClCompile Include="indicators\csindicators.cpp" />
     <ClCompile Include="indicators\ctindicators.cpp" />

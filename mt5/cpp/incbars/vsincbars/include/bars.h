@@ -39,6 +39,8 @@ public:
     void RefreshArrays();
     // local arrays have max size equal buffer size
     void SetSize(int size);
+
+    MoneyBarBuffer();
     MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created

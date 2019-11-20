@@ -30,7 +30,7 @@ public:
     // where new data starts at start and has size count
     bool Refresh(double newdata[], int start, int count){
 
-      int nprev = m_prev_data.Size(); // number of previous data
+      int nprev = m_prev_data.Count(); // number of previous data
 
       if(count==0) // no data
         return false;
@@ -147,6 +147,8 @@ public:
     CCBuffer<double> m_middle;
     CCBuffer<double> m_down;
 
+    CTaBBANDS();
+
     CTaBBANDS(int window, double devs, int ma_type);
 
     void AddEmpty(int count) override;
@@ -173,6 +175,8 @@ protected:
     double m_dfraction; // fractional difference
 
 public:
+    CFracDiffIndicator();
+
     CFracDiffIndicator(int window, double dfraction);
 
     int Calculate(double indata[], int size, double outdata[]);

@@ -13,15 +13,6 @@
 // 5. ctalib.lib - dll required
 
 
-// dont know why but this is still needed
-// dst, src, dst_start, src_start, count
-template<class Type>
-void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count) {
-    //ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
-    memcpy((Type*)dst + dst_start, (Type*)src + src_start, count * sizeof(Type));
-
-}
-
 #define EXPECT_FLOATS_NEARLY_EQ(expected, actual, size, thresh) \
         for(size_t idx = 0; idx < size; ++idx) \
         { \
@@ -207,7 +198,6 @@ TEST(Indicators, CTaMAIndicator){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
     int size = 8;
     int window = 2;
-    double out[10];
     CTaMAIndicator cta_MA(window, 0);	 // simple MA
     cta_MA.SetSize(10);
 
@@ -235,7 +225,6 @@ TEST(Indicators, CTaBBANDS){
 
     int size = 8;
     int window = 2;
-    double out[10];
     CTaBBANDS cta_BBANDS(window, 2.5, 0); // simple MA + 2.5 deviations
     cta_BBANDS.SetSize(10);
 

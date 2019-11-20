@@ -28,17 +28,14 @@ void fixArrayTicks(std::vector<MqlTick> ticks){
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called
 // 1 ms time-frame suggested using OnTimer
-CCBufferMqlTicks::CCBufferMqlTicks(std::string symbol) {
-		m_symbol = symbol;
-		m_nnew = 0;
-		gticks = 0;
+CCBufferMqlTicks::CCBufferMqlTicks(){
+	m_nnew = 0;
+	gticks = 0;
 }
 
-//CCBufferMqlTicks::~CCBufferMqlTicks() {
-//ArrayFree(m_copied_ticks);
-//}
-
 int CCBufferMqlTicks::nNew() { return m_nnew; } // number of new ticks after calling Refresh()
+
+// just receive ticks from Python/Metatrader and add them
 
 int CCBufferMqlTicks::Refresh(std::vector<MqlTick>::iterator start, 
 	std::vector<MqlTick>::iterator end){
@@ -47,6 +44,15 @@ int CCBufferMqlTicks::Refresh(std::vector<MqlTick>::iterator start,
 	gticks += m_nnew;
 	return m_nnew;
 }
+
+int CCBufferMqlTicks::Refresh(MqlTick *carray, int csize) {
+    AddRange(carray, csize);
+    m_nnew = csize;
+    gticks += m_nnew;
+    return m_nnew;
+}
+
+
 
 int CCBufferMqlTicks::indexesNewTicks(int& start1, int& end1,
 		int& start2, int& end2) {

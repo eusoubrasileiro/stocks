@@ -7,8 +7,13 @@
 #define EMPTY_VALUE DBL_MAX
 
 
+// dst, src, dst_start, src_start, count
 template<class Type>
-void ArrayCopy(void *dst, void *src, int dst_start, int src_start, int count);
+void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count) {
+    //ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
+    memcpy((Type*)dst + dst_start, (Type*)src + src_start, count * sizeof(Type));
+
+}
 
 // FIFO first in first out
 // Buffer single is an array when new data is added
@@ -54,7 +59,7 @@ public:
 
 	Type operator[](const int index) const { return m_data[index]; }
 
-	int Size(void) { return m_data_total; }
+	int Count(void) { return m_data_total; }
 
 	void RemoveLast(void) { if (m_data_total > 0) m_data_total--; }
 
@@ -115,7 +120,7 @@ public:
 	int m_cposition; // current position of end of data
 	int isfull;
 
-    CCBuffer() {};
+    CCBuffer() { SetSize(1); };
 
 	CCBuffer(int size) {
 		SetSize(size);
@@ -167,6 +172,12 @@ public:
 		for (auto element = start; element != end; ++element)
 			Add(*element);
 	}
+
+    void AddRange(Type *carray, int csize) {
+        for (int i=0; i<csize; i++)
+            Add(carray[i]);
+    }
+
 
 	int Size() { return m_data_max; }
 

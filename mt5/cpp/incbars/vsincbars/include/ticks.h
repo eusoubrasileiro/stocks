@@ -35,13 +35,16 @@ const int Max_Tick_Copy = 10e3;
 class CCBufferMqlTicks : public CCBuffer<MqlTick>
 {
 protected:
-    std::string m_symbol;
 	int m_nnew;
 public:
 	int gticks = 0; // global counter of ticks
-	CCBufferMqlTicks(std::string symbol);
+	CCBufferMqlTicks();
 	int nNew(); // number of new ticks after calling Refresh()
+
+    // just receive ticks from Python/Metatrader and add them
 	int Refresh(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
+    int Refresh(MqlTick *carray, int csize);
+
 	int indexesNewTicks(int& start1, int& end1,
 		int& start2, int& end2);
 };

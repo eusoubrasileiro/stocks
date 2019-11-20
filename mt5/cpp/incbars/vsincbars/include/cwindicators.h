@@ -28,7 +28,7 @@ public:
 
     // re-calculate indicator values based on array of new data
     // where new data starts at start and has size count
-    bool Refresh(double newdata[], int start=0, int count=0){
+    bool Refresh(double newdata[], int start, int count){
 
       int nprev = m_prev_data.Size(); // number of previous data
 
@@ -88,15 +88,15 @@ class CWindowIndicator : public CCBuffer<double>, public IWindowIndicator
     
 public:
 
-    void AddEmpty(int count) {
+    void AddEmpty(int count) override {
         CCBuffer<double>::AddEmpty(count);
     }
 
-    void Add(double value) {
+    void Add(double value) override {
         CCBuffer<double>::Add(value);
     }
 
-    void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) {
+    void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) override  {
         CCBuffer<double>::AddRange(start, end);
     }
 
@@ -113,7 +113,7 @@ class CTaSTDDEV : public CWindowIndicator{
 public:
     CTaSTDDEV(int window);
 
-    int Calculate(double indata[], int size, double outdata[]);
+    int Calculate(double indata[], int size, double outdata[]) override;
 };
 
 
@@ -127,7 +127,7 @@ protected:
 public:
     CTaMAIndicator(int window, int tama_type);
 
-    int Calculate(double indata[], int size, double outdata[]);
+    int Calculate(double indata[], int size, double outdata[]) override;
 };
 
 
@@ -149,11 +149,13 @@ public:
 
     CTaBBANDS(int window, double devs, int ma_type);
 
-    void AddEmpty(int count);
+    void AddEmpty(int count) override;
 
-    int Calculate(double indata[], int size, double outdata[]);
+    int Calculate(double indata[], int size, double outdata[]) override;
 
-    void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end);
+    void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) override;
+
+    void Add(double value) override {}; // does nothing since this is tripple buffer
 
     void SetSize(const int size);
 

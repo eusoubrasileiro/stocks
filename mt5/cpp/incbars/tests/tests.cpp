@@ -3,12 +3,32 @@
 #include "..\vsincbars\include\cwindicators.h"
 #include <array>
 
+// Since I just want to test the code
+// and I dont want to put all code in the export table of the main dll 
+// I pass to the linker 
+// 1. ctindicators.obj 
+// 2. csindicators.obj
+// 3. buffers.obj
+// 4. pytorchcpp.lib - dlls required
+// 5. ctalib.lib - dll required
+
+
+// dont know why but this is still needed
 // dst, src, dst_start, src_start, count
 template<class Type>
 void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count) {
     //ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
     memcpy((Type*)dst + dst_start, (Type*)src + src_start, count * sizeof(Type));
+
 }
+
+#define EXPECT_FLOATS_NEARLY_EQ(expected, actual, size, thresh) \
+        for(size_t idx = 0; idx < size; ++idx) \
+        { \
+            EXPECT_NEAR(expected[idx], actual[idx], thresh) << "at index: " << idx;\
+        }
+        //EXPECT_EQ(expected.size(), actual.size()) << "Array sizes differ."; \
+
 
 TEST(CBuffer, Add) {
     CBuffer<double> sbuffer;
@@ -180,16 +200,11 @@ TEST(Indicators, CFracDiffIndicator){
         
         ArrayCopy<double>(pyfractruth_indicator.data(), pyfractruth, fsize - 1, 0, 100-(fsize-1));
 
-        // make almost equal google tests
-        if (!almostEqual(pyfractruth_indicator, c_fdiff.m_data, c_fdiff.Count(), 1e-6))
-            Print("Failed - Test CFracDiffIndicator");
-        else
-            Print("Passed - Test CFracDiffIndicator");
+        EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.m_data, 100, 0.001);
  }
 
 TEST(Indicators, CTaMAIndicator){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
-    double ta_truth[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
     int size = 8;
     int window = 2;
     double out[10];
@@ -201,22 +216,22 @@ TEST(Indicators, CTaMAIndicator){
     double b[] = { 1 };
     double c[] = { 2, 3, 4, 5, 5 };
     double d[] = { 3, 1 };
-    cta_MA.Refresh(a);
-    cta_MA.Refresh(b);
-    cta_MA.Refresh(c);
-    cta_MA.Refresh(d);
+    cta_MA.Refresh(a, 0, 1);
+    cta_MA.Refresh(b, 0, 1);
+    cta_MA.Refresh(c, 0, 5);
+    cta_MA.Refresh(d, 0, 2);
 
-    if (!almostEqual(ta_truth, cta_MA.m_data, 8, 1e-6))
-        Print("Failed - Test CTaMAIndicator");
-    else
-        Print("Passed - Test CTaMAIndicator");
+    std::vector<double> ta_truth = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.m_data, 9, 0.001);
+
 }
 
-TEST(Indicators, CTaBBANDSIndicator){
+TEST(Indicators, CTaBBANDS){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
-    double ta_truth_upper[] = { EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
-    double ta_truth_middle[] = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
-    double ta_truth_down[] = { EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
+    std::vector<double> ta_truth_upper = { EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
+    std::vector<double> ta_truth_middle = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    std::vector<double> ta_truth_down = { EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
 
     int size = 8;
     int window = 2;
@@ -229,16 +244,13 @@ TEST(Indicators, CTaBBANDSIndicator){
     double b[] = { 1 };
     double c[] = { 2, 3, 4, 5, 5 };
     double d[] = { 3, 1 };
-    cta_BBANDS.Refresh(a);
-    cta_BBANDS.Refresh(b);
-    cta_BBANDS.Refresh(c);
-    cta_BBANDS.Refresh(d);
+    cta_BBANDS.Refresh(a, 0, 1);
+    cta_BBANDS.Refresh(b, 0, 1);
+    cta_BBANDS.Refresh(c, 0, 5);
+    cta_BBANDS.Refresh(d, 0, 2);
 
-    if (!almostEqual(ta_truth_upper, cta_BBANDS.m_upper.m_data, 8, 1e-6) ||
-        !almostEqual(ta_truth_middle, cta_BBANDS.m_middle.m_data, 8, 1e-6) ||
-        !almostEqual(ta_truth_down, cta_BBANDS.m_down.m_data, 8, 1e-6))
-        Print("Failed - Test CTaBBANDSIndicator");
-    else
-        Print("Passed - Test CTaBBANDSIndicator");
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, cta_BBANDS.m_upper.m_data, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_middle, cta_BBANDS.m_middle.m_data, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.m_data, 9, 0.001);
 }
 

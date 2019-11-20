@@ -115,7 +115,7 @@ public:
 	int m_cposition; // current position of end of data
 	int isfull;
 
-	CCBuffer() {};
+    CCBuffer() {};
 
 	CCBuffer(int size) {
 		SetSize(size);

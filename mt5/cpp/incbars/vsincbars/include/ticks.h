@@ -38,7 +38,8 @@ protected:
 	int m_nnew;
 public:
 	int gticks = 0; // global counter of ticks
-	CCBufferMqlTicks();
+
+	CCBufferMqlTicks(int size);
 	int nNew(); // number of new ticks after calling Refresh()
 
     // just receive ticks from Python/Metatrader and add them

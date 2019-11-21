@@ -165,8 +165,7 @@ TEST(Indicators, CFracDiffIndicator){
                     0.11830923 };
         double eps = 0.0001; // error tolerance in comparison
         int fsize = 10;
-        CFracDiffIndicator c_fdiff(fsize, 0.56);
-        c_fdiff.SetSize(200); // whatever buffer size just need to be enough
+        CFracDiffIndicator c_fdiff(fsize, 0.56, 200); // whatever buffer size just need to be enough        
 
         // partial calls until total array calculated
         double a[7];
@@ -225,8 +224,7 @@ TEST(Indicators, CTaBBANDS){
 
     int size = 8;
     int window = 2;
-    CTaBBANDS cta_BBANDS(window, 2.5, 0); // simple MA + 2.5 deviations
-    cta_BBANDS.SetSize(10);
+    CTaBBANDS cta_BBANDS(window, 2.5, 0, 10); // simple MA + 2.5 deviations    
 
     // partial calls until total array calculated
     double a[] = { 1 };

@@ -147,9 +147,7 @@ public:
     CCBuffer<double> m_middle;
     CCBuffer<double> m_down;
 
-    CTaBBANDS();
-
-    CTaBBANDS(int window, double devs, int ma_type);
+    CTaBBANDS(int window, double devs, int ma_type, int size);
 
     void AddEmpty(int count) override;
 
@@ -175,9 +173,8 @@ protected:
     double m_dfraction; // fractional difference
 
 public:
-    CFracDiffIndicator();
 
-    CFracDiffIndicator(int window, double dfraction);
+    CFracDiffIndicator(int window, double dfraction, int size);
 
     int Calculate(double indata[], int size, double outdata[]);
 

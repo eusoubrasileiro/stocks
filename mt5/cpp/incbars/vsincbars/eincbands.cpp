@@ -1,6 +1,94 @@
+#define BUILDING_DLL
 #include "eincbands.h"
+#include "embpython.h"
 
-ExpertIncBands::ExpertIncBands(void) {
+const int                Expert_BufferSize = 100e3; // indicators buffer needed
+const int                Expert_MaxFeatures = 100; // max features allowed - not used
+const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
+const double             Expert_Fracdif = 0.6; // fraction for fractional difference
+const double             Expert_Fracdif_Window = 512; // window size fraction fracdif
+
+// I dont want to use a *.def file to export functions from a namespace
+// so I am not using namespaces {namespace eincbands}
+
+
+// starts/increases positions against the trend to get profit on mean reversions
+// Using Dolar/Real Bars and consequently tick data
+// only for tick time-frame
+// Net Mode Only!
+// isInsideDay() should be checked by Metatrader prior doing 
+// any openning of positions   
+
+// Base Data
+std::shared_ptr<CCBufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
+
+// All Buffer-Derived classes bellow have indexes alligned
+// except for CObjectBuffer<XyPair>
+std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
+std::vector<double> m_mlast; // moneybar.last values of last added money bars
+// created from ticks
+std::shared_ptr<CCTimeDayBuffer> m_times; // time buffer from moneybar time-ms
+//MqlDateTime m_mqldt_now;
+//MqlDateTime m_last_time; // last time after refresh
+
+// bollinger bands configuration
+std::vector<std::shared_ptr<CTaBBANDS>> m_bands; // array of indicators for each bollinger band
+// upper and down and middle
+int m_nbands; // number of bands
+int m_bbwindow; // reference size of bollinger band indicator others
+double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
+
+// feature indicators
+std::shared_ptr<CFracDiffIndicator> m_fd_mbarp; // frac diff on money bar prices
+
+// store buy|sell|hold signals for each bband
+std::vector<CCBuffer<int>> m_raw_signal;
+
+std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
+int m_last_raw_signal_index; // related to m_bars buffer on refresh()
+
+// features and training vectors
+// array of buffers for each signal feature    
+int m_nsignal_features;
+int m_batch_size;
+int m_ntraining;
+int m_xtrain_dim; // dimension of x train vector
+CBuffer<XyPair> m_xypairs;
+
+// execution of positions and orders
+// profit or stop loss calculation for training
+double m_ordersize;
+double m_stoploss; // stop loss value in $$$ per order
+double m_targetprofit; //targetprofit in $$$ per order
+// profit or stop loss calculation for execution
+double m_run_stoploss; // stop loss value in $$$ per order
+double m_run_targetprofit; //targetprofit in $$$ per order
+// max number of orders
+// position being a execution of one order or increment
+// on the same direction
+// number of maximum 'positions'                             
+int m_max_positions; // maximum number of 'positions'
+int m_last_positions; // last number of 'positions'
+double m_last_volume; // last volume + (buy) or - (sell)
+double m_volume; // current volume of open or not positions
+
+// python sklearn model trainning
+bool m_recursive;
+//sklearnModel m_model;
+unsigned int m_model_refresh; // how frequent to update the model
+// (in number of new training samples)
+// helpers to count training samples
+unsigned long m_xypair_count; // counter to help train/re-train model
+unsigned long m_model_last_training; // referenced on m_xypair_count's
+
+
+void Initialize(int nbands, int bbwindow,
+    int batch_size, int ntraining,
+    double ordersize, double stoploss, double targetprofit,
+    double run_stoploss, double run_targetprofit, bool recursive,
+    double ticksize, double tickvalue,
+    int max_positions)
+{
     m_bbwindow_inc = 0.5;
     //m_model = new sklearnModel;
     m_xypair_count = 0;
@@ -9,21 +97,11 @@ ExpertIncBands::ExpertIncBands(void) {
     m_last_positions = 0; // number of 'positions' openned
     m_last_volume = 0;
     m_volume = 0;
-}
-
-void ExpertIncBands::Initialize(int nbands, int bbwindow,
-    int batch_size, int ntraining,
-    double ordersize, double stoploss, double targetprofit,
-    double run_stoploss, double run_targetprofit, bool recursive,
-    double ticksize, double tickvalue,
-    int max_positions)
-{
-    // create money bars
-    m_ticks.SetSize(Expert_BufferSize);
-    m_bars = MoneyBarBuffer(tickvalue,
-        ticksize, Expert_MoneyBar_Size);
-    m_bars.SetSize(Expert_BufferSize);
-    m_times.SetSize(Expert_BufferSize);
+    // set safe pointers to new objects
+    m_ticks.reset(new CCBufferMqlTicks(Expert_BufferSize));
+    m_bars.reset(new MoneyBarBuffer(tickvalue,
+        ticksize, Expert_MoneyBar_Size, Expert_BufferSize));
+    m_times.reset(new CCTimeDayBuffer(Expert_BufferSize));
 
     m_recursive = recursive;
     m_nbands = nbands;
@@ -64,7 +142,7 @@ void ExpertIncBands::Initialize(int nbands, int bbwindow,
     CreateOtherFeatureIndicators();
 }
 
-void ExpertIncBands::CreateBBands() {
+void CreateBBands() {
     // raw signal storage
     for (int j = 0; j < m_nbands; j++) {
         m_raw_signal[j] = CCBuffer<int>(Expert_BufferSize);
@@ -73,24 +151,23 @@ void ExpertIncBands::CreateBBands() {
     // ctalib bbands
     double inc = m_bbwindow_inc;
     for (int i = 0; i < m_nbands; i++) { // create multiple increasing bollinger bands
-        m_bands[i] = CTaBBANDS(m_bbwindow * inc, 2.5, 1); // 1-Exponential type
-        m_bands[i].SetSize(Expert_BufferSize);
+        m_bands[i].reset(new CTaBBANDS(m_bbwindow * inc, 2.5, 1, Expert_BufferSize)); // 1-Exponential type
         inc += m_bbwindow_inc;
     }
 }
 
-void ExpertIncBands::CreateOtherFeatureIndicators() {
+void CreateOtherFeatureIndicators() {
     // only fracdiff on prices
-    m_fd_mbarp = CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif);
-    m_fd_mbarp.SetSize(Expert_BufferSize);
+    m_fd_mbarp.reset(new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif, Expert_BufferSize));      
 }
 
-// can be called every < 1 second
-void ExpertIncBands::AddTicks(MqlTick *cticks, int size)
+// will be called every < 1 second
+// by Python or Metatrader 5
+void AddTicks(MqlTick *cticks, int size)
 {
-    if (m_ticks.Refresh(cticks, size) > 0) {
+    if (m_ticks->Refresh(cticks, size) > 0) {
 
-        if (m_bars.AddTicks(m_ticks) > 0)
+        if (m_bars->AddTicks(*m_ticks) > 0)
         {
             // some new ticks arrived and new bars created
             // at least one new money bar created
@@ -101,25 +178,27 @@ void ExpertIncBands::AddTicks(MqlTick *cticks, int size)
             }
         }
     }
-    // Metatrader Part 
+    // Metatrader Part
     // update indicators for trailing stop
     // check to see if we should close any open position
-    // 1. by time 
-    // 2. and by trailing stop    
+    // 1. by time
+    // 2. and by trailing stop
 }
 
-// Since all buffers must be alligned
-// Same new bars will come for all indicators and else 
-
-int ExpertIncBands::BufferSize() { return m_bars.Size(); }
-int ExpertIncBands::BufferTotal() { return m_bars.Count(); }
-int ExpertIncBands::BeginNewData() { return m_bars.Count() - m_bars.m_nnew; }
+// Since all buffers must be alligned and also have same size
+// Expert_BufferSize 
+// Same new bars will come for all indicators and else
+// All are updated after bars so that's the main
+// begin of new bar is also begin of new data on all buffers
+int BufferSize() { return m_bars->Size(); }
+int BufferTotal() { return m_bars->Count(); }
+int BeginNewData() { return m_bars->Count() - m_bars->m_nnew; }
 
 // start index and count of new bars that just arrived
-bool ExpertIncBands::Refresh()
+bool Refresh()
 {
-    m_bars.RefreshArrays(); // update internal latest arrays of times, prices
-    m_times.AddRangeTimeMs(m_bars.m_times.data(), 0, m_bars.m_nnew);
+    m_bars->RefreshArrays(); // update internal latest arrays of times, prices
+    m_times->AddRangeTimeMs(m_bars->m_times.data(), 0, m_bars->m_nnew);
     bool result = true;
 
     // all bellow must be called to maintain alligment of buffers
@@ -128,21 +207,21 @@ bool ExpertIncBands::Refresh()
     // features indicators
     // fracdif on bar prices order of && matter
     // first is what you want to do and second what you want to try
-    result = m_fd_mbarp.Refresh(m_bars.m_last.data(), 0, m_bars.m_nnew) && result;
+    result = m_fd_mbarp->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
 
     // update all bollinger bands indicators
     for (int j = 0; j < m_nbands; j++) {
-        result = m_bands[j].Refresh(m_bars.m_last.data(), 0, m_bars.m_nnew) && result;
+        result = m_bands[j]->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
     }
 
     // called after m_ticks.Refresh() and Refreshs() above
     // garantes not called twice and bband indicators available
-    RefreshRawBandSignals(m_bars.m_last.data(), m_bars.m_nnew, result);
+    RefreshRawBandSignals(m_bars->m_last.data(), m_bars->m_nnew, result);
 
     return result;
 }
 
-void ExpertIncBands::RefreshRawBandSignals(double last[], int count, int empty) {
+void RefreshRawBandSignals(double last[], int count, int empty) {
     // should be called only once per refresh
     // use the last added samples
     empty = (empty) ? 1 : 0;
@@ -154,10 +233,10 @@ void ExpertIncBands::RefreshRawBandSignals(double last[], int count, int empty) 
         //        sell -1 : crossing up-outside it's sell
         //        hold  0 : nothing usefull happend
         for (int i = 0; i < count; i++) {
-            if (last[i] >= m_bands[j].m_upper[start_new + i])
+            if (last[i] >= m_bands[j]->m_upper[start_new + i])
                 m_raw_signal[j].Add(-1 * empty); // sell
             else
-                if (last[i] <= m_bands[j].m_down[start_new + i])
+                if (last[i] <= m_bands[j]->m_down[start_new + i])
                     m_raw_signal[j].Add(+1 * empty); // buy
                 else
                     m_raw_signal[j].Add(0); // nothing
@@ -165,7 +244,7 @@ void ExpertIncBands::RefreshRawBandSignals(double last[], int count, int empty) 
     }
 }
 
-void ExpertIncBands::verifyEntry() {
+void verifyEntry() {
 
     // has an entry signal in any band? on the lastest
     // raw signals added bars
@@ -222,11 +301,11 @@ void ExpertIncBands::verifyEntry() {
 // otherwise returns -1
 // only call when there's at least one signal
 // stored in the buffer of raw signal bands
-int ExpertIncBands::lastRawSignals() {
+int lastRawSignals() {
     int direction = 0;
     m_last_raw_signal_index = -1;
     // m_last_raw_signal_index is index based
-    // on circular buffers index alligned on all 
+    // on circular buffers index alligned on all
     for (int j = 0; j < m_nbands; j++) {
         for (int i = BeginNewData(); i < BufferTotal(); i++) {
             m_last_raw_signal[j] = m_raw_signal[j][i];
@@ -250,3 +329,4 @@ int ExpertIncBands::lastRawSignals() {
     }
     return m_last_raw_signal_index;
 }
+

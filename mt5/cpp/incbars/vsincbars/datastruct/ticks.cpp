@@ -28,9 +28,10 @@ void fixArrayTicks(std::vector<MqlTick> ticks){
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called
 // 1 ms time-frame suggested using OnTimer
-CCBufferMqlTicks::CCBufferMqlTicks(){
-	m_nnew = 0;
-	gticks = 0;
+CCBufferMqlTicks::CCBufferMqlTicks(int size) {
+    m_nnew = 0;
+    gticks = 0;
+    CCBuffer::SetSize(size);
 }
 
 int CCBufferMqlTicks::nNew() { return m_nnew; } // number of new ticks after calling Refresh()

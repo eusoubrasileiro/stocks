@@ -51,7 +51,6 @@ public:
 	std::vector<Type> m_data;
 
 	CBuffer(void) {
-		// ArrayResize(m_data, 16); // minimu size if specified by Resize
 		m_data_total = 0;
 		m_data_max = 0;
 		m_step_resize = 16;

@@ -42,17 +42,11 @@ int CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
 // triple buffer indicator
 // cleanear code with multiple inheritance
 
-// nonsense but needed by eincbands constructor
-CTaBBANDS::CTaBBANDS() {
-    m_devs = 2.5;
-    m_tama_type = 1;
-    IWindowIndicator::Init(1);
-};
-
-CTaBBANDS::CTaBBANDS(int window, double devs, int ma_type){
+CTaBBANDS::CTaBBANDS(int window, double devs, int ma_type, int size){
     m_devs = devs;
     m_tama_type = ma_type;
     IWindowIndicator::Init(window);
+    SetSize(size);
 };
 
 void CTaBBANDS::AddEmpty(int count){

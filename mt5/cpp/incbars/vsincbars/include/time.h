@@ -21,6 +21,7 @@ class CCTimeDayBuffer : public CCBuffer<timeday>
 	int m_QuickSearch(long element, int start, int end);
 public:
 	timeday     m_last;
+    CCTimeDayBuffer(int size);
 	int QuickSearch(long element_ms);
 	int QuickSearch(timeday element);
 	// the only way to make this go faster is

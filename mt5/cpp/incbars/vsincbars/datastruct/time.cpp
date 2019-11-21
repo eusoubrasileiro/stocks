@@ -45,6 +45,11 @@ int timestampWDay(long t)
 	return wday;
 }
 
+
+CCTimeDayBuffer::CCTimeDayBuffer(int size) {
+    CCBuffer::SetSize(size);
+}
+
 // to be replaced
 // Use std::sort to sort your std::vector.
 // After sorting your std::vector use std::binary_search to find out whether a certain element exists 

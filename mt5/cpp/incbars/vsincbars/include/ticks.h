@@ -6,17 +6,17 @@
 
 typedef long datetime;
 
-typedef struct mqltick
+struct MqlTick
 {
-    datetime     time;          // Time of the last prices update 1.
+    long         time;          // Time of the last prices update 1.
     double       bid;           // Current Bid price
     double       ask;           // Current Ask price
     double       last;          // Price of the last deal (Last)
-    long        volume;        // Volume for the current Last price
+    long         volume;        // Volume for the current Last price
     long         time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
-    int         flags;         // Tick flags
+    int          flags;         // Tick flags
     double       volume_real;   // Volume for the current Last price with greater accuracy
-} MqlTick;
+};
 
 // 2      TICK_FLAG_BID –  tick has changed a Bid price
 // 4      TICK_FLAG_ASK  – a tick has changed an Ask price

@@ -17,8 +17,6 @@
 
 #endif
 
-
-
 // for MQL5 or even C++ call - thankfully __stdcall is useless in x64 arch
 // so will not use __stdcall specifier since Python is also x64
 // extern "C" guarantes no decoration is inserted on the function name
@@ -32,7 +30,7 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow,
 
 // will be called every < 1 second
 // by Python or Metatrader 5
-DLL_EXPORT void AddTicks(MqlTick* cticks, int size);
+DLL_EXPORT void AddTicks(MqlTick *cticks, int size);
 
 
 #ifdef EXPORT

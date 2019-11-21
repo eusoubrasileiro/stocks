@@ -1,11 +1,12 @@
-// dllmain.cpp : Defines the entry point for the DLL application.
-#include "exports.h"
+// python interpreter embedded in this dll
+#include "dll.h"
+#include "embpython.h"
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
-#include "ticks.h"
-#include "bars.h"
-#include <iostream>
+
+namespace py = pybind11;
+static py::module pycode; // python module to be loaded
 
 #ifdef DEBUG
 #include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
@@ -16,29 +17,6 @@ std::ofstream debugfile("pythondlib_log.txt");
 
 inline const std::string BoolToString(bool b){ 	return b ? "true" : "false"; }
 inline const std::string PtrToString(LPVOID b) { return b ? "not-null" : "null"; }
-
-
-namespace py = pybind11;
-
-static py::module pycode; // python module to be loaded
-
-int Unique(double arr[], int n) {
-	//std::lock_guard<std::mutex> guard(dll_mutex); // unlocks the mutex when destroctor is called
-	py::buffer_info buf;
-	double* ptr;
-	// create python array and copy c array data to it
-	py::array_t<double> npyarray = py::array_t<double>(n);
-	buf = npyarray.request();
-	ptr = (double*) buf.ptr;
-	std::memcpy(ptr, arr, n * sizeof(double));
-	// call python code use same array to get output
-	npyarray = pycode.attr("Unique")(npyarray);
-	// result copy back to same array
-	buf = npyarray.request();
-	ptr = (double*) buf.ptr;
-	std::memcpy(arr, ptr, buf.shape[0] * sizeof(double));
-	return buf.shape[0]; // return unique size
-}
 
 int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 						char *model, int pymodel_size_max){
@@ -131,25 +109,42 @@ int pyPredictwModel(double X[], int xtrain_dim,	char *model, int pymodel_size)
 }
 
 
+// https://docs.python.org/3/c-api/init.html#non-python-created-threads
+PyGILState_STATE gstate; // calling python from a thread not created by Python itself
 
-BOOL __stdcall DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
+BOOL __stdcall DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
 
     case DLL_PROCESS_ATTACH:
-		// attach to process
-		// return FALSE to fail DLL load
-		break;
-    case DLL_THREAD_ATTACH:
-		break;
-    case DLL_THREAD_DETACH:
-		break;
-    case DLL_PROCESS_DETACH: 
+        try {
+            if (!Py_IsInitialized()) // starts only once on the mt5 process
+                py::initialize_interpreter();
+            else // just get the GIL for the thread who called the DLL
+                gstate = PyGILState_Ensure();
+            pycode = py::module::import("python_code");
+        }
+        catch (py::error_already_set const& pythonErr) {
 
+        }
+        catch (const std::exception & ex) {
+
+        }
+        catch (...) {
+
+        }
+        // attach to process
+        // return FALSE to fail DLL load
+        break;
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
+    case DLL_PROCESS_DETACH: // will keep runing until mt5 dies/python interpreter dies
+        PyGILState_Release(gstate);
         break;
     }
     return TRUE;

@@ -1,5 +1,15 @@
-#ifndef EXPORTS_H
-#define EXPORTS_H
+//
+//
+// This is:
+// 1. __stdcall windows dll for generic porpouses
+// 2. a __cdecl x64 Python module can be imported as `import incbars.dll`
+// 
+// But here only the exports for mql5 or even c++ call
+//
+//
+
+#ifndef DLLEXPORTS_H
+#define DLLEXPORTS_H
 
 #define NOMINMAX
 
@@ -8,23 +18,14 @@
 #include <windows.h>
 #include <iostream>
 
+BOOL __stdcall DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved);
+
 /*  To use this exported function of dll, include this header
  *  in your project.
  */
 
-#ifdef BUILDING_DLL
-#define DLL_EXPORT __declspec(dllexport)
-#else
-#define DLL_EXPORT __declspec(dllimport)
-#endif
 
-// for C++/MQL5 call
-	int DLL_EXPORT __stdcall Unique(double arr[], int n);
-	int DLL_EXPORT __stdcall pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
-		char* model, int pymodel_size_max);
-	int DLL_EXPORT __stdcall pyPredictwModel(double X[], int xtrain_dim,
-		char* model, int pymodel_size);
-  // for Python use  __cdecl
-	
 
-#endif //EXPORTS_H
+#endif //DLLEXPORTS_H

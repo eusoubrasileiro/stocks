@@ -33,6 +33,8 @@
     <LinkIncremental>true</LinkIncremental>
     <IgnoreImportLibrary>
     </IgnoreImportLibrary>
+    <OutDir>$(SolutionDir)$(Platform)\</OutDir>
+    <IntDir>$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -40,17 +42,18 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)\$(Platform)\$(Configuration)\csindicators.obj;$(SolutionDir)\$(Platform)\$(Configuration)\ctindicators.obj;$(SolutionDir)\$(Platform)\$(Configuration)\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

@@ -9,6 +9,10 @@
 // Here just the python module code using pybind11
 //
 //
+
+// The DLL will only build if DEBUG preprocessor is not 
+// set pybind11 only works without it.
+
 #pragma once
 
 #define BUILDING_DLL

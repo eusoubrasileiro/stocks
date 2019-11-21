@@ -1,12 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -24,13 +20,6 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <SpectreMitigation />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -40,203 +29,49 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>
-    </LinkIncremental>
-    <OutDir>$(SolutionDir)\</OutDir>
-    <IntDir>$(Platform)\</IntDir>
-    <IgnoreImportLibrary />
-    <GenerateManifest />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)</OutDir>
-    <GenerateManifest />
-    <IntDir>$(Platform)</IntDir>
+    <IntDir>$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>
-      </Optimization>
-      <SDLCheck>
-      </SDLCheck>
-      <PreprocessorDefinitions>DEBUG;</PreprocessorDefinitions>
-      <ConformanceMode>
-      </ConformanceMode>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>BUILDING_DLL;</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\ctalib;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\pytorchcpp\pytorch</AdditionalIncludeDirectories>
-      <LanguageStandard>
-      </LanguageStandard>
-      <CallingConvention>
-      </CallingConvention>
-      <RuntimeLibrary>
-      </RuntimeLibrary>
-      <CompileAs>
-      </CompileAs>
-      <TreatWChar_tAsBuiltInType />
-      <InlineFunctionExpansion />
-      <IntrinsicFunctions />
-      <FavorSizeOrSpeed />
-      <EnableFiberSafeOptimizations />
-      <WholeProgramOptimization />
-      <StructMemberAlignment />
-      <PrecompiledHeaderOutputFile />
-      <TreatWarningAsError />
-      <UndefineAllPreprocessorDefinitions />
-      <IgnoreStandardIncludePath />
-      <PreprocessToFile />
-      <PreprocessSuppressLineNumbers />
-      <PreprocessKeepComments />
-      <SmallerTypeCheck />
-      <RemoveUnreferencedCodeData />
-      <GenerateXMLDocumentationFiles />
-      <ShowIncludes />
-      <MinimalRebuild />
-      <BasicRuntimeChecks />
-      <BufferSecurityCheck />
-      <EnableEnhancedInstructionSet />
-      <FloatingPointModel />
-      <DisableLanguageExtensions />
-      <ForceConformanceInForLoopScope />
-      <ExpandAttributedSource />
-      <AssemblerOutput />
-      <AssemblerListingLocation />
-      <BrowseInformation />
-      <BrowseInformationFile />
-      <OmitDefaultLibName />
-      <XMLDocumentationFileName />
-      <ErrorReporting />
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableUAC>
-      </EnableUAC>
-      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ForceFileOutput>
-      </ForceFileOutput>
-      <OutputFile>$(ProjectName).dll</OutputFile>
-      <IgnoreEmbeddedIDL />
-      <TypeLibraryResourceID />
-      <ShowProgress />
-      <RegisterOutput />
-      <PerUserRedirection />
-      <ManifestFile />
-      <AllowIsolation />
-      <UACExecutionLevel />
-      <UACUIAccess />
-      <GenerateMapFile />
-      <MapExports />
-      <SwapRunFromCD />
-      <SwapRunFromNET />
-      <Driver />
-      <ProfileGuidedDatabase />
-      <SetChecksum />
-      <RandomizedBaseAddress />
-      <DataExecutionPrevention />
-      <TurnOffAssemblyGeneration />
-      <Profile />
-    </Link>
-    <ProjectReference>
-      <UseLibraryDependencyInputs />
-      <LinkLibraryDependencies />
-    </ProjectReference>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <SDLCheck>
-      </SDLCheck>
-      <PreprocessorDefinitions>
-      </PreprocessorDefinitions>
-      <ConformanceMode>
-      </ConformanceMode>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\ctalib;D:\Users\andre.ferreira\Projects\stocks\mt5\cpp\pytorchcpp\pytorch</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <CallingConvention>
       </CallingConvention>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <CompileAs>
       </CompileAs>
-      <TreatWChar_tAsBuiltInType>
-      </TreatWChar_tAsBuiltInType>
-      <DebugInformationFormat />
-      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <EnableFiberSafeOptimizations />
-      <WholeProgramOptimization />
-      <MinimalRebuild />
-      <SmallerTypeCheck />
-      <BasicRuntimeChecks />
-      <DisableLanguageExtensions />
-      <ForceConformanceInForLoopScope />
-      <RemoveUnreferencedCodeData />
-      <ExpandAttributedSource />
-      <AssemblerOutput />
-      <ShowIncludes>true</ShowIncludes>
-      <UseFullPaths />
-      <OmitDefaultLibName />
-      <UndefineAllPreprocessorDefinitions />
-      <IgnoreStandardIncludePath />
-      <PreprocessToFile>
-      </PreprocessToFile>
-      <PreprocessSuppressLineNumbers />
-      <PreprocessKeepComments />
-      <PrecompiledHeaderOutputFile />
-      <BrowseInformation />
+      <TreatWChar_tAsBuiltInType />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>
-      </GenerateDebugInformation>
-      <EnableUAC>
-      </EnableUAC>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ForceFileOutput>
       </ForceFileOutput>
       <OutputFile>$(ProjectName).dll</OutputFile>
-      <ManifestFile />
-      <AllowIsolation />
-      <UACExecutionLevel />
-      <UACUIAccess />
-      <ProgramDatabaseFile />
-      <GenerateMapFile />
-      <MapExports />
-      <SwapRunFromCD />
-      <SwapRunFromNET />
-      <Driver />
-      <IgnoreEmbeddedIDL />
-      <TypeLibraryResourceID />
-      <RandomizedBaseAddress />
-      <DataExecutionPrevention />
-      <TurnOffAssemblyGeneration />
     </Link>
     <ProjectReference>
-      <UseLibraryDependencyInputs>
-      </UseLibraryDependencyInputs>
+      <UseLibraryDependencyInputs />
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\dll.h" />
     <ClInclude Include="include\eincbands.h" />
     <ClInclude Include="include\embpython.h" />
-    <ClCompile Include="pymodule.cpp" />
     <ClInclude Include="include\bars.h" />
     <ClInclude Include="include\buffers.h" />
     <ClInclude Include="include\cwindicators.h" />
@@ -249,10 +84,11 @@
     <ClCompile Include="datastruct\bars.cpp" />
     <ClCompile Include="datastruct\ticks.cpp" />
     <ClCompile Include="datastruct\time.cpp" />
-    <ClCompile Include="eincbands.cpp" />
-    <ClCompile Include="embpython.cpp" />
     <ClCompile Include="indicators\csindicators.cpp" />
     <ClCompile Include="indicators\ctindicators.cpp" />
+    <ClCompile Include="eincbands.cpp" />
+    <ClCompile Include="embpython.cpp" />
+    <ClCompile Include="pymodule.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

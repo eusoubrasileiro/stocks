@@ -57,7 +57,7 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
     return m_nnew;
 }
 
-// add ticks from bg_idx until size
+// add ticks for python support
 int MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end) {
     int nnew = 0;
     for (auto element = start; element != end; ++element)
@@ -66,15 +66,12 @@ int MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<M
     return m_nnew;
 }
 
-int MoneyBarBuffer::AddTicks(CCBufferMqlTicks ticks)
+// add ticks for metatrader support
+int MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
 {
     int nnew = 0;
-    int start1, start2, end1, end2;
-    ticks.indexesNewTicks(start1, end1, start2, end2);
-    for (int i = start1; i < end1; i++)
-        nnew += AddTick(ticks.m_data[i]);
-    for (int i = start2; i < end2; i++)
-        nnew += AddTick(ticks.m_data[i]);
+    for (int i =0; i<size; i++)
+        nnew += AddTick(cticks[i]);
     m_nnew = nnew; // overwrite internal added increment
     return m_nnew;
 }

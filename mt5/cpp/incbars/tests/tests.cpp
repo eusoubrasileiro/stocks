@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "..\vsincbars\include\buffers.h"
 #include "..\vsincbars\include\cwindicators.h"
+#include "..\vsincbars\include\ticks.h"
 #include <array>
 
 // Since I just want to test the code
@@ -241,3 +242,23 @@ TEST(Indicators, CTaBBANDS){
     EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.m_data, 9, 0.001);
 }
 
+#include <iostream>
+#include <fstream>
+
+TEST(MoneyBarBuffer, AddTicks) {
+    std::fstream fh;
+    std::streampos begin, end;
+
+    fh.open("npticks.bin", std::fstream::in | std::fstream::binary);
+    begin = fh.tellg();
+    fh.seekg(0, std::ios::end);
+    end = fh.tellg();
+    long nticks= (end- begin)/sizeof(MqlTick);
+    fh.seekg(0, std::ios::beg);
+
+    std::vector<MqlTick> ticks;
+    ticks.resize(nticks);
+
+    fh.read((char*)ticks.data(), end);
+
+}

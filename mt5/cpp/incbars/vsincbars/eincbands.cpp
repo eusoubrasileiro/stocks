@@ -2,9 +2,9 @@
 #include "eincbands.h"
 #include "embpython.h"
 
-const int                Expert_BufferSize = 100e3; // indicators buffer needed
-const int                Expert_MaxFeatures = 100; // max features allowed - not used
-const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
+const int                Expert_BufferSize = 100000; // indicators buffer needed
+//const int                Expert_MaxFeatures = 100; // max features allowed - not used
+//const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
 const double             Expert_Fracdif = 0.6; // fraction for fractional difference
 const double             Expert_Fracdif_Window = 512; // window size fraction fracdif
 
@@ -20,7 +20,7 @@ const double             Expert_Fracdif_Window = 512; // window size fraction fr
 // any openning of positions   
 
 // Base Data
-std::shared_ptr<CCBufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
+//std::shared_ptr<CCBufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
 
 // All Buffer-Derived classes bellow have indexes alligned
 // except for CObjectBuffer<XyPair>
@@ -30,6 +30,8 @@ std::vector<double> m_mlast; // moneybar.last values of last added money bars
 std::shared_ptr<CCTimeDayBuffer> m_times; // time buffer from moneybar time-ms
 //MqlDateTime m_mqldt_now;
 //MqlDateTime m_last_time; // last time after refresh
+
+double m_moneybar_size; // R$ to form 1 money bar
 
 // bollinger bands configuration
 std::vector<std::shared_ptr<CTaBBANDS>> m_bands; // array of indicators for each bollinger band
@@ -86,9 +88,10 @@ void Initialize(int nbands, int bbwindow,
     int batch_size, int ntraining,
     double ordersize, double stoploss, double targetprofit,
     double run_stoploss, double run_targetprofit, bool recursive,
-    double ticksize, double tickvalue,
+    double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
     int max_positions)
 {
+    m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;
     //m_model = new sklearnModel;
     m_xypair_count = 0;
@@ -98,9 +101,8 @@ void Initialize(int nbands, int bbwindow,
     m_last_volume = 0;
     m_volume = 0;
     // set safe pointers to new objects
-    m_ticks.reset(new CCBufferMqlTicks(Expert_BufferSize));
     m_bars.reset(new MoneyBarBuffer(tickvalue,
-        ticksize, Expert_MoneyBar_Size, Expert_BufferSize));
+        ticksize, m_moneybar_size, Expert_BufferSize));
     m_times.reset(new CCTimeDayBuffer(Expert_BufferSize));
 
     m_recursive = recursive;
@@ -161,29 +163,41 @@ void CreateOtherFeatureIndicators() {
     m_fd_mbarp.reset(new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif, Expert_BufferSize));      
 }
 
-// will be called every < 1 second
-// by Python or Metatrader 5
-void AddTicks(MqlTick *cticks, int size)
-{
-    if (m_ticks->Refresh(cticks, size) > 0) {
+// breaking apart is better for testing and cleanner code
+// and being reusable
 
-        if (m_bars->AddTicks(*m_ticks) > 0)
-        {
-            // some new ticks arrived and new bars created
-            // at least one new money bar created
-            // refresh whatever possible with new bars
-            if (Refresh()) {
-                // sucess of updating everything w. new data
-                verifyEntry();
-            }
-        }
-    }
-    // Metatrader Part
-    // update indicators for trailing stop
-    // check to see if we should close any open position
-    // 1. by time
-    // 2. and by trailing stop
+//void AddTicks(const MqlTick* cticks, int size){
+//    if (m_bars->AddTicks(cticks, size) > 0)
+//    {
+//        // some new ticks arrived and new bars created
+//        // at least one new money bar created
+//        // refresh whatever possible with new bars
+//        if (Refresh()) {
+//            // sucess of updating everything w. new data
+//            verifyEntry();
+//        }
+//    }
+//    // Metatrader Part
+//    // update indicators for trailing stop
+//    // check to see if we should close any open position
+//    // 1. by time
+//    // 2. and by trailing stop
+//}
+
+// will be called every < 1 second
+//  Metatrader 5
+int AddTicks(const MqlTick* cticks, int size) {
+
+    return m_bars->AddTicks(cticks, size);
+
 }
+
+// or by Python 
+int pyAddTicks(py::array_t<MqlTick> ticks)
+{
+    return AddTicks(ticks.data(), ticks.size());
+}
+
 
 // Since all buffers must be alligned and also have same size
 // Expert_BufferSize 
@@ -192,7 +206,8 @@ void AddTicks(MqlTick *cticks, int size)
 // begin of new bar is also begin of new data on all buffers
 int BufferSize() { return m_bars->Size(); }
 int BufferTotal() { return m_bars->Count(); }
-int BeginNewData() { return m_bars->Count() - m_bars->m_nnew; }
+// start index on all buffers of new bars after AddTicks > 0
+int IdxNewData() { return m_bars->Count() - m_bars->m_nnew; }
 
 // start index and count of new bars that just arrived
 bool Refresh()
@@ -225,7 +240,7 @@ void RefreshRawBandSignals(double last[], int count, int empty) {
     // should be called only once per refresh
     // use the last added samples
     empty = (empty) ? 1 : 0;
-    int start_new = BeginNewData();
+    int start_new = IdxNewData();
     for (int j = 0; j < m_nbands; j++) {
         //    Based on a bollinger band defined by upper-band and lower-band
         //    return signal:
@@ -307,7 +322,7 @@ int lastRawSignals() {
     // m_last_raw_signal_index is index based
     // on circular buffers index alligned on all
     for (int j = 0; j < m_nbands; j++) {
-        for (int i = BeginNewData(); i < BufferTotal(); i++) {
+        for (int i = IdxNewData(); i < BufferTotal(); i++) {
             m_last_raw_signal[j] = m_raw_signal[j][i];
             if (m_last_raw_signal[j] != 0) {
                 if (direction == 0) {

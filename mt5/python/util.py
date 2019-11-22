@@ -163,19 +163,19 @@ def ticksnbars(tickfileinput, verbose=False):
     # return dataframe of ticks
     #        dataframe of bars
 
-def writecsv_tickmt5(dfticks_, ticksfilename):
+def writecsv_tickmt5(dfticks, ticksfilename):
     ### Write Ticks Csv
     ### Make it metatrader 5 Format
-    dfticks = dfticks_.copy() # avoid modifications on orignal
+    dfticks = dfticks.copy() # avoid modifications on orignal
     mt5colnames = "<DATE>	<TIME>	<BID>	<ASK>	<LAST>	<VOLUME>".split('\t')
     dfticks.columns = mt5colnames
     dfticks.to_csv(ticksfilename+'_tickmt5.csv',
                  index=False, sep='\t')
 
-def writecsv_m1barmt5(dfbars_, barsfilename):
+def writecsv_m1barmt5(dfbars, barsfilename):
     ### Write Bars 1M Csv
     ### Make it metatrader 5 Format
-    dfbars = dfbars_.copy() # avoid modifications on orignal
+    dfbars = dfbars.copy() # avoid modifications on orignal
     mt5colnames = "<DATE>	<TIME>	<OPEN>	<HIGH>	<LOW>	<CLOSE>	<TICKVOL>	<VOL>	<SPREAD>".split("\t")
     dfbars = dfbars.loc[:, ['date', 'time', 'open', 'high', 'low', 'close', 'nticks', 'vol', 'spread']]
     dfbars.columns = mt5colnames
@@ -200,13 +200,13 @@ mqltick_dtype = np.dtype([
     ("ask", np.float64),
     ("last", np.float64),
     ("volume", np.int64),
-    ("msc", np.int64),
+    ("time_msc", np.int64),
     ("flags", np.int32),
-    ("vreal", np.float64)
+    ("volume_real", np.float64)
 ])
 
-def writebin_mql5ticks(dfticks_, mqlticksfilename):
-    dfticks = dfticks_.copy() # avoid modifications on orignal
+def create_nprecords(dfticks):
+    dfticks = dfticks.copy() # avoid modifications on orignal
     # Create mqltick fake flags but this is unacessary figure out now
     # for not to say useless  only flag_buy and flag_sell would be useful
     # but they are rare
@@ -229,5 +229,13 @@ def writebin_mql5ticks(dfticks_, mqlticksfilename):
     dfticks['ms'] = (dfticks.index.astype(np.int64)//1000000) # datetime unit='ns' nano e9 seconds to ms e3
     dfticks['time'] = dfticks['ms']//1000 # ms to seconds
     # dfticks.dtypes[[1, 2, 3, 4, 5, 8, 7, 6]] # compatible with above definition
-    mqlticks =  dfticks.iloc[:, [1, 2, 3, 4, 5, 8, 7, 6]].to_records(index=False)
-    mqlticks.tofile(mqlticksfilename+'_mqltick.bin')
+    dfticks = dfticks.iloc[:, [1, 2, 3, 4, 5, 8, 7, 6]]
+    # make names match exactly to mql5 struct
+    dfticks.columns = ["time", "bid", "ask", "last", "volume", "time_msc", "flags", "volume_real"]
+    mqlticks =  dfticks.to_records(index=False)
+    return mqlticks
+
+def writebin_mql5ticks(dfticks, mqlticksfilename):
+    dfticks = dfticks.copy() # avoid modifications on orignal
+    nprecords_mqlticks = create_nprecords(dfticks)
+    nprecords_mqlticks.tofile(mqlticksfilename+'_mqltick.bin')

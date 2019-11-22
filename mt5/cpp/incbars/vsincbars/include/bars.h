@@ -45,7 +45,8 @@ public:
     // add one tick and create as many money bars as needed (or 0)
     // return number created
     int AddTick(MqlTick tick);
-    // add ticks from bg_idx until size
+    // add ticks for python support
     int AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
-    int AddTicks(CCBufferMqlTicks ticks);
+    // add ticks for metatrader support
+    int AddTicks(const MqlTick* cticks, int size);
 };

@@ -67,6 +67,13 @@
     <ProjectReference>
       <UseLibraryDependencyInputs />
     </ProjectReference>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll  $(SolutionDir)\$(Platform)\$(ProjectName).pyd</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\dll.h" />

@@ -8,12 +8,12 @@ typedef long datetime;
 
 struct MqlTick
 {
-    long         time;          // Time of the last prices update 1.
+    long long    time;          // Time of the last prices update 1.
     double       bid;           // Current Bid price
     double       ask;           // Current Ask price
     double       last;          // Price of the last deal (Last)
-    long         volume;        // Volume for the current Last price
-    long         time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
+    long long    volume;        // Volume for the current Last price
+    long long    time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
     int          flags;         // Tick flags
     double       volume_real;   // Volume for the current Last price with greater accuracy
 };
@@ -26,12 +26,15 @@ struct MqlTick
 // 64     TICK_FLAG_SELL – a tick is a result of a sell deal
 
 
+// Since Ticks will only come to C++ 
+// cleanned there is no need for this class
+// since the C++ code works with moneybars
 
-const int Max_Tick_Copy = 10e3;
-
-// circular buffer version
-// 10k ticks maximum downloaded every time Refresh is called
-// 1 ms time-frame suggested using OnTimer
+//const int Max_Tick_Copy = 10e3;
+//
+//// circular buffer version
+//// 10k ticks maximum downloaded every time Refresh is called
+//// 1 ms time-frame suggested using OnTimer
 class CCBufferMqlTicks : public CCBuffer<MqlTick>
 {
 protected:

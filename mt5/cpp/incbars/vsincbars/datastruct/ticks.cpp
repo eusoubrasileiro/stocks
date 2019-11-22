@@ -1,5 +1,6 @@
 #include "ticks.h"
 
+
 // Fix array of ticks so if last ask, bid or last is 0
 // they get filled with previous non-zero value as should be
 // volume i dont care because it will only be usefull in change if flag >= 16

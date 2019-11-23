@@ -224,12 +224,11 @@ def create_nprecords(dfticks):
     # the first tick is by definition above created when at least volume
     # changed from 0 to something > 0 so  set accordingly
     #dfticks.loc[0, 'flags'] = np.int32(16)
-    dfticks['vreal'] = dfticks['vol']
+    dfticks['vreal'] = dfticks['vol'].astype(np.float64)
     dfticks['vol'] = dfticks['vol'].astype(np.int64)
     dfticks['ms'] = (dfticks.index.astype(np.int64)//1000000) # datetime unit='ns' nano e9 seconds to ms e3
     dfticks['time'] = dfticks['ms']//1000 # ms to seconds
-    # dfticks.dtypes[[1, 2, 3, 4, 5, 8, 7, 6]] # compatible with above definition
-    dfticks = dfticks.iloc[:, [1, 2, 3, 4, 5, 8, 7, 6]]
+    dfticks = dfticks.iloc[:, [1, 2, 3, 4, 5, 8, 6, 7]]
     # make names match exactly to mql5 struct
     dfticks.columns = ["time", "bid", "ask", "last", "volume", "time_msc", "flags", "volume_real"]
     mqlticks =  dfticks.to_records(index=False)

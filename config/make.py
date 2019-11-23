@@ -142,8 +142,10 @@ if os.name == 'nt':
     if args.cpdll:
         repopath_dlls = os.path.join(repopath, r'mt5\cpp')
         dllpaths = list(Path(repopath_dlls).glob(r'**\*.dll')) # all dll's # (glob recursive not working)
+        dllpaths += list(Path(repopath_dlls).glob(r'**\*.pyd'))
         # include pytorchcpp dll's
         dllpaths += list(Path(os.path.join(libtorchpath, 'lib')).glob(r'**\*.dll'))
+
         # for repeated files get the created most recently
         times = [ os.path.getctime(dll) for dll in dllpaths ]
         dllnames = [os.path.basename(dll) for dll in dllpaths ]

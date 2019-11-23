@@ -249,6 +249,7 @@ TEST(MoneyBarBuffer, AddTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
+    // calculate number of ticks on file
     fh.open("npticks.bin", std::fstream::in | std::fstream::binary);
     begin = fh.tellg();
     fh.seekg(0, std::ios::end);

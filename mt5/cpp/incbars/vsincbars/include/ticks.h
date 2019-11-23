@@ -1,11 +1,13 @@
 #pragma once
 
+
 #include "buffers.h"
 #include <string>
 #include <iostream>
 
 typedef long datetime;
 
+#pragma pack(push, 2)
 struct MqlTick
 {
     long long    time;          // Time of the last prices update 1.
@@ -16,7 +18,8 @@ struct MqlTick
     long long    time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
     int          flags;         // Tick flags
     double       volume_real;   // Volume for the current Last price with greater accuracy
-};
+}; // sizeof is 60 bytes to avoid auto alignment to 64 by compiler #pragma pack(2) above is needed
+#pragma pack(pop)
 
 // 2      TICK_FLAG_BID –  tick has changed a Bid price
 // 4      TICK_FLAG_ASK  – a tick has changed an Ask price

@@ -72,7 +72,8 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)\$(ProjectName).dll  $(SolutionDir)\$(Platform)\$(ProjectName).pyd</Command>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5\$(ProjectName).pyd"
+copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

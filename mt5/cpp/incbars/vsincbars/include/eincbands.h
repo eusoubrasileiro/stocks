@@ -59,6 +59,8 @@ DLL_EXPORT int IdxNewData(); // start index on all buffers of new bars after Add
 // by Python
 int pyAddTicks(py::array_t<MqlTick> ticks);
 
+py::array_t<MoneyBar> pyGetMoneyBars();
+
 void CreateBBands();
 
 void CreateOtherFeatureIndicators();

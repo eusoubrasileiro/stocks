@@ -7,18 +7,20 @@
 
 // Money Bar solves many problems of analysis of stocks data
 // stationarity and also empty volumes
+#pragma pack(push, 2)
 struct MoneyBar
 {
     //   datetime     time;          // Time of the last prices update 1.
-    double       bid;           // Current Bid price - might be 0 WHEN Equal the LAST
-    double       ask;           // Current Ask price - might be 0 WHEN Equal the LAST
+ //   double       bid;           // Current Bid price - might be 0 WHEN Equal the LAST
+ //   double       ask;           // Current Ask price - might be 0 WHEN Equal the LAST
     double       last;          // Price of the last deal (Last) - never 0 when volume not 0 - zero when no match between ask-bid
  //   ulong        volume;        // Volume for the current Last price 2.
-    long         time_msc;       // Time of a price last update in milliseconds == 1. but with milliseconds precision
+    long long        time_msc;       // Time of a price last update in milliseconds == 1. but with milliseconds precision
  //   int          day;             // day of year
  //   uint         flags;         // Tick flags - no reason to use this on money-bar - shows what changed from the previous tick
  //   double       volume_real;   // Volume for the current Last price with greater accuracy same as 2. but better
 };
+#pragma pack(pop)
 
 class MoneyBarBuffer : public CCBuffer<MoneyBar>
 {

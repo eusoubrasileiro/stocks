@@ -256,10 +256,87 @@ TEST(MoneyBarBuffer, AddTicks) {
     end = fh.tellg();
     long nticks= (end- begin)/sizeof(MqlTick);
     fh.seekg(0, std::ios::beg);
+    
+    MqlTick* cstyle;
+    cstyle = new MqlTick[nticks];
+    fh.read((char*) cstyle, end);
+    std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
 
-    std::vector<MqlTick> ticks;
-    ticks.resize(nticks);
+    delete[] cstyle;
 
-    fh.read((char*)ticks.data(), end);
+  
+}
 
+typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);
+typedef int(__stdcall* funcpyPredictwModel)(double*, int, char*, int);
+
+void test_pyTrainModel(funcpyTrainModel pyTrainModel) {
+    // xor example
+    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2 
+    int y[] = { 0, 0, 1, 1 }; // first dim = 4
+    int xdim = 2;
+    int ntrain = 4;
+    char* strmodel = (char*)malloc(1024 * 500); // 500 Kb
+    int modelsize = pyTrainModel(X, y, 4, 2, strmodel, 1024 * 1500);
+    EXPECT_TRUE(modelsize > 0);
+}
+
+void test_pyTrainAndPredict(funcpyTrainModel pyTrainModel, funcpyPredictwModel pyPredictwModel) {
+    // xor example
+    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2 
+    int y[] = { 0, 0, 1, 1 }; // first dim = 4
+    int ypred = -5;
+    int xdim = 2;
+    int ntrain = 4;
+    char* strmodel = (char*)malloc(1024 * 500); // 500 Kb
+    int modelsize = pyTrainModel(X, y, 4, 2, strmodel, 1024 * 1500);
+    EXPECT_TRUE(modelsize > 0);
+    // what is the prediction for [0, 1] = should be 1
+    ypred = pyPredictwModel(&X[4], 2, strmodel, modelsize);
+    EXPECT_EQ(ypred, 1);    
+}
+
+
+// Testing with LoadLibrary is more realistic for Mt5 
+TEST(DllMain, PyTrain_n_Predict){
+    HINSTANCE hinstDll;
+    FARPROC ProcAdd = NULL;
+    FARPROC ProcAdd_1 = NULL;
+    std::string pyfile = R"(#script only for testing 
+import numpy as np
+from sklearn.ensemble import ExtraTreesClassifier
+import pickle
+
+def pyTrainModel(X, y) :
+    trees = ExtraTreesClassifier(n_estimators = 120, verbose = 0)
+    trees.fit(X, y)
+    # save model
+    str_trees = pickle.dumps(trees)
+    return str_trees # easier to pass to C++
+
+def pyPredictwModel(X, str_trees) :
+    trees = pickle.loads(str_trees);
+    return trees.predict(X)[0]
+)";
+
+    std::ofstream out("python_code.py");
+    out << pyfile;
+    out.close();
+
+    for (int i = 0; i < 3; i++) { // call 3 times the same function loading and unloading the dll
+    // Get a handle to the DLL module.
+        hinstDll = LoadLibrary(TEXT("torch.dll"));
+        EXPECT_TRUE(hinstDll != NULL);
+        // If the handle is valid, try to get the function address.
+        if (hinstDll != NULL) {
+            ProcAdd = GetProcAddress(hinstDll, "pyTrainModel");
+            ProcAdd_1 = GetProcAddress(hinstDll, "pyPredictwModel");
+            EXPECT_TRUE(ProcAdd != NULL);
+            EXPECT_TRUE(ProcAdd_1 != NULL);
+            if (ProcAdd != NULL && ProcAdd != NULL) {
+                test_pyTrainAndPredict((funcpyTrainModel)ProcAdd, (funcpyPredictwModel)ProcAdd_1);
+            }            
+            FreeLibrary(hinstDll); // Free the DLL module.
+        }
+    }
 }

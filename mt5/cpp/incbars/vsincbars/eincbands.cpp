@@ -25,6 +25,7 @@ const double             Expert_Fracdif_Window = 512; // window size fraction fr
 // All Buffer-Derived classes bellow have indexes alligned
 // except for CObjectBuffer<XyPair>
 std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
+
 std::vector<double> m_mlast; // moneybar.last values of last added money bars
 // created from ticks
 std::shared_ptr<CCTimeDayBuffer> m_times; // time buffer from moneybar time-ms
@@ -83,6 +84,10 @@ unsigned int m_model_refresh; // how frequent to update the model
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 
+
+// Python API
+// pass to python bars var
+py::array_t<MoneyBar> pymbars(Expert_BufferSize);
 
 void Initialize(int nbands, int bbwindow,
     int batch_size, int ntraining,
@@ -191,13 +196,6 @@ int AddTicks(const MqlTick* cticks, int size) {
     return m_bars->AddTicks(cticks, size);
 
 }
-
-// or by Python 
-int pyAddTicks(py::array_t<MqlTick> ticks)
-{
-    return AddTicks(ticks.data(), ticks.size());
-}
-
 
 // Since all buffers must be alligned and also have same size
 // Expert_BufferSize 
@@ -345,3 +343,18 @@ int lastRawSignals() {
     return m_last_raw_signal_index;
 }
 
+
+// Python API
+
+// or by Python 
+int pyAddTicks(py::array_t<MqlTick> ticks)
+{
+    return AddTicks(ticks.data(), ticks.size());
+}
+
+py::array_t<MoneyBar> pyGetMoneyBars() {
+    MoneyBar* pbuf = (MoneyBar*) pymbars.request().ptr;
+    for (size_t idx = 0; idx<Expert_BufferSize; idx++)
+        pbuf[idx] = m_bars->m_data[idx];
+    return pymbars;
+}

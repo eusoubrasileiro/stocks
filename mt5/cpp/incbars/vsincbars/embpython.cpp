@@ -112,6 +112,8 @@ int pyPredictwModel(double X[], int xtrain_dim,	char *model, int pymodel_size)
 // https://docs.python.org/3/c-api/init.html#non-python-created-threads
 PyGILState_STATE gstate; // calling python from a thread not created by Python itself
 
+bool calledbyPython=false; // if called by Python dll behaves differently
+
 BOOL __stdcall DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -154,6 +156,13 @@ BOOL __stdcall DllMain( HMODULE hModule,
 		// Solved many booms $&##��*�@!(@ on metatrader 5
 		// releasing the thread GIL (note that the main thread allways has one of this)
 		PyGILState_Release(gstate);
+        // only use when called as a python module
+        if (Py_IsInitialized() && calledbyPython) { 
+	        pycode.~module(); // must destroy here otherwise will try to destroy
+            //after the interpreter is destroyed and booom!!!$&##��*�@!(@
+	        py::finalize_interpreter();
+	        debugfile << "finalized interpreter" << std::endl;
+         }
         break;
     }
     return TRUE;

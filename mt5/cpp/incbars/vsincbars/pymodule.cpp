@@ -20,14 +20,18 @@
 #include "dll.h"
 #include "eincbands.h"
 
-
-
 // for Python use  __cdecl
 PYBIND11_MODULE(incbars, m) {
 
     // dont need to init anything since when the python module (this dll)
     // is loaded the DllMain will be called? are you sure?
     DllMain(0, DLL_PROCESS_ATTACH, 0); // just to make sure
+
+    calledbyPython = true; // makes DllMain finalize_interpreter when DLL_PROCESS_DETACH
+
+    // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
+    PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, last, time_msc);
 
     // optional module docstring
     m.doc() = "pybind11 incbars api - metatrader 5 expert";
@@ -37,10 +41,7 @@ PYBIND11_MODULE(incbars, m) {
         py::arg("ntraining"), py::arg("ordersize"), py::arg("stoploss"),
         py::arg("targetprofit"), py::arg("run_stoploss"), py::arg("run_targetprofit"),
         py::arg("recursive"), py::arg("ticksize"), py::arg("tickvalue"), py::arg("moneybarsize"),
-        py::arg("max_positions"));
-    
-    // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
-    PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
+        py::arg("max_positions"));  
 
     // signature with py::array_t for AddTicks
     m.def("addticks", &pyAddTicks, "send ticks to the expert", 
@@ -53,4 +54,7 @@ PYBIND11_MODULE(incbars, m) {
     m.def("buffertotal", &BufferTotal, "count of bars or all buffers data");
 
     m.def("idxnewdata", &IdxNewData, "start index on buffers of new bars after AddTicks > 0");
+  
+    m.def("moneybars", &pyGetMoneyBars, "get MoneyBar buffer as is");
 }
+

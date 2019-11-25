@@ -45,8 +45,6 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
     if (tick.volume > 0) { // there was a deal
         m_count_money += tick.volume_real * tick.last * m_point_value;
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick
-            m_bar.bid = tick.bid;
-            m_bar.ask = tick.ask;
             m_bar.last = tick.last;
             m_bar.time_msc = tick.time_msc;
             Add(m_bar);

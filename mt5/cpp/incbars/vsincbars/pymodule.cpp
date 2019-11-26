@@ -20,6 +20,8 @@
 #include "dll.h"
 #include "eincbands.h"
 
+extern std::shared_ptr<py::array_t<MoneyBar>> ppymbars;
+
 // for Python use  __cdecl
 PYBIND11_MODULE(incbars, m) {
 
@@ -32,6 +34,9 @@ PYBIND11_MODULE(incbars, m) {
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
     PYBIND11_NUMPY_DTYPE(MoneyBar, last, time_msc);
+
+    // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
+    ppymbars.reset(new py::array_t<MoneyBar>(Expert_BufferSize));
 
     // optional module docstring
     m.doc() = "pybind11 incbars api - metatrader 5 expert";

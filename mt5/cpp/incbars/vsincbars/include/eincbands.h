@@ -1,4 +1,11 @@
 #pragma once
+
+const int                Expert_BufferSize = 100000; // indicators buffer needed
+//const int                Expert_MaxFeatures = 100; // max features allowed - not used
+//const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
+const double             Expert_Fracdif = 0.6; // fraction for fractional difference
+const double             Expert_Fracdif_Window = 512; // window size fraction fracdif
+
 #ifdef BUILDING_DLL
 #define EXPORT 
 #define DLL_EXPORT extern "C" __declspec(dllexport)

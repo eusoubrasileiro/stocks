@@ -2,12 +2,6 @@
 #include "eincbands.h"
 #include "embpython.h"
 
-const int                Expert_BufferSize = 100000; // indicators buffer needed
-//const int                Expert_MaxFeatures = 100; // max features allowed - not used
-//const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
-const double             Expert_Fracdif = 0.6; // fraction for fractional difference
-const double             Expert_Fracdif_Window = 512; // window size fraction fracdif
-
 // I dont want to use a *.def file to export functions from a namespace
 // so I am not using namespaces {namespace eincbands}
 
@@ -341,7 +335,7 @@ int lastRawSignals() {
     return m_last_raw_signal_index;
 }
 
-
+extern py::array_t<MoneyBar> *pymbars;
 // Python API
 
 // or by Python 
@@ -350,12 +344,11 @@ int pyAddTicks(py::array_t<MqlTick> ticks)
     return AddTicks(ticks.data(), ticks.size());
 }
 
-py::array_t<MoneyBar> pyGetMoneyBars() {
-    py::array_t<MoneyBar> pymbars(Expert_BufferSize); // cannot instanciate this as global
-    // this will try to get the interpreter to make reference count and booom 
-    // only possible way is without initialization this way py::array_t<MoneyBar> pymbars;
-    MoneyBar* pbuf = (MoneyBar*) pymbars.request().ptr;
+std::shared_ptr<py::array_t<MoneyBar>> ppymbars;
+
+py::array_t<MoneyBar> pyGetMoneyBars() {   
+    MoneyBar* pbuf = (MoneyBar*)ppymbars->request().ptr;
     for (size_t idx = 0; idx<Expert_BufferSize; idx++)
         pbuf[idx] = m_bars->m_data[idx];
-    return pymbars;
+    return *ppymbars;
 }

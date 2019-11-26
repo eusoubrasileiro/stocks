@@ -325,7 +325,7 @@ def pyPredictwModel(X, str_trees) :
 
     for (int i = 0; i < 3; i++) { // call 3 times the same function loading and unloading the dll
     // Get a handle to the DLL module.
-        hinstDll = LoadLibrary(TEXT("torch.dll"));
+        hinstDll = LoadLibrary(TEXT("incbars.dll"));
         EXPECT_TRUE(hinstDll != NULL);
         // If the handle is valid, try to get the function address.
         if (hinstDll != NULL) {
@@ -333,7 +333,7 @@ def pyPredictwModel(X, str_trees) :
             ProcAdd_1 = GetProcAddress(hinstDll, "pyPredictwModel");
             EXPECT_TRUE(ProcAdd != NULL);
             EXPECT_TRUE(ProcAdd_1 != NULL);
-            if (ProcAdd != NULL && ProcAdd != NULL) {
+            if (ProcAdd != NULL && ProcAdd_1 != NULL) {
                 test_pyTrainAndPredict((funcpyTrainModel)ProcAdd, (funcpyPredictwModel)ProcAdd_1);
             }            
             FreeLibrary(hinstDll); // Free the DLL module.

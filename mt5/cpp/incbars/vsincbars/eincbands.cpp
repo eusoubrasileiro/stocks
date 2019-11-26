@@ -85,9 +85,7 @@ unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 
 
-// Python API
-// pass to python bars var
-py::array_t<MoneyBar> pymbars(Expert_BufferSize);
+
 
 void Initialize(int nbands, int bbwindow,
     int batch_size, int ntraining,
@@ -353,6 +351,9 @@ int pyAddTicks(py::array_t<MqlTick> ticks)
 }
 
 py::array_t<MoneyBar> pyGetMoneyBars() {
+    py::array_t<MoneyBar> pymbars(Expert_BufferSize); // cannot instanciate this as global
+    // this will try to get the interpreter to make reference count and booom 
+    // only possible way is without initialization this way py::array_t<MoneyBar> pymbars;
     MoneyBar* pbuf = (MoneyBar*) pymbars.request().ptr;
     for (size_t idx = 0; idx<Expert_BufferSize; idx++)
         pbuf[idx] = m_bars->m_data[idx];

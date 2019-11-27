@@ -39,7 +39,7 @@ PYBIND11_MODULE(incbars, m) {
     ppymbars.reset(new py::array_t<MoneyBar>(Expert_BufferSize));
 
     // optional module docstring
-    m.doc() = "pybind11 incbars api - metatrader 5 expert";
+    m.doc() = "incbars metatrader 5 expert - python api pybind11";
 
     m.def("initialize", &Initialize, "Initialize Increase Bands Expert",
         py::arg("nbands"), py::arg("bbwindow"), py::arg("batch_size"),

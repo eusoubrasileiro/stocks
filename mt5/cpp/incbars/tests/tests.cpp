@@ -5,9 +5,9 @@
 #include <array>
 
 // Since I just want to test the code
-// and I dont want to put all code in the export table of the main dll 
-// I pass to the linker 
-// 1. ctindicators.obj 
+// and I dont want to put all code in the export table of the main dll
+// I pass to the linker
+// 1. ctindicators.obj
 // 2. csindicators.obj
 // 3. buffers.obj
 // 4. pytorchcpp.lib - dlls required
@@ -69,7 +69,7 @@ TEST(CCBuffer, Indexes_Data) {
 
     count = end1 - start1;
     // dst, src, dst_start, src_start, count
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), 0, start1, count);    
+    ArrayCopy<double>(dest, sbuffer.m_data.data(), 0, start1, count);
     ArrayCopy<double>(dest, sbuffer.m_data.data(), count, start2, end2 - start2);
 
     std::vector<double> array_dest;
@@ -166,7 +166,7 @@ TEST(Indicators, CFracDiffIndicator){
                     0.11830923 };
         double eps = 0.0001; // error tolerance in comparison
         int fsize = 10;
-        CFracDiffIndicator c_fdiff(fsize, 0.56, 200); // whatever buffer size just need to be enough        
+        CFracDiffIndicator c_fdiff(fsize, 0.56, 200); // whatever buffer size just need to be enough
 
         // partial calls until total array calculated
         double a[7];
@@ -184,11 +184,11 @@ TEST(Indicators, CFracDiffIndicator){
         c_fdiff.Refresh(c, 0, 11);
         c_fdiff.Refresh(d, 0, 49);
 
-        std::vector<double> pyfractruth_indicator; 
+        std::vector<double> pyfractruth_indicator;
         pyfractruth_indicator.resize(100);
         // prepend (size - 1) EMPTY_VALUES of indicator
-        std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), EMPTY_VALUE);
-        
+        std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), DBL_EMPTY_VALUE);
+
         ArrayCopy<double>(pyfractruth_indicator.data(), pyfractruth, fsize - 1, 0, 100-(fsize-1));
 
         EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.m_data, 100, 0.001);
@@ -211,7 +211,7 @@ TEST(Indicators, CTaMAIndicator){
     cta_MA.Refresh(c, 0, 5);
     cta_MA.Refresh(d, 0, 2);
 
-    std::vector<double> ta_truth = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    std::vector<double> ta_truth = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
 
     EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.m_data, 9, 0.001);
 
@@ -219,13 +219,13 @@ TEST(Indicators, CTaMAIndicator){
 
 TEST(Indicators, CTaBBANDS){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
-    std::vector<double> ta_truth_upper = { EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
-    std::vector<double> ta_truth_middle = { EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
-    std::vector<double> ta_truth_down = { EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
+    std::vector<double> ta_truth_upper = { DBL_EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
+    std::vector<double> ta_truth_middle = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    std::vector<double> ta_truth_down = { DBL_EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
 
     int size = 8;
     int window = 2;
-    CTaBBANDS cta_BBANDS(window, 2.5, 0, 10); // simple MA + 2.5 deviations    
+    CTaBBANDS cta_BBANDS(window, 2.5, 0, 10); // simple MA + 2.5 deviations
 
     // partial calls until total array calculated
     double a[] = { 1 };
@@ -242,6 +242,28 @@ TEST(Indicators, CTaBBANDS){
     EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.m_data, 9, 0.001);
 }
 
+TEST(Indicators, CBandSignal) {
+    double in[] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1};
+    std::vector<double> truth_band_signal = { DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
+                                        DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
+                                        1,   0,   0,   0,  -1,   0,   0};
+    int window = 5;
+    int bfsize = 20;
+    CBandSignal cbsignal(window, 1.5, 2, bfsize); // 1.5 deviations + WeightedMA=2
+
+    // partial calls until total array calculated
+    double a[] = { 1 };
+    double b[] = { 1 };
+    double c[] = { 1, 2, 5, 5, 5};
+    double d[] = { 5, 1, 1, 1};
+    cbsignal.Refresh(a, 0, 1);
+    cbsignal.Refresh(b, 0, 1);
+    cbsignal.Refresh(c, 0, 5);
+    cbsignal.Refresh(d, 0, 4);
+
+    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.m_data, 11, 0.0001);
+}
+
 #include <iostream>
 #include <fstream>
 
@@ -256,7 +278,7 @@ TEST(MoneyBarBuffer, AddTicks) {
     end = fh.tellg();
     long nticks= (end- begin)/sizeof(MqlTick);
     fh.seekg(0, std::ios::beg);
-    
+
     MqlTick* cstyle;
     cstyle = new MqlTick[nticks];
     fh.read((char*) cstyle, end);
@@ -264,7 +286,7 @@ TEST(MoneyBarBuffer, AddTicks) {
 
     delete[] cstyle;
 
-  
+
 }
 
 typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);
@@ -272,7 +294,7 @@ typedef int(__stdcall* funcpyPredictwModel)(double*, int, char*, int);
 
 void test_pyTrainModel(funcpyTrainModel pyTrainModel) {
     // xor example
-    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2 
+    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2
     int y[] = { 0, 0, 1, 1 }; // first dim = 4
     int xdim = 2;
     int ntrain = 4;
@@ -283,7 +305,7 @@ void test_pyTrainModel(funcpyTrainModel pyTrainModel) {
 
 void test_pyTrainAndPredict(funcpyTrainModel pyTrainModel, funcpyPredictwModel pyPredictwModel) {
     // xor example
-    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2 
+    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2
     int y[] = { 0, 0, 1, 1 }; // first dim = 4
     int ypred = -5;
     int xdim = 2;
@@ -293,16 +315,16 @@ void test_pyTrainAndPredict(funcpyTrainModel pyTrainModel, funcpyPredictwModel p
     EXPECT_TRUE(modelsize > 0);
     // what is the prediction for [0, 1] = should be 1
     ypred = pyPredictwModel(&X[4], 2, strmodel, modelsize);
-    EXPECT_EQ(ypred, 1);    
+    EXPECT_EQ(ypred, 1);
 }
 
 
-// Testing with LoadLibrary is more realistic for Mt5 
+// Testing with LoadLibrary is more realistic for Mt5
 TEST(DllMain, PyTrain_n_Predict){
     HINSTANCE hinstDll;
     FARPROC ProcAdd = NULL;
     FARPROC ProcAdd_1 = NULL;
-    std::string pyfile = R"(#script only for testing 
+    std::string pyfile = R"(#script only for testing
 import numpy as np
 from sklearn.ensemble import ExtraTreesClassifier
 import pickle
@@ -335,7 +357,7 @@ def pyPredictwModel(X, str_trees) :
             EXPECT_TRUE(ProcAdd_1 != NULL);
             if (ProcAdd != NULL && ProcAdd_1 != NULL) {
                 test_pyTrainAndPredict((funcpyTrainModel)ProcAdd, (funcpyPredictwModel)ProcAdd_1);
-            }            
+            }
             FreeLibrary(hinstDll); // Free the DLL module.
         }
     }

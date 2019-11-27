@@ -335,8 +335,14 @@ int lastRawSignals() {
     return m_last_raw_signal_index;
 }
 
+
+
+////////////////////////////////////////////////
+///////////////// Python API //////////////////
+///////////////////////////////////////////////
+
+
 extern py::array_t<MoneyBar> *pymbars;
-// Python API
 
 // or by Python 
 int pyAddTicks(py::array_t<MqlTick> ticks)

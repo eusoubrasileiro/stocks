@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "incbars", "incbars.vcxproj", "{726129F3-8D75-4A47-96D6-0C2D9FE045C7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "..\tests\tests.vcxproj", "{9F340E14-D79E-4F38-823B-BA89DEDE2DBE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{726129F3-8D75-4A47-96D6-0C2D9FE045C7} = {726129F3-8D75-4A47-96D6-0C2D9FE045C7}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

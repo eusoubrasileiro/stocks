@@ -4,7 +4,10 @@
 
 #include <float.h>
 #include <vector>
-#define EMPTY_VALUE DBL_MAX
+#include <memory>
+
+#define DBL_EMPTY_VALUE DBL_MAX
+#define INT_EMPTY_VALUE INT_MAX
 
 
 // dst, src, dst_start, src_start, count

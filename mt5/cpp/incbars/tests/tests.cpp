@@ -13,6 +13,10 @@
 // 4. pytorchcpp.lib - dlls required
 // 5. ctalib.lib - dll required
 
+// also remember that Python3 (python3.dll and others) is a dependency due
+// python interpreter embedding
+// so you must use `vs2019_py37.bat` script or `setpy37.bat` prior to launch vstudio
+// when debugging
 
 #define EXPECT_FLOATS_NEARLY_EQ(expected, actual, size, thresh) \
         for(size_t idx = 0; idx < size; ++idx) \

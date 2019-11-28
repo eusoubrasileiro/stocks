@@ -6,6 +6,10 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup Label="UserMacros">
+    <PYTHONHOME>$(USERPROFILE)\AppData\Local\Programs\Python\Python37</PYTHONHOME>
+    <PYTHONPATH>$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;</PYTHONPATH>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{726129F3-8D75-4A47-96D6-0C2D9FE045C7}</ProjectGuid>
@@ -20,6 +24,10 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <LocalDebuggerWorkingDirectory>D:\MetaTrader 5\</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>$(SolutionDir)\$(Platform)\tests.exe</LocalDebuggerCommand>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

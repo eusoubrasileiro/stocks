@@ -145,12 +145,12 @@ class CTaBBANDS : public IWindowIndicator<double>
 protected:
     int m_tama_type;
     double m_devs; // number of deviatons from the mean
+
+public:
+    // latest/newest calculated values
     std::vector<double> m_out_upper;
     std::vector<double> m_out_middle;
     std::vector<double> m_out_down;
-
-public:
-
     CCBuffer<double> m_upper;
     CCBuffer<double> m_middle;
     CCBuffer<double> m_down;
@@ -188,13 +188,17 @@ public:
 
 };
 
+
+// not a window indicator : each sample only depends on the current
+// values on the bollinger bands
+
 // Based on a bollinger band defined by upper-band and lower-band
 // calculate signals:
 // buy   1 : crossing down-outside it's buy
 // sell -1 : crossing up-outside it's sell
 // hold  0 : nothing usefull happend
 // storing int/short as a double -- but who cares?! for now...
-class CBandSignal : public CWindowIndicator
+class CBandSignal : public CCBuffer<double>
 {
 protected:
 
@@ -205,6 +209,4 @@ public:
     CBandSignal(int window, double devs, int ma_type, int bfsize);
 
     bool Refresh(double newdata[], int start, int count);
-
-    int Calculate(double indata[], int size, double outdata[]) override;
 };

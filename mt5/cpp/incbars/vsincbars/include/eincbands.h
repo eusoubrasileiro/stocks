@@ -68,11 +68,6 @@ int pyAddTicks(py::array_t<MqlTick> ticks);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 
-void CreateBBands();
-
-void CreateOtherFeatureIndicators();
-
-void RefreshRawBandSignals(double last[], int count, int empty);
 
 void verifyEntry();
 

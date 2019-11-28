@@ -29,7 +29,6 @@ std::shared_ptr<CCTimeDayBuffer> m_times; // time buffer from moneybar time-ms
 double m_moneybar_size; // R$ to form 1 money bar
 
 // bollinger bands configuration
-std::vector<std::shared_ptr<CTaBBANDS>> m_bands; // array of indicators for each bollinger band
 // upper and down and middle
 int m_nbands; // number of bands
 int m_bbwindow; // reference size of bollinger band indicator others
@@ -39,7 +38,7 @@ double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
 std::shared_ptr<CFracDiffIndicator> m_fd_mbarp; // frac diff on money bar prices
 
 // store buy|sell|hold signals for each bband
-std::vector<CCBuffer<int>> m_raw_signal;
+std::vector<std::shared_ptr<CBandSignal>> m_raw_signal;
 
 std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
 int m_last_raw_signal_index; // related to m_bars buffer on refresh()
@@ -77,7 +76,6 @@ unsigned int m_model_refresh; // how frequent to update the model
 // helpers to count training samples
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
-
 
 
 
@@ -123,9 +121,6 @@ void Initialize(int nbands, int bbwindow,
     m_nsignal_features = m_nbands + 1;
     m_xtrain_dim = m_nsignal_features * m_batch_size;
 
-    // allocate array of bbands indicators
-    m_bands.resize(m_nbands);
-
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
     m_xypairs.Resize(m_ntraining);
@@ -137,28 +132,19 @@ void Initialize(int nbands, int bbwindow,
     m_raw_signal.resize(m_nbands); // one for each band
     m_last_raw_signal.resize(m_nbands);
 
-    CreateBBands();
-    CreateOtherFeatureIndicators();
-}
-
-void CreateBBands() {
-    // raw signal storage
-    for (int j = 0; j < m_nbands; j++) {
-        m_raw_signal[j] = CCBuffer<int>(Expert_BufferSize);
-    }
-
-    // ctalib bbands
+    // void CreateBBands() 
+    // raw signal storage + ctalib bbands
     double inc = m_bbwindow_inc;
     for (int i = 0; i < m_nbands; i++) { // create multiple increasing bollinger bands
-        m_bands[i].reset(new CTaBBANDS(m_bbwindow * inc, 2.5, 1, Expert_BufferSize)); // 1-Exponential type
+        m_raw_signal[i].reset(new CBandSignal(m_bbwindow * inc, 2.5, 2, Expert_BufferSize)); // 2-Weighted type        
         inc += m_bbwindow_inc;
     }
+
+    // CreateOtherFeatureIndicators();
+    // only fracdiff on prices
+    m_fd_mbarp.reset(new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif, Expert_BufferSize));
 }
 
-void CreateOtherFeatureIndicators() {
-    // only fracdiff on prices
-    m_fd_mbarp.reset(new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif, Expert_BufferSize));      
-}
 
 // breaking apart is better for testing and cleanner code
 // and being reusable
@@ -214,40 +200,14 @@ bool Refresh()
     // first is what you want to do and second what you want to try
     result = m_fd_mbarp->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
 
-    // update all bollinger bands indicators
+    // update signal based on all bollinger bands 
     for (int j = 0; j < m_nbands; j++) {
-        result = m_bands[j]->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
+        result = m_raw_signal[j]->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
     }
-
-    // called after m_ticks.Refresh() and Refreshs() above
-    // garantes not called twice and bband indicators available
-    RefreshRawBandSignals(m_bars->m_last.data(), m_bars->m_nnew, result);
 
     return result;
 }
 
-void RefreshRawBandSignals(double last[], int count, int empty) {
-    // should be called only once per refresh
-    // use the last added samples
-    empty = (empty) ? 1 : 0;
-    int start_new = IdxNewData();
-    for (int j = 0; j < m_nbands; j++) {
-        //    Based on a bollinger band defined by upper-band and lower-band
-        //    return signal:
-        //        buy   1 : crossing down-outside it's buy
-        //        sell -1 : crossing up-outside it's sell
-        //        hold  0 : nothing usefull happend
-        for (int i = 0; i < count; i++) {
-            if (last[i] >= m_bands[j]->m_upper[start_new + i])
-                m_raw_signal[j].Add(-1 * empty); // sell
-            else
-                if (last[i] <= m_bands[j]->m_down[start_new + i])
-                    m_raw_signal[j].Add(+1 * empty); // buy
-                else
-                    m_raw_signal[j].Add(0); // nothing
-        }
-    }
-}
 
 void verifyEntry() {
 
@@ -313,7 +273,7 @@ int lastRawSignals() {
     // on circular buffers index alligned on all
     for (int j = 0; j < m_nbands; j++) {
         for (int i = IdxNewData(); i < BufferTotal(); i++) {
-            m_last_raw_signal[j] = m_raw_signal[j][i];
+            m_last_raw_signal[j] = m_raw_signal[j]->At(i);
             if (m_last_raw_signal[j] != 0) {
                 if (direction == 0) {
                     direction = m_last_raw_signal[j];

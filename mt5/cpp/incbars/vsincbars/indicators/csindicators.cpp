@@ -25,26 +25,27 @@ int CFracDiffIndicator::Calculate(double indata[], int size, double outdata[])
 // hold  0 : nothing usefull happend
 
 CBandSignal::CBandSignal(int window, double devs, int ma_type, int bfsize) {
-    CWindowIndicator::Init(window);
     pbands.reset(new CTaBBANDS(window, devs, ma_type, bfsize));
     CCBuffer::SetSize(bfsize);
 }    
 
-bool CBandSignal::Refresh(double newdata[], int start, int count){
-   return pbands->Refresh(newdata, start, count) &&   // update bands window mechanism
-    CWindowIndicator::Refresh(newdata, start, count); // same for ... window ...
-}
-
-int CBandSignal::Calculate(double indata[], int size, double outdata[]) {
-    // at least one calculated sample
-    for (int i=0; i<size; i++) {
-        if (indata[i] > pbands->m_upper[i])
-            outdata[i] = -1; // sell
+bool CBandSignal::Refresh(double newdata[], int start, int count) {
+    bool result = pbands->Refresh(newdata, start, count); // update bands 
+    AddEmpty(pbands->m_nempty);
+    if (!result)
+        return false;
+    // at least one calculated sample on the tripple buffer
+    // newdata[] have samples that just 'created' empty ones
+    // calculated samples dont have empty samples
+    int inew = pbands->m_nempty;
+    for (int i=0; i <pbands->m_calculated; i++) {
+        if (newdata[inew+i] > pbands->m_out_upper[i])
+            Add(-1); // sell
         else
-            if (indata[i] < pbands->m_down[i])
-                outdata[i] = +1; // buy
+            if (newdata[inew+i] < pbands->m_out_down[i])
+                Add(+1); // buy
             else
-                outdata[i] = 0; // nothing
+                Add(0); // nothing
     }
-    return size;
+    return true;
 }

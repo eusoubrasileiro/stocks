@@ -246,11 +246,19 @@ TEST(Indicators, CTaBBANDS){
     EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.m_data, 9, 0.001);
 }
 
+// Python code - base for test
+//x = np.array([1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1], dtype = np.double)
+//up, med, down = ta.BBANDS(x, 5, 1.5, 1.5, matype=2)
+//plt.figure(figsize = (10, 4))
+//plt.plot(x, '-k.')
+//plt.plot(up, '-b.', lw = 0.5)
+//plt.plot(down, '-r.', lw = 0.5)
+//plt.grid()
 TEST(Indicators, CBandSignal) {
     double in[] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1};
     std::vector<double> truth_band_signal = { DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
                                         DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
-                                        1,   0,   0,   0,  -1,   0,   0};
+                                        -1,   0,   0,   0,  1,   0,   0};
     int window = 5;
     int bfsize = 20;
     CBandSignal cbsignal(window, 1.5, 2, bfsize); // 1.5 deviations + WeightedMA=2

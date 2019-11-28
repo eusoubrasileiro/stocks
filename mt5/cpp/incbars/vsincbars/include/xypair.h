@@ -32,6 +32,7 @@ public:
         time.ms = 0;
         time.day = 0;
         bandn = -1;
+        y = 0;
     }
 
     XyPair(int vy, timeday& vtime, int vbandn) {

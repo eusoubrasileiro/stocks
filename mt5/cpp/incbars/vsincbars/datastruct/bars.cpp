@@ -15,8 +15,8 @@ void MoneyBarBuffer::RefreshArrays() {
         start = parts[i * 2];
         end = parts[1 + i * 2];
         for (j = start; j < end; j++, k++) {
-            m_last[k] = m_data[j].last; // moneybar.last price
-            m_times[k] = m_data[j].time_msc; //moneybar.time_msc
+            m_last[k] = m_data[j].avgprice; // moneybar.last price
+            m_times[k] = m_data[j].emsc; //moneybar.time_msc
         }
     }
 }
@@ -34,7 +34,8 @@ MoneyBarBuffer::MoneyBarBuffer(double tickvalue, double ticksize, double moneyba
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;
     m_count_money = 0; // count_money amount to form 1 money bar
-    m_nnew = 0;
+    m_nnew = m_nticks = 0;
+    m_pvs = m_vs = 0; // v. weighted price for this bar
     SetSize(buffersize);
 }
 
@@ -42,12 +43,22 @@ MoneyBarBuffer::MoneyBarBuffer(double tickvalue, double ticksize, double moneyba
 // return number created
 int MoneyBarBuffer::AddTick(MqlTick tick) {
     m_nnew = 0;
-    if (tick.volume > 0) { // there was a deal
-        m_count_money += tick.volume_real * tick.last * m_point_value;
+    if (tick.volume > 0) { // there was a deal        
+        if (m_bar.nticks == 0) // entry time for this bar
+            m_bar.smsc = tick.time_msc;
+        m_bar.nticks++;
+        m_count_money += tick.volume_real * tick.last * m_point_value;        
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick
-            m_bar.last = tick.last;
-            m_bar.time_msc = tick.time_msc;
+            // in this case nticks == 0 for the second one and so forth
+            // start/exit time also == 0
+            m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
+            m_vs += tick.volume_real; // summing (volumes)
+            m_bar.avgprice = m_pvs/m_vs;
+            m_bar.emsc = tick.time_msc; // exit time
             Add(m_bar);
+            m_pvs = m_vs = 0;
+            m_bar.emsc = m_bar.smsc = 0;
+            m_bar.nticks = 0;
             m_count_money -= m_moneybarsize;
             m_nnew++;
         }

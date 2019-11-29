@@ -1,13 +1,17 @@
 #pragma once
 
-const int                Expert_BufferSize = 100000; // indicators buffer needed
-//const int                Expert_MaxFeatures = 100; // max features allowed - not used
+//const int                Expert_MaxFeatures = 100;     // max features allowed - not used
 //const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
-const double             Expert_Fracdif = 0.6; // fraction for fractional difference
-const double             Expert_Fracdif_Window = 512; // window size fraction fracdif
+
+
+#define             Expert_BufferSize        100000      // indicators buffer needed
+#define             Expert_Fracdif           0.6         // fraction for fractional difference
+#define             Expert_Fracdif_Window    512         // window size fraction fracdif
+#define             Expert_Delay             8000        // delay to perform an order sucessfully after evaluating an entry (ms)
+
 
 #ifdef BUILDING_DLL
-#define EXPORT 
+#define EXPORT
 #define DLL_EXPORT extern "C" __declspec(dllexport)
 
 #include "ticks.h"
@@ -46,14 +50,14 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow,
 DLL_EXPORT int AddTicks(const MqlTick *cticks, int size);
 
 // update everything with new bars that just arrived
-// AddTicks > 0 
+// AddTicks > 0
 // if sucessfull update creating new data on all
 // indicators and signal features return true
 DLL_EXPORT bool Refresh(void);
 
 // Global Buffer Size (all buffers MUST and HAVE same size)
 // that's why they all use same SetSize for setting
-// Expert_BufferSize 
+// Expert_BufferSize
 // All are updated after bars so that's the main
 // begin of new bar is also begin of new data on all buffers
 DLL_EXPORT int BufferSize(); // size of all buffers
@@ -84,9 +88,10 @@ int lastRawSignals();
 
 // sklearn model
 // classes and features
-//void LabelClasses();
-//void BandCreateYTargetClasses(CCBuffer<int> bandsg_raw,
-//    CBuffer<XyPair> xypairs, int band_number);
+void LabelClasses();
+
+
+
 //void CreateXFeatureVectors(CBuffer<XyPair> xypairs);
 //bool CreateXFeatureVector(XyPair& xypair);
 

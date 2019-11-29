@@ -77,6 +77,12 @@ unsigned int m_model_refresh; // how frequent to update the model
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 
+// For labelling using 
+
+// round price minimum volume of symbol 100's stocks 1 for future contracts
+double m_lotsmin;
+// LotsMin same as SYMBOL_VOLUME_MIN
+#define roundVolume(vol) int(vol/m_lotsmin)*m_lotsmin
 
 
 void Initialize(int nbands, int bbwindow,
@@ -84,8 +90,9 @@ void Initialize(int nbands, int bbwindow,
     double ordersize, double stoploss, double targetprofit,
     double run_stoploss, double run_targetprofit, bool recursive,
     double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
-    int max_positions)
+    double lotsmin, int max_positions)
 {
+    m_lotsmin = lotsmin;
     m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;
     //m_model = new sklearnModel;
@@ -298,22 +305,14 @@ int lastRawSignals() {
 }
 
 
-// Create target class by analysing raw bollinger band signals
+// Create target class by analysing raw band signals
+// label or re-label or re-classify every signal on every band
+// that are different than 0 == those are already classified
+// and are useless since dont represent an entry
 // those that went true receive 1 buy or -1 sell
 // those that wen bad receive 0 hold
-// A target class exist for each band.
-// An essemble of bands together and summed are a better classifier.
-// A day integer identifier must exist prior call.
-// That is used to blocking positions from passing to another day.
 void LabelClasses() {
-    for (int i = 0; i < m_nbands; i++) {
-        BandLabelClasses(*m_rbandsg[i], m_xypairs, i);
-    }
-}
 
-void BandLabelClasses(CCBuffer<double> bandsg,
-    CBuffer<XyPair> xypairs, int band_number)
-{
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in $$
     double entryprice = 0;
@@ -323,142 +322,236 @@ void BandLabelClasses(CCBuffer<double> bandsg,
     double profit = 0;
     double quantity = 0; // number of contracts or stocks shares
     // Starts from the past (begin of buffer of signals)
-    int i = 0;//
-    // OR
-    // For not adding again the same signal
-    // Starts where it stop the last time
-    if (xypairs.Count() > 0) {
-        int last_buff_index = m_times.QuickSearch(xypairs.GetData(0).time);
-        if (last_buff_index < 0) {
-            Print("This was not implemented and should never happen!");
-            return;
-        }
-        // next signal after this!
-        i = last_buff_index + 1;
-    }
-    for (; i < BufferTotal(); i++) { // from past to present
-        time = m_times[i].ms;
-        day = m_times[i].day; // unique day identifier
-        if(day != previous_day){ // a new day reset everything
-            if (history == 1 || history == -1) {
-                // the previous batch o/f signals will not be saved. I don't want to train with that
-                xypairs.RemoveLast();
-            }
-            entryprice = 0;
-            history = 0; //# 0= nothing, buy = 1, sell = -1
-            previous_day = day;
-        }
-        // first take care of what you have
-        // calculate profit / stoploss to see if should close
-        if(history != 0){
-            if(history == 1){ // it was a buy
-              profit = (m_bars[i].last - entryprice) * quantity;// # current profit
-              if(profit >= m_targetprofit){
-                  // xypairs.Last().y = 1 // a real (buy) index class nothing to do
-                  history = 0;
-              }
-              else
-              if (profit <= (-m_stoploss)){ // reclassify the previous buy as hold
-                  xypairs.Last().y = 0; // not a good deal, was better not to entry
-                  history = 0;
-              }
-           }
-           else{ // a sell -1
-             profit = (entryprice - m_bars[i].last) * quantity;// # current profit
-             if (profit >= m_targetprofit) {
-                 // xypairs.Last().y = -1 // a real (sell) index class nothing to do
-                 history = 0;
-             }
-             else
-             if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
-                 xypairs.Last().y = 0; // not a good deal, was better not to entry
-                 history = 0;
-             }
-          }
-       }
-       // get more positions or open a new one
-       else {
-         if (bandsg[i] == 1) {
-             switch (history) {
-               case 0:
-                   // new buy signal
-                   entryprice = m_bars[i].last; // last negotiated price
-                   xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-                   quantity = roundVolume(m_ordersize / entryprice);
-                   history = 1;
-               break;
-               case 1:
-                   // another buy in sequence
-                   // maybe it is dancing around this band boundary
-                   entryprice = m_bars[i].last;
-                   xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-                   quantity = roundVolume(m_ordersize / entryprice);
-                   history = 1;
-               break;
-               case -1;
-                   // a sell after a buy with no profit
-                   // the previous batch of signals will be saved with this class (hold)
-                   xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
-               break;
-             }
-       }
-        // 4 main cases
-        // signal  1 - history = 0 || != 0  (total 1/0, 1/-1,, 1/1) = 3
-        // signal -1 - history = 0 || != 0  (total -1/0, -1/1,, -1/-1) = 3
-        // signal  0 - history = 1          (total 0/1) = 1
-        // signal  0 - history = -1         (total 0/-1) = 1
-        // useless : signal 0 - history = 0 - total total 3x3 = 9
+    int i = 0, j;
 
-        else
-            if (bandsg[i] == -1) {
-                if (history == 0) {
-                    entryprice = m_bars[i].last;
-                    xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this sell
+    // current signal on some band being analysed
+    double cbsignal = 0; // nothing 0, buy = 1, sell = -1
+    // position of last signal analysed - time and band
+    int cbsignal_i, cbsignal_j; 
+    
+    for (;i<BufferTotal();i++) { // from past to present
+    // time or bars
+
+      for (j=0;i<m_nbands;i++) {
+
+          // getting next signal
+          if (cbsignal == 0 && m_rbandsgs[j]->At(i) != 0) {
+              cbsignal = m_rbandsgs[j]->At(i);
+              cbsignal_i = i;
+              cbsignal_j = j;
+              // entryprice = m_bars->At(i).avgprice; // last avg price ?? 
+              // find first bar price considering the operational time delay
+              // TODO: need to write a Find or Search for m_times
+              int ibar = 0; // m_times->Search(m_bars->At(i).emsc - Expert_Delay, );
+              // better price based on time
+              entryprice = m_bars->At(ibar).avgprice;
+              m_xypairs.Add( //  save this buy or sell 
+                  XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j)); 
+              quantity = roundVolume(m_ordersize / entryprice);
+          }
+          else // cbsignal is -1 or +1
+          {
+            // first take care of what you have
+            // calculate profit / stoploss to see if should close
+            if(history != 0){
+                if(history == 1){ // it was a buy
+                profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
+                if(profit >= m_targetprofit){
+                    // xypairs.Last().y = 1 // a real (buy) index class nothing to do
+                    history = 0;
                 }
-                else { // another sell in sequence
-                     // or after a buy  in the same minute
-                    // the previous batch of signals will be saved with this class (hold)
-                    xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
-                    // new buy sell
-                    // maybe we can have profit here
-                    // in a fast movement
-                    entryprice = m_bars[i].last;
-                    xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this buy
+                else
+                if (profit <= (-m_stoploss)){ // reclassify the previous buy as hold
+                    xypairs.Last().y = 0; // not a good deal, was better not to entry
+                    history = 0;
                 }
-                quantity = roundVolume(m_ordersize / entryprice);
-                history = -1;
+                }
+                else{ // a sell -1
+                profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profit
+                if (profit >= m_targetprofit) {
+                    // xypairs.Last().y = -1 // a real (sell) index class nothing to do
+                    history = 0;
+                }
+                else
+                if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
+                    xypairs.Last().y = 0; // not a good deal, was better not to entry
+                    history = 0;
+                }
             }
-            else // signal 0 history 1
-                if (history == 1) { // equivalent to + && bandsg[i] == 0
-                    profit = (m_bars[i].last - entryprice) * quantity;// # current profit
-                    if (profit >= m_targetprofit) {
-                        // xypairs.Last().y = 0 // a real (buy) index class nothing to do
-                        history = 0;
-                    }
-                    else
-                        if (profit <= (-m_stoploss)) { // reclassify the previous buy as hold
-                            xypairs.Last().y = 0; // not a good deal, was better not to entry
-                            history = 0;
-                        }
+            }
+
+            // get more positions if in same direction
+            if (m_rbandsgs[j]->At(i) == cbsignal){
+
+                switch (history) {
+                    case 0:
+                        // new buy signal
+                        entryprice = m_bars[i].last; // last negotiated price
+                        xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
+                        quantity = roundVolume(m_ordersize / entryprice);
+                        history = 1;
+                    break;
+                    case 1:
+                        // another buy in sequence
+                        // maybe it is dancing around this band boundary
+                        entryprice = m_bars[i].last;
+                        xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
+                        quantity = roundVolume(m_ordersize / entryprice);
+                        history = 1;
+                    break;
+                    case -1;
+                        // a sell after a buy with no profit
+                        // the previous batch of signals will be saved with this class (hold)
+                        xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
+                    break;
                 }
-                else // signal 0 history -1
-                    if (history == -1) { // equivalent to + && bandsg[i] == 0
-                        profit = (entryprice - m_bars[i].last) * quantity;// # current profit
-                        if (profit >= m_targetprofit) {
-                            // xypairs.Last().y = 0 // a real (sell) index class nothing to do
-                            history = 0;
-                        }
-                        else
-                            if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
-                                xypairs.Last().y = 0; // not a good deal, was better not to entry
-                                history = 0;
-                            }
-                    }
-        // else signal 0 history 0
+            }
+
+          }
+
+
+      }
+
+
+
     }
-    //# reached the end of data buffer did not close one buy previouly open
-    if (history == 1 || history == -1) // don't know about the future cannot train with this guy
-        xypairs.RemoveLast();
+    // CBuffer<XyPair> m_xypairs
+
+    //// OR
+    //// For not adding again the same signal
+    //// Starts where it stop the last time
+    //if (xypairs.Count() > 0) {
+    //    int last_buff_index = m_times->QuickSearch(xypairs.GetData(0).time);
+    //    if (last_buff_index < 0) {
+    //        //Print("This was not implemented and should never happen!");
+    //        return;
+    //    }
+    //    // next signal after this!
+    //    i = last_buff_index + 1;
+    //}
+    //for (; i < BufferTotal(); i++) { // from past to present
+    //    time = m_times->At(i).ms;
+    //    day = m_times->At(i).day; // unique day identifier
+    //    if(day != previous_day){ // a new day reset everything
+    //        if (history == 1 || history == -1) {
+    //            // the previous batch o/f signals will not be saved. I don't want to train with that
+    //            xypairs.RemoveLast();
+    //        }
+    //        entryprice = 0;
+    //        history = 0; //# 0= nothing, buy = 1, sell = -1
+    //        previous_day = day;
+    //    }
+    //    // first take care of what you have
+    //    // calculate profit / stoploss to see if should close
+    //    if(history != 0){
+    //        if(history == 1){ // it was a buy
+    //          profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
+    //          if(profit >= m_targetprofit){
+    //              // xypairs.Last().y = 1 // a real (buy) index class nothing to do
+    //              history = 0;
+    //          }
+    //          else
+    //          if (profit <= (-m_stoploss)){ // reclassify the previous buy as hold
+    //              xypairs.Last().y = 0; // not a good deal, was better not to entry
+    //              history = 0;
+    //          }
+    //       }
+    //       else{ // a sell -1
+    //         profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profit
+    //         if (profit >= m_targetprofit) {
+    //             // xypairs.Last().y = -1 // a real (sell) index class nothing to do
+    //             history = 0;
+    //         }
+    //         else
+    //         if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
+    //             xypairs.Last().y = 0; // not a good deal, was better not to entry
+    //             history = 0;
+    //         }
+    //      }
+    //   }
+    //   // get more positions or open a new one
+    //   else {
+    //     if (bandsg[i] == 1) {
+    //         switch (history) {
+    //           case 0:
+    //               // new buy signal
+    //               entryprice = m_bars[i].last; // last negotiated price
+    //               xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
+    //               quantity = roundVolume(m_ordersize / entryprice);
+    //               history = 1;
+    //           break;
+    //           case 1:
+    //               // another buy in sequence
+    //               // maybe it is dancing around this band boundary
+    //               entryprice = m_bars[i].last;
+    //               xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
+    //               quantity = roundVolume(m_ordersize / entryprice);
+    //               history = 1;
+    //           break;
+    //           case -1;
+    //               // a sell after a buy with no profit
+    //               // the previous batch of signals will be saved with this class (hold)
+    //               xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
+    //           break;
+    //         }
+    //   }
+    //    // 4 main cases
+    //    // signal  1 - history = 0 || != 0  (total 1/0, 1/-1,, 1/1) = 3
+    //    // signal -1 - history = 0 || != 0  (total -1/0, -1/1,, -1/-1) = 3
+    //    // signal  0 - history = 1          (total 0/1) = 1
+    //    // signal  0 - history = -1         (total 0/-1) = 1
+    //    // useless : signal 0 - history = 0 - total total 3x3 = 9
+
+    //    else
+    //        if (bandsg[i] == -1) {
+    //            if (history == 0) {
+    //                entryprice = m_bars[i].last;
+    //                xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this sell
+    //            }
+    //            else { // another sell in sequence
+    //                 // or after a buy  in the same minute
+    //                // the previous batch of signals will be saved with this class (hold)
+    //                xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
+    //                // new buy sell
+    //                // maybe we can have profit here
+    //                // in a fast movement
+    //                entryprice = m_bars[i].last;
+    //                xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this buy
+    //            }
+    //            quantity = roundVolume(m_ordersize / entryprice);
+    //            history = -1;
+    //        }
+    //        else // signal 0 history 1
+    //            if (history == 1) { // equivalent to + && bandsg[i] == 0
+    //                profit = (m_bars[i].last - entryprice) * quantity;// # current profit
+    //                if (profit >= m_targetprofit) {
+    //                    // xypairs.Last().y = 0 // a real (buy) index class nothing to do
+    //                    history = 0;
+    //                }
+    //                else
+    //                    if (profit <= (-m_stoploss)) { // reclassify the previous buy as hold
+    //                        xypairs.Last().y = 0; // not a good deal, was better not to entry
+    //                        history = 0;
+    //                    }
+    //            }
+    //            else // signal 0 history -1
+    //                if (history == -1) { // equivalent to + && bandsg[i] == 0
+    //                    profit = (entryprice - m_bars[i].last) * quantity;// # current profit
+    //                    if (profit >= m_targetprofit) {
+    //                        // xypairs.Last().y = 0 // a real (sell) index class nothing to do
+    //                        history = 0;
+    //                    }
+    //                    else
+    //                        if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
+    //                            xypairs.Last().y = 0; // not a good deal, was better not to entry
+    //                            history = 0;
+    //                        }
+    //                }
+    //    // else signal 0 history 0
+    //}
+    ////# reached the end of data buffer did not close one buy previouly open
+    //if (history == 1 || history == -1) // don't know about the future cannot train with this guy
+    //    xypairs.RemoveLast();
 }
 
 

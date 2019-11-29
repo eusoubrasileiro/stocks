@@ -6,19 +6,17 @@
 // but are present on WINV19 etc. stocks PETR4 etc...
 
 // Money Bar solves many problems of analysis of stocks data
-// stationarity and also empty volumes
+// - stationarity first
+// - tick with no volume
 #pragma pack(push, 2)
 struct MoneyBar
 {
-    //   datetime     time;          // Time of the last prices update 1.
- //   double       bid;           // Current Bid price - might be 0 WHEN Equal the LAST
- //   double       ask;           // Current Ask price - might be 0 WHEN Equal the LAST
-    double       last;          // Price of the last deal (Last) - never 0 when volume not 0 - zero when no match between ask-bid
- //   ulong        volume;        // Volume for the current Last price 2.
-    long long        time_msc;       // Time of a price last update in milliseconds == 1. but with milliseconds precision
- //   int          day;             // day of year
- //   uint         flags;         // Tick flags - no reason to use this on money-bar - shows what changed from the previous tick
- //   double       volume_real;   // Volume for the current Last price with greater accuracy same as 2. but better
+    // preço médio
+    double       avgprice;  // volume weighted price from all ticks on this bar
+    int          nticks;  // number ticks to form this bar
+    long long    smsc; // start time of this bar - first tick time 
+    long long    emsc; // end time of this bar - last tick time
+    // p10, p50, p90 of ticks.last?
 };
 #pragma pack(pop)
 
@@ -28,6 +26,11 @@ protected:
     double m_count_money;
     double m_point_value;
     double m_moneybarsize;
+    // making average weight volume price
+    double m_pvs; // \sum_{0}^{i} prices_i*volumes_i
+    double m_vs; // \sum_{0}^{i} volumes_i
+    // counting ticks for bar
+    int m_nticks;
     MoneyBar m_bar; // temp variable
 
 public:

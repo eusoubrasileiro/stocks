@@ -35,7 +35,7 @@ public:
         y = 0;
     }
 
-    XyPair(int vy, timeday& vtime, int vbandn) {
+    XyPair(int vy, timeday vtime, int vbandn) {
         y = vy;
         time = vtime;
         xdim = 0;

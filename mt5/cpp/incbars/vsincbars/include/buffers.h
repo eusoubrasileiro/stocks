@@ -89,10 +89,12 @@ public:
 
 	// Get Data At index position using Array As Series Convention
 	// youngest sample is at (0)
-	Type GetData(const int index) const
+	Type *GetData(const int index) const
 	{
 		return(m_data[m_data_total - 1 - index]);
 	}
+
+    Type* Last() { return &m_data[m_data_total - 1 - index]; }
 
 	void SetData(const int index, Type value)
 	{

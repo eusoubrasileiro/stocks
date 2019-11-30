@@ -68,6 +68,9 @@ int m_last_positions; // last number of 'positions'
 double m_last_volume; // last volume + (buy) or - (sell)
 double m_volume; // current volume of open or not positions
 
+// max number of increases on a position
+int m_incmax = 3;
+
 // python sklearn model trainning
 bool m_recursive;
 //sklearnModel m_model;
@@ -328,83 +331,69 @@ void LabelClasses() {
     double cbsignal = 0; // nothing 0, buy = 1, sell = -1
     // position of last signal analysed - time and band
     int cbsignal_i, cbsignal_j; 
-    
+
+    // number of increases on a position - max is m_maxinc
+    int posinc = 0; 
+
+// go to the next band signal
+#define next_bsginal()  { \
+          cbsignal = 0;   \
+          i = cbsignal_i; \
+          j = cbsignal_j; \
+          posinc = 0;    }
+
     for (;i<BufferTotal();i++) { // from past to present
     // time or bars
 
-      for (j=0;i<m_nbands;i++) {
+      for (j=0;j<m_nbands;j++) {
 
-          // getting next signal
+          // getting fresh next signal
           if (cbsignal == 0 && m_rbandsgs[j]->At(i) != 0) {
               cbsignal = m_rbandsgs[j]->At(i);
               cbsignal_i = i;
               cbsignal_j = j;
+              posinc++;
               // entryprice = m_bars->At(i).avgprice; // last avg price ?? 
               // find first bar price considering the operational time delay
               // TODO: need to write a Find or Search for m_times
-              int ibar = 0; // m_times->Search(m_bars->At(i).emsc - Expert_Delay, );
+              int ibar = 0; // m_times->Search(m_bars->At(i).emsc + Expert_Delay, );
               // better price based on time
               entryprice = m_bars->At(ibar).avgprice;
               m_xypairs.Add( //  save this buy or sell 
                   XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j)); 
               quantity = roundVolume(m_ordersize / entryprice);
+              // then jump forward to where the buy/sell really takes place
+              j = 0; i = ibar;
           }
           else // cbsignal is -1 or +1
           {
             // first take care of what you have
             // calculate profit / stoploss to see if should close
-            if(history != 0){
-                if(history == 1){ // it was a buy
+
+            // use avgprice or p10, 50, 90 or ohlc?
+            // or even ticks ask, bid ohlc? -- better
+            if(cbsignal > 0) 
                 profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
-                if(profit >= m_targetprofit){
-                    // xypairs.Last().y = 1 // a real (buy) index class nothing to do
-                    history = 0;
-                }
-                else
-                if (profit <= (-m_stoploss)){ // reclassify the previous buy as hold
-                    xypairs.Last().y = 0; // not a good deal, was better not to entry
-                    history = 0;
-                }
-                }
-                else{ // a sell -1
-                profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profit
-                if (profit >= m_targetprofit) {
-                    // xypairs.Last().y = -1 // a real (sell) index class nothing to do
-                    history = 0;
-                }
-                else
-                if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
-                    xypairs.Last().y = 0; // not a good deal, was better not to entry
-                    history = 0;
-                }
-            }
-            }
+            else
+                profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profif
 
-            // get more positions if in same direction
-            if (m_rbandsgs[j]->At(i) == cbsignal){
-
-                switch (history) {
-                    case 0:
-                        // new buy signal
-                        entryprice = m_bars[i].last; // last negotiated price
-                        xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-                        quantity = roundVolume(m_ordersize / entryprice);
-                        history = 1;
-                    break;
-                    case 1:
-                        // another buy in sequence
-                        // maybe it is dancing around this band boundary
-                        entryprice = m_bars[i].last;
-                        xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-                        quantity = roundVolume(m_ordersize / entryprice);
-                        history = 1;
-                    break;
-                    case -1;
-                        // a sell after a buy with no profit
-                        // the previous batch of signals will be saved with this class (hold)
-                        xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
-                    break;
-                }
+            // also need to check expire by time / day -- tripple barrier
+            // first barrier
+            if (profit >= m_targetprofit){ // done classifying this signal
+                next_bsginal();
+            }
+            // second barrier
+            else 
+            if (profit <= (-m_stoploss)) { // re-classify as hold
+                m_xypairs.Last()->y = 0; // not a good deal, was better not to entry
+                next_bsginal();
+            }
+            // third barrier
+            else
+            // get more positions only if in same direction
+            // and allowed
+            if (m_rbandsgs[j]->At(i) == cbsignal && posinc < m_incmax){
+                posinc++;
             }
 
           }

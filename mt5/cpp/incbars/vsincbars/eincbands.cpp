@@ -394,6 +394,12 @@ void LabelClasses() {
             // and allowed
             if (m_rbandsgs[j]->At(i) == cbsignal && posinc < m_incmax){
                 posinc++;
+
+                entryprice = m_bars->At(ibar).avgprice;
+                m_xypairs.Add( //  save this buy or sell 
+                    XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j));
+                quantity = roundVolume(m_ordersize / entryprice);
+
             }
 
           }

@@ -1,6 +1,7 @@
 #pragma once
 #include "buffers.h"
 #include "ticks.h"
+#include "time.h"
 
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
@@ -17,6 +18,9 @@ struct MoneyBar
     long long    smsc; // start time of this bar - first tick time 
     long long    emsc; // end time of this bar - last tick time
     // p10, p50, p90 of ticks.last?
+    // unique identifier for this bar - for searching etc..
+    unsigned long long uid; // emsc and smsc might repeat on different bars
+    int wday; // day of week for this bar
 };
 #pragma pack(pop)
 
@@ -32,6 +36,14 @@ protected:
     // counting ticks for bar
     int m_nticks;
     MoneyBar m_bar; // temp variable
+    // current unique identifier - starts w. 0 and goes forever increasing
+    // max size is 18,446,744,073,709,551,615 == 2^64-1
+    // will never have in any scenary this ammount of money bars so rest safe
+    // there is be no problems on binary search for money bars
+    unsigned long long cuid; 
+    // current week day for the bar being formed
+    // if a day is crossed the data for this bar is ignored
+    int cwday;
 
 public:
     int m_nnew; // number of bars nnew on last call
@@ -54,4 +66,11 @@ public:
     int AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
     // add ticks for metatrader support
     int AddTicks(const MqlTick* cticks, int size);
+
+    // return buffer index position
+    int Search(unsigned long long uid);
+
+private:
+    // internal uses absolute index
+    int _Search(unsigned long long uid, int start, int end);
 };

@@ -16,7 +16,7 @@ void MoneyBarBuffer::RefreshArrays() {
         end = parts[1 + i * 2];
         for (j = start; j < end; j++, k++) {
             m_last[k] = m_data[j].avgprice; // moneybar.last price
-            m_times[k] = m_data[j].emsc; //moneybar.time_msc
+            m_times[k] = m_data[j].uid; //moneybar.uid
         }
     }
 }
@@ -44,8 +44,22 @@ MoneyBarBuffer::MoneyBarBuffer(double tickvalue, double ticksize, double moneyba
 int MoneyBarBuffer::AddTick(MqlTick tick) {
     m_nnew = 0;
     if (tick.volume > 0) { // there was a deal        
-        if (m_bar.nticks == 0) // entry time for this bar
+        // control to not have bars with ticks of different days
+        cwday = timestampWDay(tick.time);
+        if (m_bar.nticks == 0) {// entry time for this bar
             m_bar.smsc = tick.time_msc;
+            m_bar.wday = cwday;
+        }
+        else // just crossed to a new day
+        if(cwday != m_bar.wday){ 
+            // clean up (ignore) previous data 
+            // for starting a new bar
+            m_bar.nticks = 0;
+            m_bar.smsc = tick.time_msc;
+            m_bar.wday = cwday;
+            m_count_money = 0;
+            m_pvs = m_vs = 0;
+        }
         m_bar.nticks++;
         m_count_money += tick.volume_real * tick.last * m_point_value;        
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick
@@ -55,6 +69,7 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
             m_vs += tick.volume_real; // summing (volumes)
             m_bar.avgprice = m_pvs/m_vs;
             m_bar.emsc = tick.time_msc; // exit time
+            m_bar.uid = cuid++; 
             Add(m_bar);
             m_pvs = m_vs = 0;
             m_bar.emsc = m_bar.smsc = 0;
@@ -83,6 +98,59 @@ int MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
         nnew += AddTick(cticks[i]);
     m_nnew = nnew; // overwrite internal added increment
     return m_nnew;
+}
+
+// MoneyBar isnt a class so I will not add this operator bellow on it or anything else
+//inline bool operator<(const MoneyBar& a, const MoneyBar& b) or
+// inline bool operator<(const MoneyBar& a, unsigned long long uid)
+//{
+//    return a.uid < b.uid;
+//    return a.uid < uid;
+//}
+// we will use this comparator
+// compare a MoneyBar's to a uid to see if it comes before it or not
+inline bool cmpMoneyBarSmallUid(const MoneyBar& a, unsigned long long uid) {
+    return a.uid < uid;
+}
+// or if it comes after that uid
+//inline bool CmpMoneyBarGreaterUid(const MoneyBar& a, const unsigned long long uid) {
+//    return a.uid > uid;
+//}
+// then you can use 
+// std::lower_bound(m_data.begin(), m_data.end(), value, CmpMoneyBarSmallUid) - m_data.begin()
+// to get the index where it is equal
+
+// return index on ring buffer for the uid
+int MoneyBarBuffer::Search(unsigned long long uid)
+{
+    int nparts, start, end, ifound, i, parts[4];
+    ifound = -1;
+    nparts = indexesData(0, Count(), parts);
+    for (i = 0; i < nparts; i++) {
+        start = parts[i * 2];
+        end = parts[1 + i * 2];
+        ifound = _Search(uid, start, end);
+        if (ifound != -1)
+            break;
+    }
+    // convert to start based index (ring buffer index)
+    return (ifound != -1) ? toIndex(ifound) : ifound;
+}
+
+// std::lower_bound
+// Returns an iterator pointing to the first element in the range [first,last) 
+// which does not compare less than val.
+// The elements are compared using operator< or comparator function (cmpMoneyBarSmallUid)
+// since uid 
+// 1. does not repeat
+// 2. are sorted
+// above will get the index of the uid on the buffer of bars
+
+int MoneyBarBuffer::_Search(unsigned long long uid, int start, int end) {
+    auto iter = std::lower_bound(m_data.begin() + start, m_data.begin() + end,
+        uid, cmpMoneyBarSmallUid);
+    // in case did not find returns -1
+    return (iter == m_data.end())? -1 : iter - m_data.begin();
 }
 
 

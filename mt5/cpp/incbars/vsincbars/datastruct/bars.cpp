@@ -1,42 +1,19 @@
 #include "bars.h"
 
-int MoneyBarBuffer::indexesNewBars(int parts[]) {
-    return indexesData(Count() - m_nnew, m_nnew, parts);
+int MoneyBarBuffer::newBars() {
+    return size() - m_nnew;
 }
 
-// copy last data of new bars m_nnew
-// to local arrays
-void MoneyBarBuffer::RefreshArrays() {
-    int parts[4];
-    int i, j, k, nparts, start, end;
-    nparts = indexesNewBars(parts);
-    for (i = 0, k = 0; i < nparts; i++) {
-        // money bars circular buffer copy in two parts
-        start = parts[i * 2];
-        end = parts[1 + i * 2];
-        for (j = start; j < end; j++, k++) {
-            m_last[k] = m_data[j].avgprice; // moneybar.last price
-            m_times[k] = m_data[j].uid; //moneybar.uid
-        }
-    }
-}
-
-// local arrays have max size equal buffer size
-void MoneyBarBuffer::SetSize(int size) {
-    CCBuffer::SetSize(size);
-    m_last.resize(size);
-    m_times.resize(size);
-}
-
-
-MoneyBarBuffer::MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize, 
-        int buffersize) {
+void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize){
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;
     m_count_money = 0; // count_money amount to form 1 money bar
     m_nnew = m_nticks = 0;
     m_pvs = m_vs = 0; // v. weighted price for this bar
-    SetSize(buffersize);
+}
+
+MoneyBarBuffer::MoneyBarBuffer(int bufsize){
+    resize(bufsize);
 }
 
 // add one tick and create as many money bars as needed (or 0)
@@ -70,7 +47,7 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.avgprice = m_pvs/m_vs;
             m_bar.emsc = tick.time_msc; // exit time
             m_bar.uid = cuid++; 
-            Add(m_bar);
+            add(m_bar);
             m_pvs = m_vs = 0;
             m_bar.emsc = m_bar.smsc = 0;
             m_bar.nticks = 0;
@@ -117,24 +94,11 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, unsigned long long uid) {
 //    return a.uid > uid;
 //}
 // then you can use 
-// std::lower_bound(m_data.begin(), m_data.end(), value, CmpMoneyBarSmallUid) - m_data.begin()
-// to get the index where it is equal
-
 // return index on ring buffer for the uid
 int MoneyBarBuffer::Search(unsigned long long uid)
 {
-    int nparts, start, end, ifound, i, parts[4];
-    ifound = -1;
-    nparts = indexesData(0, Count(), parts);
-    for (i = 0; i < nparts; i++) {
-        start = parts[i * 2];
-        end = parts[1 + i * 2];
-        ifound = _Search(uid, start, end);
-        if (ifound != -1)
-            break;
-    }
-    // convert to start based index (ring buffer index)
-    return (ifound != -1) ? toIndex(ifound) : ifound;
+    auto iter = std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid);
+    return (iter == end()) ? -1 : iter - begin();
 }
 
 // std::lower_bound
@@ -145,13 +109,6 @@ int MoneyBarBuffer::Search(unsigned long long uid)
 // 1. does not repeat
 // 2. are sorted
 // above will get the index of the uid on the buffer of bars
-
-int MoneyBarBuffer::_Search(unsigned long long uid, int start, int end) {
-    auto iter = std::lower_bound(m_data.begin() + start, m_data.begin() + end,
-        uid, cmpMoneyBarSmallUid);
-    // in case did not find returns -1
-    return (iter == m_data.end())? -1 : iter - m_data.begin();
-}
 
 
 //

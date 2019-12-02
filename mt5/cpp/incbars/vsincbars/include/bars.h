@@ -24,7 +24,7 @@ struct MoneyBar
 };
 #pragma pack(pop)
 
-class MoneyBarBuffer : public CCBuffer<MoneyBar>
+class MoneyBarBuffer : public buffer<MoneyBar>
 {
 protected:
     double m_count_money;
@@ -50,15 +50,10 @@ public:
     std::vector<double> m_last; // lastest added last prices
     std::vector<long> m_times; // ... . ...... times in msc
 
-    int indexesNewBars(int parts[]);
-    // copy last data of new bars m_nnew
-    // to local arrays
-    void RefreshArrays();
-    // local arrays have max size equal buffer size
-    void SetSize(int size);
+    int newBars();
 
-    MoneyBarBuffer(double tickvalue, double ticksize, double moneybarsize,
-        int buffersize);
+    MoneyBarBuffer(int bufsize);
+    void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created
     int AddTick(MqlTick tick);
@@ -69,8 +64,4 @@ public:
 
     // return buffer index position
     int Search(unsigned long long uid);
-
-private:
-    // internal uses absolute index
-    int _Search(unsigned long long uid, int start, int end);
 };

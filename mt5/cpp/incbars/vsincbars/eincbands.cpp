@@ -18,11 +18,9 @@
 
 // All Buffer-Derived classes bellow have indexes alligned
 // except for CObjectBuffer<XyPair>
-std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
+MoneyBarBuffer m_bars(Expert_BufferSize); // buffer of money bars base for everything
 
 std::vector<double> m_mlast; // moneybar.last values of last added money bars
-// created from ticks
-std::shared_ptr<CCTimeDayBuffer> m_times; // time buffer from moneybar time-ms
 //MqlDateTime m_mqldt_now;
 //MqlDateTime m_last_time; // last time after refresh
 
@@ -49,7 +47,7 @@ int m_nsignal_features;
 int m_batch_size;
 int m_ntraining;
 int m_xtrain_dim; // dimension of x train vector
-CBuffer<XyPair> m_xypairs;
+buffer<XyPair> m_xypairs;
 
 // execution of positions and orders
 // profit or stop loss calculation for training
@@ -106,9 +104,8 @@ void Initialize(int nbands, int bbwindow,
     m_last_volume = 0;
     m_volume = 0;
     // set safe pointers to new objects
-    m_bars.reset(new MoneyBarBuffer(tickvalue,
-        ticksize, m_moneybar_size, Expert_BufferSize));
-    m_times.reset(new CCTimeDayBuffer(Expert_BufferSize));
+    m_bars.Init(tickvalue,
+        ticksize, m_moneybar_size);
 
     m_recursive = recursive;
     m_nbands = nbands;
@@ -133,7 +130,7 @@ void Initialize(int nbands, int bbwindow,
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
-    m_xypairs.Resize(m_ntraining);
+    m_xypairs.resize(m_ntraining);
     // resize x feature vector inside it
     // but they do not exist cant resize something that doesnt exist
     // only the space available for them
@@ -183,7 +180,7 @@ void Initialize(int nbands, int bbwindow,
 //  Metatrader 5
 int AddTicks(const MqlTick* cticks, int size) {
 
-    return m_bars->AddTicks(cticks, size);
+    return m_bars.AddTicks(cticks, size);
 
 }
 
@@ -192,16 +189,14 @@ int AddTicks(const MqlTick* cticks, int size) {
 // Same new bars will come for all indicators and else
 // All are updated after bars so that's the main
 // begin of new bar is also begin of new data on all buffers
-int BufferSize() { return m_bars->Size(); }
-int BufferTotal() { return m_bars->Count(); }
+int BufferSize() { return m_bars.capacity(); }
+int BufferTotal() { return m_bars.size(); }
 // start index on all buffers of new bars after AddTicks > 0
-int IdxNewData() { return m_bars->Count() - m_bars->m_nnew; }
+int IdxNewData() { return m_bars.newBars();  }
 
 // start index and count of new bars that just arrived
 bool Refresh()
 {
-    m_bars->RefreshArrays(); // update internal latest arrays of times, prices
-    m_times->AddRangeTimeMs(m_bars->m_times.data(), 0, m_bars->m_nnew);
     bool result = true;
 
     // all bellow must be called to maintain alligment of buffers
@@ -314,102 +309,102 @@ int lastRawSignals() {
 // and are useless since dont represent an entry
 // those that went true receive 1 buy or -1 sell
 // those that wen bad receive 0 hold
-void LabelClasses() {
-
-    // targetprofit - profit to close open position
-    // amount - tick value * quantity bought in $$
-    double entryprice = 0;
-    int history = 0; // nothing, buy = 1, sell = -1
-    int day, previous_day = 0;
-    long time;
-    double profit = 0;
-    double quantity = 0; // number of contracts or stocks shares
-    // Starts from the past (begin of buffer of signals)
-    int i = 0, j;
-
-    // current signal on some band being analysed
-    double cbsignal = 0; // nothing 0, buy = 1, sell = -1
-    // position of last signal analysed - time and band
-    int cbsignal_i, cbsignal_j; 
-
-    // number of increases on a position - max is m_maxinc
-    int posinc = 0; 
-
-// go to the next band signal
-#define next_bsginal()  { \
-          cbsignal = 0;   \
-          i = cbsignal_i; \
-          j = cbsignal_j; \
-          posinc = 0;    }
-
-    for (;i<BufferTotal();i++) { // from past to present
-    // time or bars
-
-      for (j=0;j<m_nbands;j++) {
-
-          // getting fresh next signal
-          if (cbsignal == 0 && m_rbandsgs[j]->At(i) != 0) {
-              cbsignal = m_rbandsgs[j]->At(i);
-              cbsignal_i = i;
-              cbsignal_j = j;
-              posinc++;
-              // entryprice = m_bars->At(i).avgprice; // last avg price ?? 
-              // find first bar price considering the operational time delay
-              // TODO: need to write a Find or Search for m_times
-              int ibar = 0; // m_times->Search(m_bars->At(i).emsc + Expert_Delay, );
-              // better price based on time
-              entryprice = m_bars->At(ibar).avgprice;
-              m_xypairs.Add( //  save this buy or sell 
-                  XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j)); 
-              quantity = roundVolume(m_ordersize / entryprice);
-              // then jump forward to where the buy/sell really takes place
-              j = 0; i = ibar;
-          }
-          else // cbsignal is -1 or +1
-          {
-            // first take care of what you have
-            // calculate profit / stoploss to see if should close
-
-            // use avgprice or p10, 50, 90 or ohlc?
-            // or even ticks ask, bid ohlc? -- better
-            if(cbsignal > 0) 
-                profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
-            else
-                profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profif
-
-            // also need to check expire by time / day -- tripple barrier
-            // first barrier
-            if (profit >= m_targetprofit){ // done classifying this signal
-                next_bsginal();
-            }
-            // second barrier
-            else 
-            if (profit <= (-m_stoploss)) { // re-classify as hold
-                m_xypairs.Last()->y = 0; // not a good deal, was better not to entry
-                next_bsginal();
-            }
-            // third barrier
-            else
-            // get more positions only if in same direction
-            // and allowed
-            if (m_rbandsgs[j]->At(i) == cbsignal && posinc < m_incmax){
-                posinc++;
-
-                entryprice = m_bars->At(ibar).avgprice;
-                m_xypairs.Add( //  save this buy or sell 
-                    XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j));
-                quantity = roundVolume(m_ordersize / entryprice);
-
-            }
-
-          }
-
-
-      }
-
-
-
-    }
+//void LabelClasses() {
+//
+//    // targetprofit - profit to close open position
+//    // amount - tick value * quantity bought in $$
+//    double entryprice = 0;
+//    int history = 0; // nothing, buy = 1, sell = -1
+//    int day, previous_day = 0;
+//    long time;
+//    double profit = 0;
+//    double quantity = 0; // number of contracts or stocks shares
+//    // Starts from the past (begin of buffer of signals)
+//    int i = 0, j;
+//
+//    // current signal on some band being analysed
+//    double cbsignal = 0; // nothing 0, buy = 1, sell = -1
+//    // position of last signal analysed - time and band
+//    int cbsignal_i, cbsignal_j; 
+//
+//    // number of increases on a position - max is m_maxinc
+//    int posinc = 0; 
+//
+//// go to the next band signal
+//#define next_bsginal()  { \
+//          cbsignal = 0;   \
+//          i = cbsignal_i; \
+//          j = cbsignal_j; \
+//          posinc = 0;    }
+//
+//    for (;i<BufferTotal();i++) { // from past to present
+//    // time or bars
+//
+//      for (j=0;j<m_nbands;j++) {
+//
+//          // getting fresh next signal
+//          if (cbsignal == 0 && m_rbandsgs[j]->At(i) != 0) {
+//              cbsignal = m_rbandsgs[j]->At(i);
+//              cbsignal_i = i;
+//              cbsignal_j = j;
+//              posinc++;
+//              // entryprice = m_bars->At(i).avgprice; // last avg price ?? 
+//              // find first bar price considering the operational time delay
+//              // TODO: need to write a Find or Search for m_times
+//              int ibar = 0; // m_times->Search(m_bars->At(i).emsc + Expert_Delay, );
+//              // better price based on time
+//              entryprice = m_bars->At(ibar).avgprice;
+//              m_xypairs.Add( //  save this buy or sell 
+//                  XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j)); 
+//              quantity = roundVolume(m_ordersize / entryprice);
+//              // then jump forward to where the buy/sell really takes place
+//              j = 0; i = ibar;
+//          }
+//          else // cbsignal is -1 or +1
+//          {
+//            // first take care of what you have
+//            // calculate profit / stoploss to see if should close
+//
+//            // use avgprice or p10, 50, 90 or ohlc?
+//            // or even ticks ask, bid ohlc? -- better
+//            if(cbsignal > 0) 
+//                profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
+//            else
+//                profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profif
+//
+//            // also need to check expire by time / day -- tripple barrier
+//            // first barrier
+//            if (profit >= m_targetprofit){ // done classifying this signal
+//                next_bsginal();
+//            }
+//            // second barrier
+//            else 
+//            if (profit <= (-m_stoploss)) { // re-classify as hold
+//                m_xypairs.Last()->y = 0; // not a good deal, was better not to entry
+//                next_bsginal();
+//            }
+//            // third barrier
+//            else
+//            // get more positions only if in same direction
+//            // and allowed
+//            if (m_rbandsgs[j]->At(i) == cbsignal && posinc < m_incmax){
+//                posinc++;
+//
+//                entryprice = m_bars->At(ibar).avgprice;
+//                m_xypairs.Add( //  save this buy or sell 
+//                    XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j));
+//                quantity = roundVolume(m_ordersize / entryprice);
+//
+//            }
+//
+//          }
+//
+//
+//      }
+//
+//
+//
+//    }
     // CBuffer<XyPair> m_xypairs
 
     //// OR

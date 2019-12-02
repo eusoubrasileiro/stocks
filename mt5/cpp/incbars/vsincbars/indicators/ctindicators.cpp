@@ -50,9 +50,9 @@ CTaBBANDS::CTaBBANDS(int window, double devs, int ma_type, int size){
 };
 
 void CTaBBANDS::AddEmpty(int count){
-    m_upper.AddEmpty(count);
-    m_middle.AddEmpty(count);
-    m_down.AddEmpty(count);
+    m_upper.addempty(count);
+    m_middle.addempty(count);
+    m_down.addempty(count);
 }
 
 int CTaBBANDS::Calculate(double indata[], int size, double outdata[])
@@ -74,18 +74,18 @@ int CTaBBANDS::Calculate(double indata[], int size, double outdata[])
 
 void CTaBBANDS::AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end){
     // totally ignores signature since I have to add in three buffers
-    m_upper.AddRange(m_out_upper.begin(), m_out_upper.begin()+m_calculated);
-    m_middle.AddRange(m_out_middle.begin(), m_out_middle.begin()+m_calculated);
-    m_down.AddRange(m_out_down.begin(), m_out_down.begin()+m_calculated);
+    m_upper.addrange(m_out_upper.begin(), m_out_upper.begin()+m_calculated);
+    m_middle.addrange(m_out_middle.begin(), m_out_middle.begin()+m_calculated);
+    m_down.addrange(m_out_down.begin(), m_out_down.begin()+m_calculated);
 };
 
 void CTaBBANDS::SetSize(const int size)
 {
-    m_upper.SetSize(size);
-    m_middle.SetSize(size); 
-    m_down.SetSize(size);
+    m_upper.resize(size);
+    m_middle.resize(size);
+    m_down.resize(size);
 }
 
 int CTaBBANDS::Size(){
-    return m_middle.Size();
+    return m_middle.size();
 }

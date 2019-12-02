@@ -1,19 +1,35 @@
 #include "bars.h"
 
-int MoneyBarBuffer::newBars() {
-    return size() - m_nnew;
+// iterator 'like' begin of new bars
+MoneyBar *MoneyBarBuffer::BeginNewBars() {
+    return &(end()-(m_nnew-1))[0];
+}
+
+// index based
+int MoneyBarBuffer::BeginNewBarsIdx() {
+    return size()-m_nnew;
+}
+
+MoneyBarBuffer::MoneyBarBuffer() {
+    cuid = 0;
+    cwday = 0;
+    m_count_money = 0; // count_money amount to form 1 money bar
+    m_nnew = m_nticks = 0;
+    m_pvs = m_vs = 0; // v. weighted price for this bar
+    m_moneybarsize = DBL_EMPTY_VALUE;
+    m_point_value = 0;
+}
+
+// return only new ... data added
+void MoneyBarBuffer::RefreshArrays() {
+    auto bar = BeginNewBars();
+    for(int i=0; i<m_nnew; i++)
+        new_avgprices[i] = bar[i].avgprice;
 }
 
 void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize){
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;
-    m_count_money = 0; // count_money amount to form 1 money bar
-    m_nnew = m_nticks = 0;
-    m_pvs = m_vs = 0; // v. weighted price for this bar
-}
-
-MoneyBarBuffer::MoneyBarBuffer(int bufsize){
-    resize(bufsize);
 }
 
 // add one tick and create as many money bars as needed (or 0)
@@ -61,7 +77,7 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
 // add ticks for python support
 int MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end) {
     int nnew = 0;
-    for (auto element = start; element != end; ++element)
+    for (auto element = start; element != end; element++)
         nnew += AddTick(*element);
     m_nnew = nnew; // overwrite internal added increment
     return m_nnew;

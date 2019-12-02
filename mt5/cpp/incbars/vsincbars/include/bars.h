@@ -43,16 +43,14 @@ protected:
     unsigned long long cuid; 
     // current week day for the bar being formed
     // if a day is crossed the data for this bar is ignored
-    int cwday;
+    int cwday;    
 
 public:
-    int m_nnew; // number of bars nnew on last call
-    std::vector<double> m_last; // lastest added last prices
-    std::vector<long> m_times; // ... . ...... times in msc
+    int m_nnew; // number of bars nnew on last call    
+    double new_avgprices[BUFFERSIZE];
 
-    int newBars();
+    MoneyBarBuffer();
 
-    MoneyBarBuffer(int bufsize);
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created
@@ -61,6 +59,11 @@ public:
     int AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
     // add ticks for metatrader support
     int AddTicks(const MqlTick* cticks, int size);
+
+    MoneyBar* BeginNewBars();
+    int BeginNewBarsIdx();
+
+    void RefreshArrays();
 
     // return buffer index position
     int Search(unsigned long long uid);

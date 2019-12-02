@@ -14,7 +14,7 @@
 //ENUM_DEFINE(TA_MAType_MAMA, Mama) = 7,
 //ENUM_DEFINE(TA_MAType_T3, T3) = 8
 
-CTaMAIndicator::CTaMAIndicator(int window, int tama_type){
+void CTaMAIndicator::Init(int window, int tama_type){
     m_tama_type = tama_type;
     CWindowIndicator::Init(window);
 };
@@ -27,7 +27,7 @@ int CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
 
 // STDDEV
 
-CTaSTDDEV::CTaSTDDEV(int window){ CWindowIndicator::Init(window); };
+void CTaSTDDEV::Init(int window){ CWindowIndicator::Init(window); };
 
 int CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
 {
@@ -42,11 +42,10 @@ int CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
 // triple buffer indicator
 // cleanear code with multiple inheritance
 
-CTaBBANDS::CTaBBANDS(int window, double devs, int ma_type, int size){
+void CTaBBANDS::Init(int window, double devs, int ma_type){
     m_devs = devs;
     m_tama_type = ma_type;
     IWindowIndicator::Init(window);
-    SetSize(size);
 };
 
 void CTaBBANDS::AddEmpty(int count){
@@ -79,12 +78,6 @@ void CTaBBANDS::AddRange(std::vector<double>::iterator start, std::vector<double
     m_down.addrange(m_out_down.begin(), m_out_down.begin()+m_calculated);
 };
 
-void CTaBBANDS::SetSize(const int size)
-{
-    m_upper.resize(size);
-    m_middle.resize(size);
-    m_down.resize(size);
-}
 
 int CTaBBANDS::Size(){
     return m_middle.size();

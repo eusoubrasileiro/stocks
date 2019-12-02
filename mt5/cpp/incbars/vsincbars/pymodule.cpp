@@ -33,10 +33,10 @@ PYBIND11_MODULE(incbars, m) {
 
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, smsc, emsc);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, smsc, emsc, uid, wday);
 
     // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
-    ppymbars.reset(new py::array_t<MoneyBar>(Expert_BufferSize));
+    ppymbars.reset(new py::array_t<MoneyBar>(BUFFERSIZE));
 
     // optional module docstring
     m.doc() = "incbars metatrader 5 expert - python api pybind11";
@@ -46,7 +46,7 @@ PYBIND11_MODULE(incbars, m) {
         py::arg("ntraining"), py::arg("ordersize"), py::arg("stoploss"),
         py::arg("targetprofit"), py::arg("run_stoploss"), py::arg("run_targetprofit"),
         py::arg("recursive"), py::arg("ticksize"), py::arg("tickvalue"), py::arg("moneybarsize"),
-        py::arg("max_positions"));  
+        py::arg("min_lots"), py::arg("max_positions"));  
 
     // signature with py::array_t for AddTicks
     m.def("addticks", &pyAddTicks, "send ticks to the expert", 
@@ -58,7 +58,7 @@ PYBIND11_MODULE(incbars, m) {
     
     m.def("buffertotal", &BufferTotal, "count of bars or all buffers data");
 
-    m.def("idxnewdata", &IdxNewData, "start index on buffers of new bars after AddTicks > 0");
+    m.def("newdataidx", &NewDataIdx, "start index on buffers of new bars after AddTicks > 0");
   
     m.def("moneybars", &pyGetMoneyBars, "get MoneyBar buffer as is");
 }

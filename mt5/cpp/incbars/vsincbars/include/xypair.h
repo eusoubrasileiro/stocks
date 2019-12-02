@@ -20,27 +20,23 @@ public:
     std::vector<double> X; // X feature vector
     int bandn; // number of band where the signal happend
     int y; // class value
-    // cannot use cbuffindex because buffers change/get updated
-    //int cbuffindex; // buffer index value of y class
-    timeday time; // when that happend
+    unsigned long long timeidx; // when that happend 
     // used to assembly X feature vector
     bool isready; // if XyPair is ready for training
 
     XyPair(void) : xdim(16) {
         X.resize(xdim);
         isready = false;
-        time.ms = 0;
-        time.day = 0;
+        timeidx = 0;
         bandn = -1;
         y = 0;
     }
 
-    XyPair(int vy, timeday vtime, int vbandn) {
+    XyPair(int vy, unsigned long long vtimeidx, int vbandn) {
         y = vy;
-        time = vtime;
-        xdim = 0;
-        isready = false;
+        timeidx = vtimeidx;
         bandn = vbandn;
+        isready = false;
     }
 
     void Resize(const int size) {

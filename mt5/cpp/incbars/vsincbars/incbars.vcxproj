@@ -53,7 +53,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;C:\Users\andre\Projects\boost_headers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <CallingConvention>
       </CallingConvention>

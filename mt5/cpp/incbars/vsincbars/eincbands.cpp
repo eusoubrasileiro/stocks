@@ -18,7 +18,7 @@
 
 // All Buffer-Derived classes bellow have indexes alligned
 // except for CObjectBuffer<XyPair>
-MoneyBarBuffer m_bars(Expert_BufferSize); // buffer of money bars base for everything
+MoneyBarBuffer m_bars; // buffer of money bars base for everything
 
 std::vector<double> m_mlast; // moneybar.last values of last added money bars
 //MqlDateTime m_mqldt_now;
@@ -33,10 +33,10 @@ int m_bbwindow; // reference size of bollinger band indicator others
 double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
 
 // feature indicators
-std::shared_ptr<CFracDiffIndicator> m_fd_mbarp; // frac diff on money bar prices
+CFracDiffIndicator m_fd_mbarp; // frac diff on money bar prices
 
 // store buy|sell|hold signals for each bband - raw
-std::vector<std::shared_ptr<CBandSignal>> m_rbandsgs;
+std::vector<CBandSignal> m_rbandsgs;
 
 std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
 int m_last_raw_signal_index; // related to m_bars buffer on refresh()
@@ -130,7 +130,7 @@ void Initialize(int nbands, int bbwindow,
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
-    m_xypairs.resize(m_ntraining);
+    m_xypairs.set_capacity(m_ntraining);
     // resize x feature vector inside it
     // but they do not exist cant resize something that doesnt exist
     // only the space available for them
@@ -143,7 +143,7 @@ void Initialize(int nbands, int bbwindow,
     // raw signal storage + ctalib bbands
     double inc = m_bbwindow_inc;
     for (int i = 0; i < m_nbands; i++) { // create multiple increasing bollinger bands
-        m_rbandsgs[i].reset(new CBandSignal(m_bbwindow * inc, 2.5, 2, Expert_BufferSize)); // 2-Weighted type
+        m_rbandsgs[i].Init(m_bbwindow * inc, 2.5, 2); // 2-Weighted type
         // weighted seams more meaning since i know each bar
         // represents same ammount of money so have a equal weight
         inc += m_bbwindow_inc;
@@ -151,7 +151,7 @@ void Initialize(int nbands, int bbwindow,
 
     // CreateOtherFeatureIndicators();
     // only fracdiff on prices
-    m_fd_mbarp.reset(new CFracDiffIndicator(Expert_Fracdif_Window, Expert_Fracdif, Expert_BufferSize));
+    m_fd_mbarp.Init(Expert_Fracdif_Window, Expert_Fracdif);
 }
 
 
@@ -192,12 +192,15 @@ int AddTicks(const MqlTick* cticks, int size) {
 int BufferSize() { return m_bars.capacity(); }
 int BufferTotal() { return m_bars.size(); }
 // start index on all buffers of new bars after AddTicks > 0
-int IdxNewData() { return m_bars.newBars();  }
+int NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
 
 // start index and count of new bars that just arrived
 bool Refresh()
 {
     bool result = true;
+
+    // arrays of new data update them
+    m_bars.RefreshArrays();
 
     // all bellow must be called to maintain alligment of buffers
     // by creating empty samples
@@ -205,11 +208,11 @@ bool Refresh()
     // features indicators
     // fracdif on bar prices order of && matter
     // first is what you want to do and second what you want to try
-    result = m_fd_mbarp->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
+    result = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;
 
     // update signals based on all bollinger bands
     for (int j = 0; j < m_nbands; j++) {
-        result = m_rbandsgs[j]->Refresh(m_bars->m_last.data(), 0, m_bars->m_nnew) && result;
+        result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;
     }
 
     return result;
@@ -222,13 +225,13 @@ void verifyEntry() {
     // raw signals added bars
     if (lastRawSignals() != -1)
     {
-        int m_xypair_count_old = m_xypairs.Count();
+        int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
         // only when needed
         //LabelClasses();
         //CreateXFeatureVectors(m_xypairs);
         // add number of xypairs added (cannot decrease)
-        m_xypair_count += (m_xypairs.Count() - m_xypair_count_old);
+        m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
         // update/train model if needed/possible
         //if (m_xypairs.Count() >= m_ntraining) {
         //    // first time training
@@ -279,8 +282,8 @@ int lastRawSignals() {
     // m_last_raw_signal_index is index based
     // on circular buffers index alligned on all
     for (int j = 0; j < m_nbands; j++) {
-        for (int i = IdxNewData(); i < BufferTotal(); i++) {
-            m_last_raw_signal[j] = m_rbandsgs[j]->At(i);
+        for (int i = NewDataIdx(); i < BufferTotal(); i++) {
+            m_last_raw_signal[j] = m_rbandsgs[j][i];
             if (m_last_raw_signal[j] != 0) {
                 if (direction == 0) {
                     direction = m_last_raw_signal[j];
@@ -542,7 +545,7 @@ int lastRawSignals() {
     ////# reached the end of data buffer did not close one buy previouly open
     //if (history == 1 || history == -1) // don't know about the future cannot train with this guy
     //    xypairs.RemoveLast();
-}
+//}
 
 
 
@@ -632,7 +635,7 @@ std::shared_ptr<py::array_t<MoneyBar>> ppymbars;
 
 py::array_t<MoneyBar> pyGetMoneyBars() {
     MoneyBar* pbuf = (MoneyBar*)ppymbars->request().ptr;
-    for (size_t idx = 0; idx<Expert_BufferSize; idx++)
-        pbuf[idx] = m_bars->m_data[idx];
+    for (size_t idx = 0; idx<BUFFERSIZE; idx++)
+        pbuf[idx] = m_bars[idx];
     return *ppymbars;
 }

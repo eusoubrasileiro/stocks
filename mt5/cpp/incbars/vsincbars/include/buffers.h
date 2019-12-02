@@ -10,7 +10,8 @@
 #define DBL_EMPTY_VALUE DBL_MAX
 #define INT_EMPTY_VALUE INT_MAX
 
-
+// indicators, bars etc. buffer needed
+#define BUFFERSIZE       100000      
 
 // FIFO first in first out
 // Buffer single is an array when new data is added
@@ -18,16 +19,18 @@
 // like a Queue or FIFO
 using boost::circular_buffer;
 
+
+// fixed size buffer max - BUFFERSIZE
+
 template<class Type>
 class buffer : public circular_buffer<Type>
 {
 
 public:
+        
+    buffer() : circular_buffer<Type>::circular_buffer(BUFFERSIZE) {};
 
-    buffer(int size) :
-        circular_buffer<Type>::circular_buffer(size) {
-        circular_buffer<Type>::resize(size);
-    }
+    buffer(int bufsize) : circular_buffer<Type>::circular_buffer(bufsize) {};
 
     void add(Type element) {
         circular_buffer<Type>::push_back(element);
@@ -42,6 +45,12 @@ public:
             circular_buffer<Type>::push_back(*element);
     }
 
+    // addrange from c style array
+    void addrange(Type values[], int count) {
+        for (int i=0; i<count; i++)
+            circular_buffer<Type>::push_back(values[i]);
+    }
+
     void removelast(void) {
         circular_buffer<Type>::pop_back();
     }
@@ -54,7 +63,7 @@ template<class Type>
 void ArrayCopy(void* dst, void* src, int dst_start, int src_start, int count) {
     //ArrayCopy(dest, sbuffer.m_data, 0, start1, count);
     memcpy((Type*)dst + dst_start, (Type*)src + src_start, count * sizeof(Type));
-
+    //std::copy()
 }
 
 

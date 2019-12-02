@@ -4,7 +4,6 @@
 //const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
 
 
-#define             Expert_BufferSize        100000      // indicators buffer needed
 #define             Expert_Fracdif           0.6         // fraction for fractional difference
 #define             Expert_Fracdif_Window    512         // window size fraction fracdif
 #define             Expert_Delay             8000        // delay to perform an order sucessfully after evaluating an entry (ms)
@@ -43,7 +42,7 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow,
     double ordersize, double stoploss, double targetprofit,
     double run_stoploss, double run_targetprofit, bool recursive,
     double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
-    int max_positions);
+    double lotsmin, int max_positions);
 
 // will be called every < 1 second
 // by Metatrader 5
@@ -62,7 +61,7 @@ DLL_EXPORT bool Refresh(void);
 // begin of new bar is also begin of new data on all buffers
 DLL_EXPORT int BufferSize(); // size of all buffers
 DLL_EXPORT int BufferTotal(); // count of bars or all buffers data
-DLL_EXPORT int IdxNewData(); // start index on all buffers of new bars after AddTicks > 0
+DLL_EXPORT int NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
 
 
 #ifdef EXPORT

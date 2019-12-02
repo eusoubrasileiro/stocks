@@ -26,94 +26,6 @@
         //EXPECT_EQ(expected.size(), actual.size()) << "Array sizes differ."; \
 
 
-TEST(CBuffer, Add) {
-    CBuffer<double> sbuffer;
-    sbuffer.Resize(4);
-    for (int i = 0; i < 12; i++) // minimum buffer size is 16
-        sbuffer.Add(0);
-    for (int i = 1; i < 7; i++) // exceeds the buffer
-        sbuffer.Add(i);
-
-    EXPECT_EQ(sbuffer.GetData(0), 6);
-    EXPECT_EQ(sbuffer.GetData(1), 5);
-    EXPECT_EQ(sbuffer.GetData(3), 3);
-    EXPECT_EQ(sbuffer.GetData(2), 4);
-}
-
-TEST(CCBuffer, Add) {
-
-    CCBuffer<double> sbuffer(16); // buffer size 16
-    for (int i = 0; i < 12; i++)
-        sbuffer.Add(0);
-    for (int i = 1; i < 7; i++) // exceeds the buffer
-        sbuffer.Add(i);
-
-    EXPECT_EQ(sbuffer[15], 5);
-    EXPECT_EQ(sbuffer[16], 6);
-    EXPECT_EQ(sbuffer[13], 3);
-    EXPECT_EQ(sbuffer[14], 4);
-    //EXPECT_TRUE(true);
-}
-
-TEST(CCBuffer, Indexes_Data) {
-    CCBuffer<double> sbuffer(5); // buffer size 5
-
-    for (int i = 0; i < 3; i++)
-        sbuffer.Add(0);
-    for (int i = 1; i < 5; i++) // exceeds the buffer
-        sbuffer.Add(i);
-
-    int start1, start2, end1, end2;
-    double dest[4];
-    int parts, count;
-
-    // get 4 elements
-    // beginning at the first 0
-    parts = sbuffer.indexesData(0, 4, start1, end1, start2, end2);  // get 4 elements
-
-    count = end1 - start1;
-    // dst, src, dst_start, src_start, count
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), 0, start1, count);
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), count, start2, end2 - start2);
-
-    std::vector<double> array_dest;
-    array_dest.resize(4);
-    memcpy(array_dest.data(), dest, 4*sizeof(double));
-
-    ASSERT_THAT(array_dest, testing::ElementsAre(0, 1, 2, 3));
-    EXPECT_EQ(parts, 2);
-
-    // get 1 element
-    // beginning at the 4th
-    parts = sbuffer.indexesData(4, 1, start1, end1, start2, end2);
-
-    count = end1 - start1;
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), 0, start1, count);
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), count, start2, end2 - start2);
-
-    array_dest.resize(1);
-    memcpy(array_dest.data(), dest, 1 * sizeof(double));
-
-    ASSERT_THAT(array_dest, testing::ElementsAre(4));
-    EXPECT_EQ(parts, 1);
-
-    // get 3 elements
-    // beginning at 0
-    int arr_parts[4]; // start1, end1, start2, end2
-    parts = sbuffer.indexesData(0, 3, arr_parts);
-
-    count = arr_parts[1] - arr_parts[0];
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), 0, arr_parts[0], count);
-    ArrayCopy<double>(dest, sbuffer.m_data.data(), count,
-        arr_parts[2], arr_parts[3] - arr_parts[2]);
-
-    array_dest.resize(3);
-    memcpy(array_dest.data(), dest, 3 * sizeof(double));
-
-    ASSERT_THAT(array_dest, testing::ElementsAre(0, 1, 2));
-    EXPECT_EQ(parts, 1);
-}
-
 //ENUM_DEFINE(TA_MAType_SMA, Sma) = 0,
 //ENUM_DEFINE(TA_MAType_EMA, Ema) = 1,
 //ENUM_DEFINE(TA_MAType_WMA, Wma) = 2,
@@ -170,7 +82,8 @@ TEST(Indicators, CFracDiffIndicator){
                     0.11830923 };
         double eps = 0.0001; // error tolerance in comparison
         int fsize = 10;
-        CFracDiffIndicator c_fdiff(fsize, 0.56, 200); // whatever buffer size just need to be enough
+        CFracDiffIndicator c_fdiff;
+        c_fdiff.Init(fsize, 0.56); 
 
         // partial calls until total array calculated
         double a[7];
@@ -183,10 +96,10 @@ TEST(Indicators, CFracDiffIndicator){
         double d[49];
         ArrayCopy<double>(d, in, 0, 51, 49); // 51:100 = 49
 
-        c_fdiff.Refresh(a, 0, 7);
-        c_fdiff.Refresh(b, 0, 33);
-        c_fdiff.Refresh(c, 0, 11);
-        c_fdiff.Refresh(d, 0, 49);
+        c_fdiff.Refresh(a, 7);
+        c_fdiff.Refresh(b, 33);
+        c_fdiff.Refresh(c, 11);
+        c_fdiff.Refresh(d, 49);
 
         std::vector<double> pyfractruth_indicator;
         pyfractruth_indicator.resize(100);
@@ -195,29 +108,29 @@ TEST(Indicators, CFracDiffIndicator){
 
         ArrayCopy<double>(pyfractruth_indicator.data(), pyfractruth, fsize - 1, 0, 100-(fsize-1));
 
-        EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.m_data, 100, 0.001);
+        EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.begin(), 100, 0.001);
  }
 
 TEST(Indicators, CTaMAIndicator){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
     int size = 8;
     int window = 2;
-    CTaMAIndicator cta_MA(window, 0);	 // simple MA
-    cta_MA.SetSize(10);
+    CTaMAIndicator cta_MA;
+    cta_MA.Init(window, 0);	 // simple MA
 
     // partial calls until total array calculated
     double a[] = { 1 };
     double b[] = { 1 };
     double c[] = { 2, 3, 4, 5, 5 };
     double d[] = { 3, 1 };
-    cta_MA.Refresh(a, 0, 1);
-    cta_MA.Refresh(b, 0, 1);
-    cta_MA.Refresh(c, 0, 5);
-    cta_MA.Refresh(d, 0, 2);
+    cta_MA.Refresh(a, 1);
+    cta_MA.Refresh(b, 1);
+    cta_MA.Refresh(c, 5);
+    cta_MA.Refresh(d, 2);
 
     std::vector<double> ta_truth = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.m_data, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.begin(), 9, 0.001);
 
 }
 
@@ -229,21 +142,22 @@ TEST(Indicators, CTaBBANDS){
 
     int size = 8;
     int window = 2;
-    CTaBBANDS cta_BBANDS(window, 2.5, 0, 10); // simple MA + 2.5 deviations
+    CTaBBANDS cta_BBANDS;
+    cta_BBANDS.Init(window, 2.5, 0); // simple MA + 2.5 deviations
 
     // partial calls until total array calculated
     double a[] = { 1 };
     double b[] = { 1 };
     double c[] = { 2, 3, 4, 5, 5 };
     double d[] = { 3, 1 };
-    cta_BBANDS.Refresh(a, 0, 1);
-    cta_BBANDS.Refresh(b, 0, 1);
-    cta_BBANDS.Refresh(c, 0, 5);
-    cta_BBANDS.Refresh(d, 0, 2);
+    cta_BBANDS.Refresh(a, 1);
+    cta_BBANDS.Refresh(b, 1);
+    cta_BBANDS.Refresh(c, 5);
+    cta_BBANDS.Refresh(d, 2);
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, cta_BBANDS.m_upper.m_data, 9, 0.001);
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_middle, cta_BBANDS.m_middle.m_data, 9, 0.001);
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.m_data, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, cta_BBANDS.m_upper.begin(), 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_middle, cta_BBANDS.m_middle.begin(), 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.begin(), 9, 0.001);
 }
 
 // Python code - base for test
@@ -261,19 +175,20 @@ TEST(Indicators, CBandSignal) {
                                         -1,   0,   0,   0,  1,   0,   0};
     int window = 5;
     int bfsize = 20;
-    CBandSignal cbsignal(window, 1.5, 2, bfsize); // 1.5 deviations + WeightedMA=2
+    CBandSignal cbsignal;
+    cbsignal.Init(window, 1.5, 2); // 1.5 deviations + WeightedMA=2
 
     // partial calls until total array calculated
     double a[] = { 1 };
     double b[] = { 1 };
     double c[] = { 1, 2, 5, 5, 5};
     double d[] = { 5, 1, 1, 1};
-    cbsignal.Refresh(a, 0, 1);
-    cbsignal.Refresh(b, 0, 1);
-    cbsignal.Refresh(c, 0, 5);
-    cbsignal.Refresh(d, 0, 4);
+    cbsignal.Refresh(a, 1);
+    cbsignal.Refresh(b, 1);
+    cbsignal.Refresh(c, 5);
+    cbsignal.Refresh(d, 4);
 
-    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.m_data, 11, 0.0001);
+    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.begin(), 11, 0.0001);
 }
 
 #include <iostream>

@@ -19,7 +19,7 @@ protected:
   void Init(int window){
       //m_window1 = window-1;
       m_window = window;
-      m_prev_data.resize(m_window-1);
+      m_prev_data.set_capacity(m_window-1);
       m_calculated = 0;
       m_nempty = 0;
   }
@@ -31,7 +31,7 @@ public:
 
     // re-calculate indicator values based on array of new data
     // where new data starts at start and has size count
-    bool Refresh(Type newdata[], int start, int count){
+    bool Refresh(Type newdata[], int count){
 
       m_calculated = 0;
       m_nempty = 0; 
@@ -45,36 +45,37 @@ public:
       if(nprev < m_window-1){
         if(nprev + count < m_window){ // cannot calculate 1 output
           // not enough data now, but insert on previous data
-          m_prev_data.addrange(newdata, start, count);
+          m_prev_data.addrange(newdata, count);
           // add dummy samples to mainting allignment with time and buffers
           m_nempty = count;
-          addempty(m_nempty);
+          AddEmpty(m_nempty);
           return false;
         }
         else { // now can calculate 1 or more outputs
           // insert the missing EMPTY_VALUES
           m_nempty = m_window - 1 - nprev;
-          addempty(m_nempty);
+          AddEmpty(m_nempty);
         }
       }
 
       // if exists previous data include its size for array of calculation      
       m_calculating.resize(nprev + count);
       // copy previous data if any
-      // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
-      ArrayCopy<Type>(m_calculating.data(), m_prev_data.m_data.data(), 0, 0, nprev);
+      std::copy(m_prev_data.begin(), m_prev_data.end(), m_calculating.begin());
       // copy in sequence new data
-      ArrayCopy<Type>(m_calculating.data(), newdata, nprev, start, count);
+      std::copy(newdata, newdata + count, m_calculating.begin() + nprev);
 
       m_calculated = Calculate(m_calculating.data(), nprev+count, m_calculating.data());
 
       AddRange(m_calculating.begin(), m_calculating.begin()+m_calculated);
 
       // copy the now previous data for the subsequent call
-      m_prev_data.AddRange(newdata, start, count);
+      m_prev_data.addrange(newdata, count);
 
       return true;
     }
+
+protected:
 
     // perform indicator calculation on indata
     // will only be called with enough samples
@@ -95,6 +96,8 @@ class CWindowIndicator : public buffer<double>, public IWindowIndicator<double>
 {
     
 public:
+
+    CWindowIndicator(void) { set_capacity(BUFFERSIZE); };
 
     void AddEmpty(int count) override {
         buffer<double>::addempty(count);
@@ -119,7 +122,10 @@ public:
 
 class CTaSTDDEV : public CWindowIndicator{
 public:
-    CTaSTDDEV(int window);
+
+    CTaSTDDEV(void) {};
+
+    void Init(int window);
 
     int Calculate(double indata[], int size, double outdata[]) override;
 };
@@ -133,7 +139,9 @@ protected:
     int m_tama_type;
 
 public:
-    CTaMAIndicator(int window, int tama_type);
+    CTaMAIndicator(void) {};
+
+    void Init(int window, int tama_type);
 
     int Calculate(double indata[], int size, double outdata[]) override;
 };
@@ -155,7 +163,9 @@ public:
     buffer<double> m_middle;
     buffer<double> m_down;
 
-    CTaBBANDS(int window, double devs, int ma_type, int size);
+    CTaBBANDS() {};
+
+    void Init(int window, double devs, int ma_type);
 
     void AddEmpty(int count) override;
 
@@ -164,8 +174,6 @@ public:
     void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) override;
 
     void Add(double value) override {}; // does nothing since this is tripple buffer
-
-    void SetSize(const int size);
 
     int Size();
 };
@@ -182,7 +190,9 @@ protected:
 
 public:
 
-    CFracDiffIndicator(int window, double dfraction, int size);
+    CFracDiffIndicator() { m_dfraction = 1;  };
+
+    void Init(int window, double dfraction);
 
     int Calculate(double indata[], int size, double outdata[]);
 
@@ -202,11 +212,13 @@ class CBandSignal : public buffer<double>
 {
 protected:
 
-    std::shared_ptr<CTaBBANDS> pbands;
+    CTaBBANDS bands;
 
 public:
 
-    CBandSignal(int window, double devs, int ma_type, int bfsize);
+    CBandSignal(){};
 
-    bool Refresh(double newdata[], int start, int count);
+    void Init(int window, double devs, int ma_type);
+
+    bool Refresh(double newdata[], int count);
 };

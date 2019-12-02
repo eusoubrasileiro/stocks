@@ -67,4 +67,5 @@ public:
 
     // return buffer index position
     int Search(unsigned long long uid);
+    int SearchStime(unsigned long long emsc);
 };

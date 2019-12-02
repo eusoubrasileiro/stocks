@@ -110,7 +110,7 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, unsigned long long uid) {
 //    return a.uid > uid;
 //}
 // then you can use 
-// return index on ring buffer for the uid
+// return index on ring buffer or -1 on not finding
 int MoneyBarBuffer::Search(unsigned long long uid)
 {
     auto iter = std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid);
@@ -125,6 +125,20 @@ int MoneyBarBuffer::Search(unsigned long long uid)
 // 1. does not repeat
 // 2. are sorted
 // above will get the index of the uid on the buffer of bars
+
+// find first money bar with start time bigger or equal than 
+inline bool cmpMoneyBarStime(const MoneyBar& a, unsigned long long smsc) {
+    return a.smsc < smsc;
+}
+
+// return index on ring buffer for 
+// for first money bar with start time bigger or equal than or -1 not finding
+int MoneyBarBuffer::SearchStime(unsigned long long smsc)
+{
+    auto iter = std::lower_bound(begin(), end(), smsc, cmpMoneyBarStime);
+    return (iter == end()) ? -1 : iter - begin();
+}
+
 
 
 //

@@ -55,7 +55,9 @@ buffer<XyPair> m_xypairs;
 // execution of positions and orders
 // max time to hold a position in miliseconds
 int64_t m_expire_time; 
-
+// operational window for expert since 00:00:00 
+double m_start_hour;
+double m_end_hour;
 
 // profit or stop loss calculation for training
 double m_ordersize;
@@ -370,13 +372,19 @@ XyPair LabelSignal(int sign, bsignal signal){
     // start time 
     int64_t start_time = m_bars[signal.bfidx].emsc;
     // current day
-    day = m_bars[signal.bfidx].wday;
+    tm time = m_bars[signal.bfidx].time;
+
+    day = time.tm_wday;
 
     // TODO:
     // missing ignore a signal if it is after
     // the operational window
     // to avoid contaminating model
     // with samples outside model
+    //if(!isInsideDay(m_bars[signal.bfidx].time))
+    //   return 
+    
+    
 
     quantity = roundVolume(m_ordersize / entryprice);
     // then jump forward to where the buy/sell really takes place
@@ -410,7 +418,7 @@ XyPair LabelSignal(int sign, bsignal signal){
         }
         // third barrier - time (expire-time or day-end)
         if(m_bars[i].emsc - start_time > m_expire_time ||
-            m_bars[i].wday != day){
+            m_bars[i].time.tm_wday != day){
             xy.y = 0; // expire position
             return xy;
         }

@@ -12,7 +12,6 @@ int MoneyBarBuffer::BeginNewBarsIdx() {
 
 MoneyBarBuffer::MoneyBarBuffer() {
     cuid = 0;
-    cwday = 0;
     m_count_money = 0; // count_money amount to form 1 money bar
     m_nnew = m_nticks = 0;
     m_pvs = m_vs = 0; // v. weighted price for this bar
@@ -50,25 +49,24 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
     ///////////////////////////
     if (tick.volume > 0) { // there was a deal        
         // control to not have bars with ticks of different days
-        cwday = timestampWDay(tick.time);
+        ctime = *gmtime(&tick.time);
         if (m_bar.nticks == 0) {// entry time for this bar
             m_bar.smsc = tick.time_msc;
-            m_bar.wday = cwday;
             m_bar.bidh = m_bar.bidl = tick.bid;
-            m_bar.askh = m_bar.askl = tick.ask;
+            m_bar.askh = m_bar.askl = tick.ask;            
         }
         else // just crossed to a new day
-        if(cwday != m_bar.wday){ 
+        if(ctime.tm_wday != m_bar.time.tm_wday){ 
             // clean up (ignore) previous data 
             // for starting a new bar
             m_bar.nticks = 0;
             m_bar.smsc = tick.time_msc;
-            m_bar.wday = cwday;
             m_count_money = 0;
             m_pvs = m_vs = 0;
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;
         }
+        m_bar.time = ctime;
         m_bar.nticks++;
         m_count_money += tick.volume_real * tick.last * m_point_value;        
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick
@@ -77,10 +75,10 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
             m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
             m_vs += tick.volume_real; // summing (volumes)
             m_bar.avgprice = m_pvs/m_vs;
-            m_bar.emsc = tick.time_msc; // exit time            
-            m_bar.uid = cuid++; 
-            times.add(m_bar.uid);
-            add(m_bar);            
+            m_bar.emsc = tick.time_msc; // exit time
+            m_bar.uid = cuid++;
+            uidtimes.add(m_bar.uid);
+            add(m_bar);
             m_pvs = m_vs = 0;
             m_bar.nticks = 0;
             m_count_money -= m_moneybarsize;

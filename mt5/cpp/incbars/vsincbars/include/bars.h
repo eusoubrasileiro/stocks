@@ -1,7 +1,7 @@
 #pragma once
+#include <time.h>
 #include "buffers.h"
 #include "ticks.h"
-#include "time.h"
 
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
@@ -9,22 +9,23 @@
 // Money Bar solves many problems of analysis of stocks data
 // - stationarity first
 // - tick with no volume
+// times are (GMT)
 #pragma pack(push, 2)
 struct MoneyBar
 {
     // preço médio
     double       avgprice;  // volume weighted price from all ticks on this bar
     int          nticks;  // number ticks to form this bar
-    int64_t    smsc; // start time of this bar - first tick time 
-    int64_t    emsc; // end time of this bar - last tick time
+    tm time; // start time of this bar ... datetime tm struct 
+    int64_t    smsc; // start time of this bar - first tick time - timestamp ms
+    int64_t    emsc; // end time of this bar - last tick time - timestamp ms   
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars
-    int wday; // day of week for this bar
     double askh;
     double askl; // high and lowest value ask during this bar
     double bidh;
-    double bidl; // high and lowest value bid during this bar
+    double bidl; // high and lowest value bid during this bar    
 };
 #pragma pack(pop)
 
@@ -45,14 +46,14 @@ protected:
     // will never have in any scenary this ammount of money bars so rest safe
     // there is be no problems on binary search for money bars
     uint64_t cuid;
-    // current week day for the bar being formed
+    // current tm time the bar being formed
     // if a day is crossed the data for this bar is ignored
-    int cwday;        
+    tm ctime;
 
 public:
     int m_nnew; // number of bars nnew on last call    
     double new_avgprices[BUFFERSIZE];
-    buffer<uint64_t> times;
+    buffer<uint64_t> uidtimes;
 
     MoneyBarBuffer();
 

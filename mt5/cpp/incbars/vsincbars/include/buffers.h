@@ -2,6 +2,7 @@
 #ifndef BUFFERS_H
 #define BUFFERS_H
 
+#include <stdint.h>
 #include <float.h>
 #include <vector>
 #include <memory>

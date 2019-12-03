@@ -15,12 +15,16 @@ struct MoneyBar
     // preço médio
     double       avgprice;  // volume weighted price from all ticks on this bar
     int          nticks;  // number ticks to form this bar
-    long long    smsc; // start time of this bar - first tick time 
-    long long    emsc; // end time of this bar - last tick time
+    int64_t    smsc; // start time of this bar - first tick time 
+    int64_t    emsc; // end time of this bar - last tick time
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
-    unsigned long long uid; // emsc and smsc might repeat on different bars
+    uint64_t uid; // emsc and smsc might repeat on different bars
     int wday; // day of week for this bar
+    double askh;
+    double askl; // high and lowest value ask during this bar
+    double bidh;
+    double bidl; // high and lowest value bid during this bar
 };
 #pragma pack(pop)
 
@@ -40,14 +44,15 @@ protected:
     // max size is 18,446,744,073,709,551,615 == 2^64-1
     // will never have in any scenary this ammount of money bars so rest safe
     // there is be no problems on binary search for money bars
-    unsigned long long cuid; 
+    uint64_t cuid;
     // current week day for the bar being formed
     // if a day is crossed the data for this bar is ignored
-    int cwday;    
+    int cwday;        
 
 public:
     int m_nnew; // number of bars nnew on last call    
     double new_avgprices[BUFFERSIZE];
+    buffer<uint64_t> times;
 
     MoneyBarBuffer();
 
@@ -66,6 +71,6 @@ public:
     void RefreshArrays();
 
     // return buffer index position
-    int Search(unsigned long long uid);
-    int SearchStime(unsigned long long emsc);
+    int Search(uint64_t uid);
+    int SearchStime(uint64_t emsc);
 };

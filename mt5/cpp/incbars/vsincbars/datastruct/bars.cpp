@@ -36,12 +36,26 @@ void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize
 // return number created
 int MoneyBarBuffer::AddTick(MqlTick tick) {
     m_nnew = 0;
+    // get high and low bid-ask 
+    if (tick.ask > m_bar.askh)
+        m_bar.askh = tick.ask;
+    else
+        if (tick.ask < m_bar.askl)
+            m_bar.askl = tick.ask;
+    if (tick.bid > m_bar.bidh)
+        m_bar.bidh = tick.bid;
+    else
+        if (tick.bid < m_bar.bidl)
+            m_bar.bidl = tick.bid;
+    ///////////////////////////
     if (tick.volume > 0) { // there was a deal        
         // control to not have bars with ticks of different days
         cwday = timestampWDay(tick.time);
         if (m_bar.nticks == 0) {// entry time for this bar
             m_bar.smsc = tick.time_msc;
             m_bar.wday = cwday;
+            m_bar.bidh = m_bar.bidl = tick.bid;
+            m_bar.askh = m_bar.askl = tick.ask;
         }
         else // just crossed to a new day
         if(cwday != m_bar.wday){ 
@@ -52,6 +66,8 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.wday = cwday;
             m_count_money = 0;
             m_pvs = m_vs = 0;
+            m_bar.bidh = m_bar.bidl = tick.bid;
+            m_bar.askh = m_bar.askl = tick.ask;
         }
         m_bar.nticks++;
         m_count_money += tick.volume_real * tick.last * m_point_value;        
@@ -61,11 +77,11 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
             m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
             m_vs += tick.volume_real; // summing (volumes)
             m_bar.avgprice = m_pvs/m_vs;
-            m_bar.emsc = tick.time_msc; // exit time
+            m_bar.emsc = tick.time_msc; // exit time            
             m_bar.uid = cuid++; 
-            add(m_bar);
+            times.add(m_bar.uid);
+            add(m_bar);            
             m_pvs = m_vs = 0;
-            m_bar.emsc = m_bar.smsc = 0;
             m_bar.nticks = 0;
             m_count_money -= m_moneybarsize;
             m_nnew++;
@@ -102,7 +118,7 @@ int MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
 //}
 // we will use this comparator
 // compare a MoneyBar's to a uid to see if it comes before it or not
-inline bool cmpMoneyBarSmallUid(const MoneyBar& a, unsigned long long uid) {
+inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
     return a.uid < uid;
 }
 // or if it comes after that uid
@@ -111,7 +127,7 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, unsigned long long uid) {
 //}
 // then you can use 
 // return index on ring buffer or -1 on not finding
-int MoneyBarBuffer::Search(unsigned long long uid)
+int MoneyBarBuffer::Search(uint64_t uid)
 {
     auto iter = std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid);
     return (iter == end()) ? -1 : iter - begin();
@@ -127,13 +143,13 @@ int MoneyBarBuffer::Search(unsigned long long uid)
 // above will get the index of the uid on the buffer of bars
 
 // find first money bar with start time bigger or equal than 
-inline bool cmpMoneyBarStime(const MoneyBar& a, unsigned long long smsc) {
+inline bool cmpMoneyBarStime(const MoneyBar& a, uint64_t smsc) {
     return a.smsc < smsc;
 }
 
 // return index on ring buffer for 
 // for first money bar with start time bigger or equal than or -1 not finding
-int MoneyBarBuffer::SearchStime(unsigned long long smsc)
+int MoneyBarBuffer::SearchStime(uint64_t smsc)
 {
     auto iter = std::lower_bound(begin(), end(), smsc, cmpMoneyBarStime);
     return (iter == end()) ? -1 : iter - begin();

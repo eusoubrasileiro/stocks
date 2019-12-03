@@ -41,6 +41,8 @@ std::vector<CBandSignal> m_rbandsgs;
 std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
 int m_last_raw_signal_index; // related to m_bars buffer on refresh()
 
+// labelling
+
 // features and training vectors
 // array of buffers for each signal feature
 int m_nsignal_features;
@@ -49,7 +51,12 @@ int m_ntraining;
 int m_xtrain_dim; // dimension of x train vector
 buffer<XyPair> m_xypairs;
 
+
 // execution of positions and orders
+// max time to hold a position in miliseconds
+int64_t m_expire_time; 
+
+
 // profit or stop loss calculation for training
 double m_ordersize;
 double m_stoploss; // stop loss value in $$$ per order
@@ -88,7 +95,7 @@ double m_lotsmin;
 
 void Initialize(int nbands, int bbwindow,
     int batch_size, int ntraining,
-    double ordersize, double stoploss, double targetprofit,
+    double ordersize, double stoploss, double targetprofit, 
     double run_stoploss, double run_targetprofit, bool recursive,
     double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
     double lotsmin, int max_positions)
@@ -201,7 +208,6 @@ bool Refresh()
 
     // arrays of new data update them
     m_bars.RefreshArrays();
-
     // all bellow must be called to maintain alligment of buffers
     // by creating empty samples
 
@@ -211,9 +217,8 @@ bool Refresh()
     result = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;
 
     // update signals based on all bollinger bands
-    for (int j = 0; j < m_nbands; j++) {
-        result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;
-    }
+    for (int j = 0; j < m_nbands; j++)
+        result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;        
 
     return result;
 }
@@ -305,106 +310,110 @@ int lastRawSignals() {
     return m_last_raw_signal_index;
 }
 
+// save only signal ocurrences
+std::vector<bsignal> psignals(BUFFERSIZE);
+std::vector<bsignal> nsignals(BUFFERSIZE);
 
 // Create target class by analysing raw band signals
 // label or re-label or re-classify every signal on every band
-// that are different than 0 == those are already classified
-// and are useless since dont represent an entry
+// that are different than 0
 // those that went true receive 1 buy or -1 sell
 // those that wen bad receive 0 hold
 void LabelClasses() {
 
-    // targetprofit - profit to close open position
-    // amount - tick value * quantity bought in $$
-    double entryprice = 0;
-    int history = 0; // nothing, buy = 1, sell = -1
-    int day, previous_day = 0;
-    long time;
-    double profit = 0;
-    double quantity = 0; // number of contracts or stocks shares
-    // Starts from the past (begin of buffer of signals)
-    int i = 0, j;
+    psignals.clear(); // positive signals
+    nsignals.clear(); // negative signals
 
-    // current signal on some band being analysed
-    double cbsignal = 0; // nothing 0, buy = 1, sell = -1
-    // position of last signal analysed - time and band
-    int cbsignal_i, cbsignal_j;
-
-    // number of increases on a position - max is m_maxinc
-    int posinc = 0;
-
-    // go to the next band signal
-#define next_bsginal()  { \
-          cbsignal = 0;   \
-          i = cbsignal_i; \
-          j = cbsignal_j; \
-          posinc = 0;    }
-
-    for (; i < BufferTotal(); i++) { // from past to present
-    // time or bars
-
-        for (j = 0; j < m_nbands; j++) {
-
-            // getting fresh next signal
-            if (cbsignal == 0 && m_rbandsgs[j][i] != 0) {
-                cbsignal = m_rbandsgs[j][i];
-                cbsignal_i = i;
-                cbsignal_j = j;
-                posinc++;
-                // find first bar price considering the operational time delay
-                // first money bar with time >= expert delay included
-                int ibar = m_bars.SearchStime(m_bars[i].emsc + Expert_Delay);
-                entryprice = m_bars[ibar].avgprice;
-                m_xypairs.add( //  save this buy or sell 
-                    XyPair(cbsignal, m_bars[i].uid, j));
-                quantity = roundVolume(m_ordersize / entryprice);
-                // then jump forward to where the buy/sell really takes place
-                j = 0; i = ibar;
-            }
-            else // cbsignal is -1 or +1
-            {
-                // first take care of what you have
-                // calculate profit / stoploss to see if should close
-
-                // use avgprice or p10, 50, 90 or ohlc?
-                // or even ticks ask, bid ohlc? -- better
-                if (cbsignal > 0)
-                    profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
-                else
-                    profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profif
-
-                // also need to check expire by time / day -- tripple barrier
-                // first barrier
-                if (profit >= m_targetprofit) { // done classifying this signal
-                    next_bsginal();
-                }
-                // second barrier
-                else
-                    if (profit <= (-m_stoploss)) { // re-classify as hold
-                        m_xypairs.Last()->y = 0; // not a good deal, was better not to entry
-                        next_bsginal();
-                    }
-                // third barrier
-                    else
-                        // get more positions only if in same direction
-                        // and allowed
-                        if (m_rbandsgs[j]->At(i) == cbsignal && posinc < m_incmax) {
-                            posinc++;
-
-                            entryprice = m_bars->At(ibar).avgprice;
-                            m_xypairs.Add( //  save this buy or sell 
-                                XyPair(cbsignal, m_times->At(cbsignal_i), cbsignal_j));
-                            quantity = roundVolume(m_ordersize / entryprice);
-
-                        }
-
-            }
-
-
+    // get only signal ocurrences  - buffer index based
+    // entire buffer?
+    for (int j = 0; j < m_nbands; j++) {
+        for (int i = 0; i < BufferTotal(); i++) {
+            if (m_rbandsgs[j][i] > 0)  // need to know which uid/time for each sample added
+                psignals.push_back({ i, j });
+            else
+            if (m_rbandsgs[j][i] < 0)
+                nsignals.push_back({ i, j });
         }
+    }
+    
+    // now bags of signals saved
+    // label every signal
+    // Create Xy pair 
+    // buys
+    for (int i = 0; i < psignals.size(); i++)
+        m_xypairs.add(LabelSignal(1, psignals[i]));
+    // sells
+    for (int i = 0; i < nsignals.size(); i++)
+        m_xypairs.add(LabelSignal(-1, nsignals[i]));
+}
 
+XyPair LabelSignal(int sign, bsignal signal){
+    // targetprofit - profit to close open position
+    // amount - tick value * quantity bought in R$
+    int day = 0;    
+    double entryprice = 0;
+    double profit = 0;
+    double slprofit = 0; // high-low profit (based on ask-bid prices)
+    double quantity = 0; // number of contracts or stocks shares
 
+    // get 'real' price of execution of this signal
+    // first bar considering the operational time delay
+    // first bar with time >= expert delay included
+    int start_bfidx = m_bars.SearchStime(m_bars[signal.bfidx].emsc + Expert_Delay);
+    entryprice = m_bars[start_bfidx].avgprice;
+    
+    XyPair xy;
+    // save this buy or sell 
+    xy.tidx = m_bars[signal.bfidx].uid;
+    xy.y = signal.sign;
+    // for this position
+    // start time 
+    int64_t start_time = m_bars[signal.bfidx].emsc;
+    // current day
+    day = m_bars[signal.bfidx].wday;
 
+    // TODO:
+    // missing ignore a signal if it is after
+    // the operational window
+    // to avoid contaminating model
+    // with samples outside model
+
+    quantity = roundVolume(m_ordersize / entryprice);
+    // then jump forward to where the buy/sell really takes place
+    for (int i=start_bfidx; i<BufferTotal(); i++) { // from past to present
+
+        // see if should close:
+        // - calculate profit / stoploss 
+        // - closed by time
+
+        // use avgprice for TP 
+        // and high-low bid from ticks to stop_loss
+        // or even ticks ask, bid ohlc? -- better
+        if (sign > 0) { // long
+            profit = (m_bars[i].avgprice - entryprice) * quantity;// # avg. current profit
+            //  stop-loss profit - people buy at bid -  (low worst scenario)
+            slprofit = (m_bars[i].bidl - entryprice) * quantity;
+        }
+        else { // short
+            profit = (entryprice - m_bars[i].avgprice) * quantity;// # avg. current profif
+            //  stop-loss profit - people buy at bid - (high worst scenario)
+            slprofit = (entryprice - m_bars[i].bidh) * quantity;
+        }
+        // first barrier
+        if (profit >= m_targetprofit) // done classifying this signal
+            return xy;
+        // second barrier
+        else
+        if (slprofit <= (-m_stoploss)) { // re-classify as hold
+            xy.y = 0; // not a good deal, was better not to entry
+            return xy;
+        }
+        // third barrier - time (expire-time or day-end)
+        if(m_bars[i].emsc - start_time > m_expire_time ||
+            m_bars[i].wday != day){
+            xy.y = 0; // expire position
+            return xy;
+        }
     }
 }
     // CBuffer<XyPair> m_xypairs
@@ -638,3 +647,4 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
         pbuf[idx] = m_bars[idx];
     return *ppymbars;
 }
+

@@ -10,12 +10,12 @@ typedef long datetime;
 #pragma pack(push, 2)
 struct MqlTick
 {
-    long long    time;          // Time of the last prices update 1.
+    int64_t      time;          // Time of the last prices update 1.
     double       bid;           // Current Bid price
     double       ask;           // Current Ask price
     double       last;          // Price of the last deal (Last)
-    long long    volume;        // Volume for the current Last price
-    long long    time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
+    int64_t      volume;        // Volume for the current Last price
+    int64_t      time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
     int          flags;         // Tick flags
     double       volume_real;   // Volume for the current Last price with greater accuracy
 }; // sizeof is 60 bytes to avoid auto alignment to 64 by compiler #pragma pack(2) above is needed

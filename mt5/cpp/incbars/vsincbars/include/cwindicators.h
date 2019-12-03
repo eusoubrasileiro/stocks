@@ -215,8 +215,9 @@ protected:
     CTaBBANDS bands;
 
 public:
+    int m_calculated;
 
-    CBandSignal(){};
+    CBandSignal() { m_calculated = 0; };
 
     void Init(int window, double devs, int ma_type);
 

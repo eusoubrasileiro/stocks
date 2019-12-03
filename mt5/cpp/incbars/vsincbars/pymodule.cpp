@@ -33,7 +33,7 @@ PYBIND11_MODULE(incbars, m) {
 
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, smsc, emsc, uid, wday);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, smsc, emsc, uid, wday, askh, askl, bidh, bidl);
 
     // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
     ppymbars.reset(new py::array_t<MoneyBar>(BUFFERSIZE));

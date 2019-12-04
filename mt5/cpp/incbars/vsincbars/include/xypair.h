@@ -3,7 +3,8 @@
 
 #pragma pack(push, 2)
 struct bsignal { // bollinger band signal
-    int   bfidx; // when happened buffer index - temporary
+    uint64_t tidx; // when that happend - 'time' idx
+    int   bfidx; // when happened - buffer index - temporary
     int   band; // which band
     int   sign; // what sign
 };
@@ -13,9 +14,10 @@ struct bsignal { // bollinger band signal
 struct XyPair
 {
     uint64_t tidx; // when that happend - 'time' idx
-    // used to assembly X feature vector
-    int y; // y label value
-    double *X;
+    // used to assembly X feature vector    
+    bool isready = false;
+    std::vector<double> X;
+    int y = 0; // y label value
 };
 
 

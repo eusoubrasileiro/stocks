@@ -49,7 +49,7 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
     ///////////////////////////
     if (tick.volume > 0) { // there was a deal        
         // control to not have bars with ticks of different days
-        ctime = *gmtime(&tick.time);
+        gmtime_s(&ctime, &tick.time);
         if (m_bar.nticks == 0) {// entry time for this bar
             m_bar.smsc = tick.time_msc;
             m_bar.bidh = m_bar.bidl = tick.bid;

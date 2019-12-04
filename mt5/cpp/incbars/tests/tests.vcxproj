@@ -58,7 +58,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(SolutionDir)\incbars.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

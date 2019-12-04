@@ -32,8 +32,9 @@ PYBIND11_MODULE(incbars, m) {
     calledbyPython = true; // makes DllMain finalize_interpreter when DLL_PROCESS_DETACH
 
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
+    PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, smsc, emsc, uid, wday, askh, askl, bidh, bidl);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, time, smsc, emsc, uid, askh, askl, bidh, bidl);
 
     // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
     ppymbars.reset(new py::array_t<MoneyBar>(BUFFERSIZE));
@@ -42,11 +43,11 @@ PYBIND11_MODULE(incbars, m) {
     m.doc() = "incbars metatrader 5 expert - python api pybind11";
 
     m.def("initialize", &Initialize, "Initialize Increase Bands Expert",
-        py::arg("nbands"), py::arg("bbwindow"), py::arg("batch_size"),
-        py::arg("ntraining"), py::arg("ordersize"), py::arg("stoploss"),
-        py::arg("targetprofit"), py::arg("run_stoploss"), py::arg("run_targetprofit"),
-        py::arg("recursive"), py::arg("ticksize"), py::arg("tickvalue"), py::arg("moneybarsize"),
-        py::arg("min_lots"), py::arg("max_positions"));  
+        py::arg("nbands"), py::arg("bbwindow"), py::arg("batch_size"), py::arg("ntraining"), 
+        py::arg("start_hour"), py::arg("end_hour"),        
+        py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), 
+        py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
+        py::arg("moneybarsize"));  
 
     // signature with py::array_t for AddTicks
     m.def("addticks", &pyAddTicks, "send ticks to the expert", 
@@ -61,5 +62,14 @@ PYBIND11_MODULE(incbars, m) {
     m.def("newdataidx", &NewDataIdx, "start index on buffers of new bars after AddTicks > 0");
   
     m.def("moneybars", &pyGetMoneyBars, "get MoneyBar buffer as is");
+
+    m.def("createxvector", &CreateXFeatureVectors, "fill in xypairs creating x feature vector");
+
+    m.def("getxvectors", &pyGetXvectors, "get x feature vectors flattened");
+
+    m.def("getxdim", &pyGetXdim, "get x feature vector dimension");
+    
+    m.def("labelsignals", &LabelClasses, "label available b. band signals creating xypairs with y target class assigned");
+        
 }
 

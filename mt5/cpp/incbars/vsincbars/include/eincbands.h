@@ -22,6 +22,8 @@
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
+#include "pybind11/stl.h"
+#include "pybind11/functional.h"
 
 namespace py = pybind11;
 
@@ -37,12 +39,11 @@ namespace py = pybind11;
 // so will not use __stdcall specifier since Python is also x64
 // extern "C" guarantes no decoration is inserted on the function name
 
-DLL_EXPORT void Initialize(int nbands, int bbwindow,
-    int batch_size, int ntraining,
+DLL_EXPORT void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
+    double start_hour, double end_hour,
     double ordersize, double stoploss, double targetprofit,
-    double run_stoploss, double run_targetprofit, bool recursive,
-    double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
-    double lotsmin, int max_positions);
+    double lotsmin, double ticksize, double tickvalue,
+    double moneybar_size);
 
 // will be called every < 1 second
 // by Metatrader 5
@@ -63,6 +64,9 @@ DLL_EXPORT int BufferSize(); // size of all buffers
 DLL_EXPORT int BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT int NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
 
+// classes and features
+DLL_EXPORT void LabelClasses();
+DLL_EXPORT void CreateXFeatureVectors();
 
 #ifdef EXPORT
 
@@ -73,7 +77,6 @@ py::array_t<MoneyBar> pyGetMoneyBars();
 
 
 void verifyEntry();
-
 // verify a signal in any band
 // on the last m_added bars
 // get the latest signal
@@ -85,15 +88,13 @@ void verifyEntry();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
+int LabelSignal(bsignal signal, XyPair& xy);
+int CreateXFeatureVector(XyPair xypair);
+
+std::vector<double> pyGetXvectors();
+int pyGetXdim();
+
 // sklearn model
-// classes and features
-void LabelClasses();
-
-
-
-//void CreateXFeatureVectors(CBuffer<XyPair> xypairs);
-//bool CreateXFeatureVector(XyPair& xypair);
-
 //bool PythonTrainModel();
 //int  PythonPredict(XyPair& xypair);
 

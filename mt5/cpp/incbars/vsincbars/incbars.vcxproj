@@ -92,14 +92,12 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     <ClInclude Include="include\buffers.h" />
     <ClInclude Include="include\cwindicators.h" />
     <ClInclude Include="include\ticks.h" />
-    <ClInclude Include="include\time.h" />
     <ClInclude Include="include\xypair.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buffers.cpp" />
     <ClCompile Include="datastruct\bars.cpp" />
     <ClCompile Include="datastruct\ticks.cpp" />
-    <ClCompile Include="datastruct\time.cpp" />
     <ClCompile Include="indicators\csindicators.cpp" />
     <ClCompile Include="indicators\ctindicators.cpp" />
     <ClCompile Include="eincbands.cpp" />

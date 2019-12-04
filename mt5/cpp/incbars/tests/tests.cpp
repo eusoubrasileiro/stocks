@@ -2,6 +2,7 @@
 #include "..\vsincbars\include\buffers.h"
 #include "..\vsincbars\include\cwindicators.h"
 #include "..\vsincbars\include\ticks.h"
+#include "..\vsincbars\include\eincbands.h"
 #include <array>
 
 // Since I just want to test the code
@@ -194,27 +195,47 @@ TEST(Indicators, CBandSignal) {
 #include <iostream>
 #include <fstream>
 
-TEST(MoneyBarBuffer, AddTicks) {
+TEST(Expert, Initialize) {
+    Initialize(3, 15, 5, 100,
+        10.5, 16.5,
+        25000, 100, 10,
+        100, 0.01, 0.01,
+        100e4); // 1MM BRL to form 1 money bar
+}
+
+TEST(Expert, AddTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
     // calculate number of ticks on file
-    fh.open("npticks.bin", std::fstream::in | std::fstream::binary);
+    fh.open("D:\\MetaTrader 5\\npticks.bin", std::fstream::in | std::fstream::binary);
     begin = fh.tellg();
     fh.seekg(0, std::ios::end);
     end = fh.tellg();
     long nticks= (end- begin)/sizeof(MqlTick);
     fh.seekg(0, std::ios::beg);
 
-    MqlTick* cstyle;
-    cstyle = new MqlTick[nticks];
-    fh.read((char*) cstyle, end);
-    std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
+    MqlTick* cstyle_ticks;
+    cstyle_ticks = new MqlTick[nticks];
+    fh.read((char*)cstyle_ticks, end);
+    //std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
 
-    delete[] cstyle;
+    AddTicks(cstyle_ticks, nticks);
 
-
+    delete[] cstyle_ticks;
 }
+
+
+
+TEST(Expert, Refresh){    
+    Refresh();
+}
+
+
+TEST(Expert, LabelClasses) {
+    LabelClasses();
+}
+
 
 typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);
 typedef int(__stdcall* funcpyPredictwModel)(double*, int, char*, int);

@@ -17,13 +17,8 @@
 //std::shared_ptr<CCBufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
 
 // All Buffer-Derived classes bellow have indexes alligned
-// except for CObjectBuffer<XyPair>
 MoneyBarBuffer m_bars; // buffer of money bars base for everything
-
 std::vector<double> m_mlast; // moneybar.last values of last added money bars
-//MqlDateTime m_mqldt_now;
-//MqlDateTime m_last_time; // last time after refresh
-
 double m_moneybar_size; // R$ to form 1 money bar
 
 // bollinger bands configuration
@@ -41,7 +36,11 @@ std::vector<CBandSignal> m_rbandsgs;
 std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
 int m_last_raw_signal_index; // related to m_bars buffer on refresh()
 
-// labelling
+// storage of signals
+// save only signal ocurrences
+std::list<bsignal> m_bsignals; // signals
+// last uid of bar inserted on storage of signals
+int64_t m_bsignals_lastuid;
 
 // features and training vectors
 // array of buffers for each signal feature
@@ -51,35 +50,36 @@ int m_ntraining;
 int m_xtrain_dim; // dimension of x train vector
 buffer<XyPair> m_xypairs;
 
-
+// For labelling  
 // execution of positions and orders
 // max time to hold a position in miliseconds
 int64_t m_expire_time; 
 // operational window for expert since 00:00:00 
 double m_start_hour;
 double m_end_hour;
-
+// round price minimum volume of symbol 100's stocks 1 for future contracts
+double m_lotsmin;
+// LotsMin same as SYMBOL_VOLUME_MIN
+#define roundVolume(vol) int(vol/m_lotsmin)*m_lotsmin
 // profit or stop loss calculation for training
 double m_ordersize;
 double m_stoploss; // stop loss value in $$$ per order
 double m_targetprofit; //targetprofit in $$$ per order
-// profit or stop loss calculation for execution
-double m_run_stoploss; // stop loss value in $$$ per order
-double m_run_targetprofit; //targetprofit in $$$ per order
+
 // max number of orders
 // position being a execution of one order or increment
 // on the same direction
 // number of maximum 'positions'
-int m_max_positions; // maximum number of 'positions'
-int m_last_positions; // last number of 'positions'
-double m_last_volume; // last volume + (buy) or - (sell)
-double m_volume; // current volume of open or not positions
+//int m_max_positions; // maximum number of 'positions'
+//int m_last_positions; // last number of 'positions'
+//double m_last_volume; // last volume + (buy) or - (sell)
+//double m_volume; // current volume of open or not positions
 
 // max number of increases on a position
-int m_incmax = 3;
+//int m_incmax = 3;
 
 // python sklearn model trainning
-bool m_recursive;
+//bool m_recursive;
 //sklearnModel m_model;
 unsigned int m_model_refresh; // how frequent to update the model
 // (in number of new training samples)
@@ -87,21 +87,17 @@ unsigned int m_model_refresh; // how frequent to update the model
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 
-// For labelling using 
-
-// round price minimum volume of symbol 100's stocks 1 for future contracts
-double m_lotsmin;
-// LotsMin same as SYMBOL_VOLUME_MIN
-#define roundVolume(vol) int(vol/m_lotsmin)*m_lotsmin
 
 
-void Initialize(int nbands, int bbwindow,
-    int batch_size, int ntraining,
-    double ordersize, double stoploss, double targetprofit, 
-    double run_stoploss, double run_targetprofit, bool recursive,
-    double ticksize, double tickvalue, double moneybar_size, // R$ to form 1 money bar
-    double lotsmin, int max_positions)
+
+void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
+    double start_hour, double end_hour,
+    double ordersize, double stoploss, double targetprofit,
+    double lotsmin, double ticksize, double tickvalue, 
+    double moneybar_size) // R$ to form 1 money bar
 {
+    m_start_hour = start_hour;
+    m_end_hour = end_hour;
     m_lotsmin = lotsmin;
     m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;
@@ -109,14 +105,10 @@ void Initialize(int nbands, int bbwindow,
     m_xypair_count = 0;
     m_model_last_training = 0;
     m_last_raw_signal_index = -1;
-    m_last_positions = 0; // number of 'positions' openned
-    m_last_volume = 0;
-    m_volume = 0;
     // set safe pointers to new objects
     m_bars.Init(tickvalue,
         ticksize, m_moneybar_size);
 
-    m_recursive = recursive;
     m_nbands = nbands;
     m_bbwindow = bbwindow;
     // ordersize is in $$
@@ -124,9 +116,6 @@ void Initialize(int nbands, int bbwindow,
     // for training
     m_stoploss = stoploss; // value in $$$
     m_targetprofit = targetprofit;
-    // for execution
-    m_run_stoploss = run_stoploss; // value in $$$
-    m_run_targetprofit = run_stoploss;
     // training
     m_batch_size = batch_size;
     m_ntraining = ntraining; // minimum number of X, y training pairs
@@ -146,7 +135,9 @@ void Initialize(int nbands, int bbwindow,
     //m_model_refresh = model_refresh;
 
     m_rbandsgs.resize(m_nbands); // one for each band
-    m_last_raw_signal.resize(m_nbands);
+    m_last_raw_signal.resize(m_nbands); // resize and fill in (but we dont care will be overwritten)
+
+    m_bsignals_lastuid = 0;
 
     // void CreateBBands()
     // raw signal storage + ctalib bbands
@@ -235,7 +226,7 @@ void verifyEntry() {
         int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
         // only when needed
-        //LabelClasses();
+        LabelClasses();
         //CreateXFeatureVectors(m_xypairs);
         // add number of xypairs added (cannot decrease)
         m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
@@ -312,44 +303,51 @@ int lastRawSignals() {
     return m_last_raw_signal_index;
 }
 
-// save only signal ocurrences
-std::vector<bsignal> psignals(BUFFERSIZE);
-std::vector<bsignal> nsignals(BUFFERSIZE);
+
 
 // Create target class by analysing raw band signals
 // label or re-label or re-classify every signal on every band
 // that are different than 0
 // those that went true receive 1 buy or -1 sell
-// those that wen bad receive 0 hold
-void LabelClasses() {
+// those that went bad receive 0 hold
+void LabelClasses(){
 
-    psignals.clear(); // positive signals
-    nsignals.clear(); // negative signals
+    // find where we stopped adding signals
+    int tstart = (m_bsignals_lastuid != 0) ? m_bars.Search(m_bsignals_lastuid) : 0;
 
-    // get only signal ocurrences  - buffer index based
-    // entire buffer?
+    // store signals
+    // only signal ocurrences    
     for (int j = 0; j < m_nbands; j++) {
-        for (int i = 0; i < BufferTotal(); i++) {
-            if (m_rbandsgs[j][i] > 0)  // need to know which uid/time for each sample added
-                psignals.push_back({ i, j });
-            else
-            if (m_rbandsgs[j][i] < 0)
-                nsignals.push_back({ i, j });
-        }
+        for (int i = tstart; i < BufferTotal(); i++)
+            if (m_rbandsgs[j][i] != 0) {  // need to know which uid/time for each sample added
+                m_bsignals.push_back({ m_bars.uidtimes[i], i, j });
+            }
     }
-    
+    m_bsignals_lastuid = m_bars.uidtimes[BufferTotal()-1];
+
     // now bags of signals saved
     // label every signal
     // Create Xy pair 
-    // buys
-    for (int i = 0; i < psignals.size(); i++)
-        m_xypairs.add(LabelSignal(1, psignals[i]));
-    // sells
-    for (int i = 0; i < nsignals.size(); i++)
-        m_xypairs.add(LabelSignal(-1, nsignals[i]));
+    XyPair xy;
+    int res;
+    auto iter = m_bsignals.begin();
+    while(iter != m_bsignals.end()){    
+        res = LabelSignal(*iter, xy); iter++;
+        if (res == -2) // not enough data to start labelling - stop everything
+            break;
+        else
+        if (res == 1) {
+            m_bsignals.erase(iter); // done with this
+            m_xypairs.add(xy);
+        }
+        else
+        if (res == -3) { // outside the operational window
+            m_bsignals.erase(iter); // remove this
+        }
+    }
 }
 
-XyPair LabelSignal(int sign, bsignal signal){
+int LabelSignal(bsignal signal, XyPair &xy){
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in R$
     int day = 0;    
@@ -362,9 +360,12 @@ XyPair LabelSignal(int sign, bsignal signal){
     // first bar considering the operational time delay
     // first bar with time >= expert delay included
     int start_bfidx = m_bars.SearchStime(m_bars[signal.bfidx].emsc + Expert_Delay);
+
+    if (start_bfidx == -1) // cannot start labelling
+        return -2; //  did not find bar, not enough data in future
+
     entryprice = m_bars[start_bfidx].avgprice;
     
-    XyPair xy;
     // save this buy or sell 
     xy.tidx = m_bars[signal.bfidx].uid;
     xy.y = signal.sign;
@@ -374,20 +375,19 @@ XyPair LabelSignal(int sign, bsignal signal){
     // current day
     tm time = m_bars[signal.bfidx].time;
 
-    day = time.tm_wday;
+    day = time.tm_mday; // day-of-month identifier for crossing-day
 
-    // TODO:
-    // missing ignore a signal if it is after
+    // ignore a signal if it is after
     // the operational window
     // to avoid contaminating model
-    // with samples outside model
-    //if(!isInsideDay(m_bars[signal.bfidx].time))
-    //   return 
-    
-    
+
+    // current hour decimal
+    double chour = (time.tm_sec / 3600. + time.tm_min / 60.) + time.tm_hour;
+    if (chour > m_end_hour || chour < m_start_hour)
+        return -3;
 
     quantity = roundVolume(m_ordersize / entryprice);
-    // then jump forward to where the buy/sell really takes place
+    // starting jump forward to where the buy/sell really takes place
     for (int i=start_bfidx; i<BufferTotal(); i++) { // from past to present
 
         // see if should close:
@@ -397,7 +397,7 @@ XyPair LabelSignal(int sign, bsignal signal){
         // use avgprice for TP 
         // and high-low bid from ticks to stop_loss
         // or even ticks ask, bid ohlc? -- better
-        if (sign > 0) { // long
+        if (signal.sign > 0) { // long
             profit = (m_bars[i].avgprice - entryprice) * quantity;// # avg. current profit
             //  stop-loss profit - people buy at bid -  (low worst scenario)
             slprofit = (m_bars[i].bidl - entryprice) * quantity;
@@ -409,228 +409,88 @@ XyPair LabelSignal(int sign, bsignal signal){
         }
         // first barrier
         if (profit >= m_targetprofit) // done classifying this signal
-            return xy;
+            return 1;
         // second barrier
         else
         if (slprofit <= (-m_stoploss)) { // re-classify as hold
             xy.y = 0; // not a good deal, was better not to entry
-            return xy;
+            return 1;
         }
         // third barrier - time (expire-time or day-end)
         if(m_bars[i].emsc - start_time > m_expire_time ||
-            m_bars[i].time.tm_wday != day){
-            xy.y = 0; // expire position
-            return xy;
+            m_bars[i].time.tm_mday != day){
+            xy.y = 0; // expired position
+            return 1;
         }
     }
+    // if reaches here did not close the position
+    // did not expire
+    // did not stop-loss
+    // not enough data to classify this sample yet
+    return -1;
 }
-    // CBuffer<XyPair> m_xypairs
-
-    //// OR
-    //// For not adding again the same signal
-    //// Starts where it stop the last time
-    //if (xypairs.Count() > 0) {
-    //    int last_buff_index = m_times->QuickSearch(xypairs.GetData(0).time);
-    //    if (last_buff_index < 0) {
-    //        //Print("This was not implemented and should never happen!");
-    //        return;
-    //    }
-    //    // next signal after this!
-    //    i = last_buff_index + 1;
-    //}
-    //for (; i < BufferTotal(); i++) { // from past to present
-    //    time = m_times->At(i).ms;
-    //    day = m_times->At(i).day; // unique day identifier
-    //    if(day != previous_day){ // a new day reset everything
-    //        if (history == 1 || history == -1) {
-    //            // the previous batch o/f signals will not be saved. I don't want to train with that
-    //            xypairs.RemoveLast();
-    //        }
-    //        entryprice = 0;
-    //        history = 0; //# 0= nothing, buy = 1, sell = -1
-    //        previous_day = day;
-    //    }
-    //    // first take care of what you have
-    //    // calculate profit / stoploss to see if should close
-    //    if(history != 0){
-    //        if(history == 1){ // it was a buy
-    //          profit = (m_bars->At(i).avgprice - entryprice) * quantity;// # current profit
-    //          if(profit >= m_targetprofit){
-    //              // xypairs.Last().y = 1 // a real (buy) index class nothing to do
-    //              history = 0;
-    //          }
-    //          else
-    //          if (profit <= (-m_stoploss)){ // reclassify the previous buy as hold
-    //              xypairs.Last().y = 0; // not a good deal, was better not to entry
-    //              history = 0;
-    //          }
-    //       }
-    //       else{ // a sell -1
-    //         profit = (entryprice - m_bars->At(i).avgprice) * quantity;// # current profit
-    //         if (profit >= m_targetprofit) {
-    //             // xypairs.Last().y = -1 // a real (sell) index class nothing to do
-    //             history = 0;
-    //         }
-    //         else
-    //         if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
-    //             xypairs.Last().y = 0; // not a good deal, was better not to entry
-    //             history = 0;
-    //         }
-    //      }
-    //   }
-    //   // get more positions or open a new one
-    //   else {
-    //     if (bandsg[i] == 1) {
-    //         switch (history) {
-    //           case 0:
-    //               // new buy signal
-    //               entryprice = m_bars[i].last; // last negotiated price
-    //               xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-    //               quantity = roundVolume(m_ordersize / entryprice);
-    //               history = 1;
-    //           break;
-    //           case 1:
-    //               // another buy in sequence
-    //               // maybe it is dancing around this band boundary
-    //               entryprice = m_bars[i].last;
-    //               xypairs.Add(new XyPair(1, m_times[i], band_number)); //  save this buy
-    //               quantity = roundVolume(m_ordersize / entryprice);
-    //               history = 1;
-    //           break;
-    //           case -1;
-    //               // a sell after a buy with no profit
-    //               // the previous batch of signals will be saved with this class (hold)
-    //               xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
-    //           break;
-    //         }
-    //   }
-    //    // 4 main cases
-    //    // signal  1 - history = 0 || != 0  (total 1/0, 1/-1,, 1/1) = 3
-    //    // signal -1 - history = 0 || != 0  (total -1/0, -1/1,, -1/-1) = 3
-    //    // signal  0 - history = 1          (total 0/1) = 1
-    //    // signal  0 - history = -1         (total 0/-1) = 1
-    //    // useless : signal 0 - history = 0 - total total 3x3 = 9
-
-    //    else
-    //        if (bandsg[i] == -1) {
-    //            if (history == 0) {
-    //                entryprice = m_bars[i].last;
-    //                xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this sell
-    //            }
-    //            else { // another sell in sequence
-    //                 // or after a buy  in the same minute
-    //                // the previous batch of signals will be saved with this class (hold)
-    //                xypairs.Last().y = 0; // reclassify the previous buy/sell as hold
-    //                // new buy sell
-    //                // maybe we can have profit here
-    //                // in a fast movement
-    //                entryprice = m_bars[i].last;
-    //                xypairs.Add(new XyPair(-1, m_times[i], band_number)); //  save this buy
-    //            }
-    //            quantity = roundVolume(m_ordersize / entryprice);
-    //            history = -1;
-    //        }
-    //        else // signal 0 history 1
-    //            if (history == 1) { // equivalent to + && bandsg[i] == 0
-    //                profit = (m_bars[i].last - entryprice) * quantity;// # current profit
-    //                if (profit >= m_targetprofit) {
-    //                    // xypairs.Last().y = 0 // a real (buy) index class nothing to do
-    //                    history = 0;
-    //                }
-    //                else
-    //                    if (profit <= (-m_stoploss)) { // reclassify the previous buy as hold
-    //                        xypairs.Last().y = 0; // not a good deal, was better not to entry
-    //                        history = 0;
-    //                    }
-    //            }
-    //            else // signal 0 history -1
-    //                if (history == -1) { // equivalent to + && bandsg[i] == 0
-    //                    profit = (entryprice - m_bars[i].last) * quantity;// # current profit
-    //                    if (profit >= m_targetprofit) {
-    //                        // xypairs.Last().y = 0 // a real (sell) index class nothing to do
-    //                        history = 0;
-    //                    }
-    //                    else
-    //                        if (profit <= (-m_stoploss)) { // reclassify the previous sell as hold
-    //                            xypairs.Last().y = 0; // not a good deal, was better not to entry
-    //                            history = 0;
-    //                        }
-    //                }
-    //    // else signal 0 history 0
-    //}
-    ////# reached the end of data buffer did not close one buy previouly open
-    //if (history == 1 || history == -1) // don't know about the future cannot train with this guy
-    //    xypairs.RemoveLast();
-//}
 
 
+void CreateXFeatureVectors()
+{ // using the pre-filled buffer of y target classes
+  // assembly the X array of features for it
+  // from more recent to oldest
+  // if it is already filled (ready) stop
+    for (auto iter = m_xypairs.begin(); iter != m_xypairs.end(); iter++) {
+        // no need to assembly any other if this is already ready
+        // olders will also be ready
+        if(CreateXFeatureVector(*iter) == -1) // old signal or cannot create
+            m_xypairs.erase(iter);
+    }
+}
 
-//void CreateXFeatureVectors(CObjectBuffer<XyPair>& xypairs)
-//{ // using the pre-filled buffer of y target classes
-//  // assembly the X array of features for it
-//  // from more recent to oldest
-//  // if it is already filled (ready) stop
-//    for (int i = 0; i < xypairs.Count(); i++) {
-//        // no need to assembly any other if this is already ready
-//        // olders will also be ready
-//        if (!CreateXFeatureVector(xypairs.GetData(i)))
-//            xypairs.RemoveData(i);
-//    }
-//
-//}
-//
-//bool CreateXFeatureVector(XyPair& xypair)
-//{
-//    if (xypair.isready) // no need to assembly
-//        return true;
-//
-//    // find xypair.time current position on all buffers (have same size)
-//    // time is allways sorted
-//    int bufi = m_times.QuickSearch(xypair.time);
-//
-//    // cannot assembly X feature train with such an old signal not in buffer anymore
-//    // such should be removed ...
-//    if (bufi < 0) { // not found -1 : this should never happen?
-//        Print("ERROR: This should never happen!");
-//        return false;
-//    }
-//    // not enough : bands raw signal, features in time to form a batch
-//    // cannot create a X feature vector and will never will
-//    // remove it
-//    if (bufi - m_batch_size < 0)
-//        return false;
-//
-//    if (ArraySize(xypair.X) < m_xtrain_dim)
-//        xypair.Resize(m_xtrain_dim);
-//
-//    int xifeature = 0;
-//    // something like
-//    // double[Expert_BufferSize][nsignal_features] would be awesome
-//    // easier to copy to X also to create cross-features
-//    // using a constant on the second dimension is possible
-//    //bufi = BufferTotal()-1-bufi;
-//    bufi -= m_batch_size;
-//    int batch_end_idx = bufi + m_batch_size;
-//    for (int timeidx = bufi; timeidx < batch_end_idx; timeidx++) {
-//        // from past to present
-//        // features from band signals
-//        for (int i = 0; i < m_nbands; i++, xifeature++) {
-//            xypair.X[xifeature] = m_rbandsgs[i][timeidx];
-//        }
-//        // fracdif feature
-//        xypair.X[xifeature++] = m_fd_mbarp[timeidx];
-//        // some indicators might contain EMPTY_VALUE == DBL_MAX values
-//        // verified volumes with EMPTY VALUES but I suppose that also might happen
-//        // with others in this case better drop the training sample?
-//        // sklearn throws an exception because of that
-//        // anyhow that's not a problem for the code since the python exception
-//        // is catched behind the scenes and a valid model will only be available
-//        // once correct samples are available
-//    }
-//    xypair.isready = true;
-//    return true; // suceeded
-//}
-//
+int CreateXFeatureVector(XyPair xypair)
+{
+    if (xypair.isready) // no need to assembly
+        return 0;
+
+    // find xypair.time current position on all buffers (have same size)
+    // uidtime is allways sorted
+    int bufi = m_bars.Search(xypair.tidx);
+
+    // cannot assembly X feature train with such an old signal
+    //  not in buffer anymore - such should be removed ...
+    if (bufi < 0) 
+        return -1;
+    // not enough : bands raw signal, features in time to form a batch
+    // cannot create a X feature vector and will never will
+    // remove it
+    if (bufi - m_batch_size < 0)
+        return -1;
+
+    xypair.X.resize(m_xtrain_dim);
+
+    int xifeature = 0;
+    // something like
+    // double[Expert_BufferSize][nsignal_features] would be awesome
+    // easier to copy to X also to create cross-features
+    // using a constant on the second dimension is possible
+    //bufi = BufferTotal()-1-bufi;
+    bufi -= m_batch_size;
+    int batch_end_idx = bufi + m_batch_size;
+    for (int timeidx = bufi; timeidx < batch_end_idx; timeidx++) {
+        // from past to present
+        // features from band signals
+        for (int i = 0; i < m_nbands; i++, xifeature++) {
+            xypair.X[xifeature] = m_rbandsgs[i][timeidx];
+        }
+        // fracdif feature
+        xypair.X[xifeature++] = m_fd_mbarp[timeidx];
+        // some indicators might contain EMPTY_VALUE == DBL_MAX values
+        // sklearn throws an exception because of that
+        // anyhow that's not a problem for the code since the python exception
+        // is catched behind the scenes and a valid model will only be available
+        // once correct samples are available
+    }
+    xypair.isready = true;
+    return 1; // suceeded
+}
+
 
 
 
@@ -638,8 +498,6 @@ XyPair LabelSignal(int sign, bsignal signal){
 ///////////////// Python API //////////////////
 ///////////////////////////////////////////////
 
-
-extern py::array_t<MoneyBar> *pymbars;
 
 // or by Python
 int pyAddTicks(py::array_t<MqlTick> ticks)
@@ -655,4 +513,25 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
         pbuf[idx] = m_bars[idx];
     return *ppymbars;
 }
+
+std::vector<double> pyGetXvectors() {
+    // pybind11 automatically casts/converts it to numpy array
+    // needs "pybind11/stl.h"
+    std::vector<double> pyX(m_xypairs.size()* m_xtrain_dim);
+
+    size_t idx = 0;
+    for (; idx < m_xypairs.size(); idx++) {
+        if(m_xypairs[idx].isready)
+            std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(), 
+                pyX.begin()+idx*m_xtrain_dim);
+    }
+
+    pyX.resize(idx * m_xtrain_dim); // to ready vectors size
+    return pyX;
+}
+
+int pyGetXdim() {
+    return m_xtrain_dim;
+}
+
 

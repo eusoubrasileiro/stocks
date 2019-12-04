@@ -3,8 +3,7 @@
 
 #pragma pack(push, 2)
 struct bsignal { // bollinger band signal
-    uint64_t tidx; // when that happend - 'time' idx
-    int   bfidx; // when happened - buffer index - temporary
+    uint64_t tuidx; // when that happend - 'time' idx
     int   band; // which band
     int   sign; // what sign
 };

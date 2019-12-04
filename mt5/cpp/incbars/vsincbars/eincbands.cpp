@@ -178,7 +178,7 @@ void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
 
 // will be called every < 1 second
 //  Metatrader 5
-int AddTicks(const MqlTick* cticks, int size) {
+size_t AddTicks(const MqlTick* cticks, int size) {
 
     return m_bars.AddTicks(cticks, size);
 
@@ -189,10 +189,10 @@ int AddTicks(const MqlTick* cticks, int size) {
 // Same new bars will come for all indicators and else
 // All are updated after bars so that's the main
 // begin of new bar is also begin of new data on all buffers
-int BufferSize() { return m_bars.capacity(); }
-int BufferTotal() { return m_bars.size(); }
+size_t BufferSize() { return m_bars.capacity(); }
+size_t BufferTotal() { return m_bars.size(); }
 // start index on all buffers of new bars after AddTicks > 0
-int NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
+size_t NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
 
 // start index and count of new bars that just arrived
 bool Refresh()
@@ -212,6 +212,17 @@ bool Refresh()
     // update signals based on all bollinger bands
     for (int j = 0; j < m_nbands; j++)
         result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;        
+
+    if (result) { 
+        // valid samples calculated
+        // store only signal ocurrences        
+        for (int j = 0; j < m_nbands; j++){
+            int i = BufferTotal() - m_rbandsgs[0].m_calculated;
+            for(;i < BufferTotal(); i++)
+                if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
+                    m_bsignals.push_back({ m_bars.uidtimes[i], j, (int) m_rbandsgs[j][i]});
+        }
+    }
 
     return result;
 }
@@ -311,28 +322,20 @@ int lastRawSignals() {
 // those that went true receive 1 buy or -1 sell
 // those that went bad receive 0 hold
 void LabelClasses(){
-
-    // find where we stopped adding signals
-    int tstart = (m_bsignals_lastuid != 0) ? m_bars.Search(m_bsignals_lastuid) : 0;
-
-    // store signals
-    // only signal ocurrences    
-    for (int j = 0; j < m_nbands; j++) {
-        for (int i = tstart; i < BufferTotal(); i++)
-            if (m_rbandsgs[j][i] != 0) {  // need to know which uid/time for each sample added
-                m_bsignals.push_back({ m_bars.uidtimes[i], i, j });
-            }
-    }
-    m_bsignals_lastuid = m_bars.uidtimes[BufferTotal()-1];
-
-    // now bags of signals saved
+    // w. bags of signals saved
     // label every signal
-    // Create Xy pair 
+    // Creating Xy pairs
     XyPair xy;
     int res;
     auto iter = m_bsignals.begin();
+    uint64_t bfidx_ct = 0; 
+
+    // correction of position of signals to current buffer index position
+    if (iter != m_bsignals.end()) // correction between uid's and current buffer index
+        bfidx_ct = iter->tuidx - m_bars.Search(iter->tuidx);  
+
     while(iter != m_bsignals.end()){    
-        res = LabelSignal(*iter, xy); iter++;
+        res = LabelSignal(*iter, iter->tuidx - bfidx_ct, xy); iter++;
         if (res == -2) // not enough data to start labelling - stop everything
             break;
         else
@@ -347,7 +350,7 @@ void LabelClasses(){
     }
 }
 
-int LabelSignal(bsignal signal, XyPair &xy){
+int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy){
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in R$
     int day = 0;    
@@ -359,7 +362,7 @@ int LabelSignal(bsignal signal, XyPair &xy){
     // get 'real' price of execution of this signal
     // first bar considering the operational time delay
     // first bar with time >= expert delay included
-    int start_bfidx = m_bars.SearchStime(m_bars[signal.bfidx].emsc + Expert_Delay);
+    int start_bfidx = m_bars.SearchStime(m_bars[bfidx].emsc + Expert_Delay);
 
     if (start_bfidx == -1) // cannot start labelling
         return -2; //  did not find bar, not enough data in future
@@ -367,13 +370,13 @@ int LabelSignal(bsignal signal, XyPair &xy){
     entryprice = m_bars[start_bfidx].avgprice;
     
     // save this buy or sell 
-    xy.tidx = m_bars[signal.bfidx].uid;
+    xy.tidx = m_bars[bfidx].uid;
     xy.y = signal.sign;
     // for this position
     // start time 
-    int64_t start_time = m_bars[signal.bfidx].emsc;
+    int64_t start_time = m_bars[bfidx].emsc;
     // current day
-    tm time = m_bars[signal.bfidx].time;
+    tm time = m_bars[bfidx].time;
 
     day = time.tm_mday; // day-of-month identifier for crossing-day
 
@@ -500,7 +503,7 @@ int CreateXFeatureVector(XyPair xypair)
 
 
 // or by Python
-int pyAddTicks(py::array_t<MqlTick> ticks)
+size_t pyAddTicks(py::array_t<MqlTick> ticks)
 {
     return AddTicks(ticks.data(), ticks.size());
 }

@@ -6,7 +6,7 @@ MoneyBar *MoneyBarBuffer::BeginNewBars() {
 }
 
 // index based
-int MoneyBarBuffer::BeginNewBarsIdx() {
+size_t MoneyBarBuffer::BeginNewBarsIdx() {
     return size()-m_nnew;
 }
 
@@ -33,7 +33,7 @@ void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize
 
 // add one tick and create as many money bars as needed (or 0)
 // return number created
-int MoneyBarBuffer::AddTick(MqlTick tick) {
+size_t MoneyBarBuffer::AddTick(MqlTick tick) {
     m_nnew = 0;
     // get high and low bid-ask 
     if (tick.ask > m_bar.askh)
@@ -89,8 +89,8 @@ int MoneyBarBuffer::AddTick(MqlTick tick) {
 }
 
 // add ticks for python support
-int MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end) {
-    int nnew = 0;
+size_t MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end) {
+    size_t nnew = 0;
     for (auto element = start; element != end; element++)
         nnew += AddTick(*element);
     m_nnew = nnew; // overwrite internal added increment
@@ -98,9 +98,9 @@ int MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<M
 }
 
 // add ticks for metatrader support
-int MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
+size_t MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
 {
-    int nnew = 0;
+    size_t nnew = 0;
     for (int i =0; i<size; i++)
         nnew += AddTick(cticks[i]);
     m_nnew = nnew; // overwrite internal added increment
@@ -125,7 +125,7 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
 //}
 // then you can use 
 // return index on ring buffer or -1 on not finding
-int MoneyBarBuffer::Search(uint64_t uid)
+size_t MoneyBarBuffer::Search(uint64_t uid)
 {
     auto iter = std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid);
     return (iter == end()) ? -1 : iter - begin();
@@ -147,7 +147,7 @@ inline bool cmpMoneyBarStime(const MoneyBar& a, uint64_t smsc) {
 
 // return index on ring buffer for 
 // for first money bar with start time bigger or equal than or -1 not finding
-int MoneyBarBuffer::SearchStime(uint64_t smsc)
+size_t MoneyBarBuffer::SearchStime(uint64_t smsc)
 {
     auto iter = std::lower_bound(begin(), end(), smsc, cmpMoneyBarStime);
     return (iter == end()) ? -1 : iter - begin();

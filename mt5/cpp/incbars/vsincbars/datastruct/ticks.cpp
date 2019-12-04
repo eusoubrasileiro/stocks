@@ -5,7 +5,7 @@
 // they get filled with previous non-zero value as should be
 // volume i dont care because it will only be usefull in change if flag >= 16
 void fixArrayTicks(std::vector<MqlTick> ticks){
-	int nticks = ticks.capacity();
+	size_t nticks = ticks.capacity();
 	double       bid = 0;           // Current Bid price
 	double       ask = 0;           // Current Ask price
 	double       last = 0;          // Price of the last deal (Last)

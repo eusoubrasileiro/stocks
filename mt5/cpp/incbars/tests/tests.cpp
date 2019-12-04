@@ -226,15 +226,18 @@ TEST(Expert, AddTicks) {
 }
 
 
-
 TEST(Expert, Refresh){    
     Refresh();
 }
 
-
 TEST(Expert, LabelClasses) {
     LabelClasses();
 }
+
+TEST(Expert, CreateXFeatureVectors) {
+    CreateXFeatureVectors();
+}
+
 
 
 typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);

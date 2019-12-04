@@ -51,7 +51,7 @@ protected:
     tm ctime;
 
 public:
-    int m_nnew; // number of bars nnew on last call    
+    size_t m_nnew; // number of bars nnew on last call    
     double new_avgprices[BUFFERSIZE];
     buffer<uint64_t> uidtimes;
 
@@ -60,18 +60,18 @@ public:
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created
-    int AddTick(MqlTick tick);
+    size_t AddTick(MqlTick tick);
     // add ticks for python support
-    int AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
+    size_t AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
     // add ticks for metatrader support
-    int AddTicks(const MqlTick* cticks, int size);
+    size_t AddTicks(const MqlTick* cticks, int size);
 
     MoneyBar* BeginNewBars();
-    int BeginNewBarsIdx();
+    size_t BeginNewBarsIdx();
 
     void RefreshArrays();
 
     // return buffer index position
-    int Search(uint64_t uid);
-    int SearchStime(uint64_t emsc);
+    size_t Search(uint64_t uid);
+    size_t SearchStime(uint64_t emsc);
 };

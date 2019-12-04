@@ -47,7 +47,7 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow, int batch_size, int ntraini
 
 // will be called every < 1 second
 // by Metatrader 5
-DLL_EXPORT int AddTicks(const MqlTick *cticks, int size);
+DLL_EXPORT size_t AddTicks(const MqlTick *cticks, int size);
 
 // update everything with new bars that just arrived
 // AddTicks > 0
@@ -60,9 +60,9 @@ DLL_EXPORT bool Refresh(void);
 // Expert_BufferSize
 // All are updated after bars so that's the main
 // begin of new bar is also begin of new data on all buffers
-DLL_EXPORT int BufferSize(); // size of all buffers
-DLL_EXPORT int BufferTotal(); // count of bars or all buffers data
-DLL_EXPORT int NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
+DLL_EXPORT size_t BufferSize(); // size of all buffers
+DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
+DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
 
 // classes and features
 DLL_EXPORT void LabelClasses();
@@ -71,7 +71,7 @@ DLL_EXPORT void CreateXFeatureVectors();
 #ifdef EXPORT
 
 // by Python
-int pyAddTicks(py::array_t<MqlTick> ticks);
+size_t pyAddTicks(py::array_t<MqlTick> ticks);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 
@@ -88,7 +88,7 @@ void verifyEntry();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
-int LabelSignal(bsignal signal, XyPair& xy);
+int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy);
 int CreateXFeatureVector(XyPair xypair);
 
 std::vector<double> pyGetXvectors();

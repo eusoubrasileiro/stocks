@@ -23,8 +23,6 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -38,8 +36,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IgnoreImportLibrary>
-    </IgnoreImportLibrary>
+    <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(Platform)\</IntDir>
   </PropertyGroup>

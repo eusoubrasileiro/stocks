@@ -24,9 +24,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <LocalDebuggerWorkingDirectory>D:\MetaTrader 5\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommand>$(SolutionDir)\$(Platform)\tests.exe</LocalDebuggerCommand>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -42,6 +40,8 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)</OutDir>
     <IntDir>$(Platform)\</IntDir>
+    <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

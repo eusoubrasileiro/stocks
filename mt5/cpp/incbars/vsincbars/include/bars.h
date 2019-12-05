@@ -73,5 +73,5 @@ public:
 
     // return buffer index position
     size_t Search(uint64_t uid);
-    size_t SearchStime(uint64_t emsc);
+    size_t SearchStime(int64_t emsc);
 };

@@ -41,7 +41,7 @@ int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 	try {
 		// call python code
 		strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();
-		unsigned int size = strpyModel.length();
+		size_t size = strpyModel.length();
 #ifdef DEBUG
 		if (ntraining > 2) {
 			debugfile << "X: " << X[ntraining-3] << " " << X[ntraining-2] << " " << X[ntraining-1] << std::endl;

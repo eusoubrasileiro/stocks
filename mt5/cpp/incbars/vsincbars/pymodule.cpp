@@ -65,7 +65,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("createxvector", &CreateXFeatureVectors, "fill in xypairs creating x feature vector");
 
-    m.def("getxvectors", &pyGetXvectors, "get x feature vectors flattened");
+    m.def("getxyvectors", &pyGetXyvectors, "get X feature vectors and y class labels");
 
     m.def("getxdim", &pyGetXdim, "get x feature vector dimension");
     

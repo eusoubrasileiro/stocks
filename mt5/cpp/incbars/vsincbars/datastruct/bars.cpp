@@ -141,13 +141,13 @@ size_t MoneyBarBuffer::Search(uint64_t uid)
 // above will get the index of the uid on the buffer of bars
 
 // find first money bar with start time bigger or equal than 
-inline bool cmpMoneyBarStime(const MoneyBar& a, uint64_t smsc) {
+inline bool cmpMoneyBarStime(const MoneyBar& a, int64_t smsc) {
     return a.smsc < smsc;
 }
 
 // return index on ring buffer for 
 // for first money bar with start time bigger or equal than or -1 not finding
-size_t MoneyBarBuffer::SearchStime(uint64_t smsc)
+size_t MoneyBarBuffer::SearchStime(int64_t smsc)
 {
     auto iter = std::lower_bound(begin(), end(), smsc, cmpMoneyBarStime);
     return (iter == end()) ? -1 : iter - begin();

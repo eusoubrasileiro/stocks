@@ -122,9 +122,11 @@ void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of signal features
     // m_nbands band signals
-    // indicar features is 1
-    // 1 - fracdiff on prices
-    m_nsignal_features = m_nbands + 1;
+    // indicar features is 3
+    // 1 - fracdiff on prices - stationary
+    // 2 - time to form a bar in seconds - stationary adfuller test
+    // 3 - number of ticks to form a bar  - stationary adfuller test
+    m_nsignal_features = m_nbands + 3;
     m_xtrain_dim = m_nsignal_features * m_batch_size;
 
     // group of samples and signal vectors to train the model
@@ -488,6 +490,16 @@ int CreateXFeatureVector(XyPair &xypair)
         }
         // fracdif feature
         xypair.X[xifeature++] = m_fd_mbarp[timeidx];
+        // time to form a bar in seconds
+        xypair.X[xifeature++] = (m_bars[timeidx].emsc- m_bars[timeidx].smsc)/1000.;
+        // number of ticks to form a bar
+        xypair.X[xifeature++] = m_bars[timeidx].nticks;
+
+        // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)
+        // data is reliable since I also need to interpolate it
+        // also ask prices are 'fake' appearances 
+        // so better not use         
+
         // some indicators might contain EMPTY_VALUE == DBL_MAX values
         // sklearn throws an exception because of that
         // anyhow that's not a problem for the code since the python exception
@@ -521,21 +533,33 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
     return *ppymbars;
 }
 
-std::vector<double> pyGetXvectors() {
-    // pybind11 automatically casts/converts it to numpy array
+std::tuple<py::array, py::array> pyGetXyvectors(){
+    // pybind11 automatically casts/converts std:: types
+    // vectors got to a list
+    // but you can use cast to convert to a numpy array
     // needs "pybind11/stl.h"
-    std::vector<double> pyX(m_xypairs.size()* m_xtrain_dim);
+    std::vector<double> X;
+    std::vector<double> Y(m_xypairs.size());  // if use push_back dont need set size
+    X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
 
-    size_t idx = 0;
+    int idx = 0;
     for (; idx < m_xypairs.size(); idx++) {
-        if(m_xypairs[idx].isready)
-            std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(), 
-                pyX.begin()+idx*m_xtrain_dim);
+        if (m_xypairs[idx].isready) {
+            std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(),
+                X.begin() + idx * m_xtrain_dim);
+            Y[idx]= m_xypairs[idx].y;
+        }
     }
 
-    pyX.resize(idx * m_xtrain_dim); // to ready vectors size
-    return pyX;
+    X.resize(idx * m_xtrain_dim); // to data size
+    Y.resize(idx);
+    py::array pyX = py::cast(X);
+    py::array pyY = py::cast(Y);
+    pyX.resize({ idx, m_xtrain_dim });
+
+    return std::make_tuple(pyX, pyY);
 }
+
 
 int pyGetXdim() {
     return m_xtrain_dim;

@@ -19,6 +19,7 @@
 #include "cwindicators.h"
 #include "xypair.h"
 
+#include <tuple>
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
@@ -91,7 +92,7 @@ int lastRawSignals();
 int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy);
 int CreateXFeatureVector(XyPair &xypair);
 
-std::vector<double> pyGetXvectors();
+std::tuple<py::array, py::array> pyGetXyvectors();
 int pyGetXdim();
 
 // sklearn model

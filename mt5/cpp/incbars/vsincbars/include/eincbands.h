@@ -40,7 +40,7 @@ namespace py = pybind11;
 // extern "C" guarantes no decoration is inserted on the function name
 
 DLL_EXPORT void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
-    double start_hour, double end_hour,
+    double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size);
@@ -89,7 +89,7 @@ void verifyEntry();
 int lastRawSignals();
 
 int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy);
-int CreateXFeatureVector(XyPair xypair);
+int CreateXFeatureVector(XyPair &xypair);
 
 std::vector<double> pyGetXvectors();
 int pyGetXdim();

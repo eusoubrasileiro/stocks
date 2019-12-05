@@ -91,13 +91,14 @@ unsigned long m_model_last_training; // referenced on m_xypair_count's
 
 
 void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
-    double start_hour, double end_hour,
+    double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit,
     double lotsmin, double ticksize, double tickvalue, 
     double moneybar_size) // R$ to form 1 money bar
 {
     m_start_hour = start_hour;
     m_end_hour = end_hour;
+    m_expire_time = (int64_t) expire_hour*3600*1000; // to ms 
     m_lotsmin = lotsmin;
     m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;
@@ -197,7 +198,7 @@ size_t NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
 // start index and count of new bars that just arrived
 bool Refresh()
 {
-    bool result = true;
+    int ncalculated = 0;
 
     // arrays of new data update them
     m_bars.RefreshArrays();
@@ -207,24 +208,27 @@ bool Refresh()
     // features indicators
     // fracdif on bar prices order of && matter
     // first is what you want to do and second what you want to try
-    result = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;
+    ncalculated = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
 
     // update signals based on all bollinger bands
-    for (int j = 0; j < m_nbands; j++)
-        result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew) && result;        
-
-    if (result) { 
-        // valid samples calculated
-        // store only signal ocurrences        
-        for (int j = 0; j < m_nbands; j++){
-            int i = BufferTotal() - m_rbandsgs[0].m_calculated;
-            for(;i < BufferTotal(); i++)
-                if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-                    m_bsignals.push_back({ m_bars.uidtimes[i], j, (int) m_rbandsgs[j][i]});
-        }
+    for (int j = 0; j < m_nbands; j++) {
+        int result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+        // get only the intersection - region where samples were calculated
+        // on all indicators
+        ncalculated = (result < ncalculated) ? result : ncalculated;
     }
 
-    return result;
+    if (ncalculated > 0) {
+    // valid samples calculated
+    // store only signal ocurrences        
+    int i = BufferTotal() - ncalculated;
+    for (; i < BufferTotal(); i++)
+        for (int j = 0; j < m_nbands; j++)
+            if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
+                m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
+    }
+
+    return (ncalculated > 0);
 }
 
 
@@ -439,15 +443,15 @@ void CreateXFeatureVectors()
   // assembly the X array of features for it
   // from more recent to oldest
   // if it is already filled (ready) stop
-    for (auto iter = m_xypairs.begin(); iter != m_xypairs.end(); iter++) {
+    for (int i=0; i < m_xypairs.size(); i++) {
         // no need to assembly any other if this is already ready
         // olders will also be ready
-        if(CreateXFeatureVector(*iter) == -1) // old signal or cannot create
-            m_xypairs.erase(iter);
+        if(CreateXFeatureVector(m_xypairs[i]) == -1) // old signal or cannot create
+           m_xypairs.erase(m_xypairs.begin() + i);
     }
 }
 
-int CreateXFeatureVector(XyPair xypair)
+int CreateXFeatureVector(XyPair &xypair)
 {
     if (xypair.isready) // no need to assembly
         return 0;

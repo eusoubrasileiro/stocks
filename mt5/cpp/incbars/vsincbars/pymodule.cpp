@@ -44,7 +44,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("initialize", &Initialize, "Initialize Increase Bands Expert",
         py::arg("nbands"), py::arg("bbwindow"), py::arg("batch_size"), py::arg("ntraining"), 
-        py::arg("start_hour"), py::arg("end_hour"),        
+        py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"), 
         py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), 
         py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
         py::arg("moneybarsize"));  

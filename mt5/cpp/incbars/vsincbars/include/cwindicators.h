@@ -31,7 +31,7 @@ public:
 
     // re-calculate indicator values based on array of new data
     // where new data starts at start and has size count
-    bool Refresh(Type newdata[], int count){
+    int Refresh(Type newdata[], int count){
 
       m_calculated = 0;
       m_nempty = 0; 
@@ -39,7 +39,7 @@ public:
       int nprev = m_prev_data.size(); // number of previous data      
 
       if(count==0) // no data
-        return false;
+        return 0;
       // needs m_window samples to calculate 1 output sample
       // check enough samples using previous
       if(nprev < m_window-1){
@@ -49,7 +49,7 @@ public:
           // add dummy samples to mainting allignment with time and buffers
           m_nempty = count;
           AddEmpty(m_nempty);
-          return false;
+          return 0;
         }
         else { // now can calculate 1 or more outputs
           // insert the missing EMPTY_VALUES
@@ -72,7 +72,7 @@ public:
       // copy the now previous data for the subsequent call
       m_prev_data.addrange(newdata, count);
 
-      return true;
+      return m_calculated;
     }
 
 protected:
@@ -221,5 +221,5 @@ public:
 
     void Init(int window, double devs, int ma_type);
 
-    bool Refresh(double newdata[], int count);
+    int Refresh(double newdata[], int count);
 };

@@ -27,12 +27,12 @@ void CBandSignal::Init(int window, double devs, int ma_type) {
     bands.Init(window, devs, ma_type);
 }    
 
-bool CBandSignal::Refresh(double newdata[], int count) {    
+int CBandSignal::Refresh(double newdata[], int count) {    
     bool result = bands.Refresh(newdata, count); // update bands 
     m_calculated = bands.m_calculated;
     addempty(bands.m_nempty);
     if (!result)
-        return false;
+        return m_calculated;
     // at least one calculated sample on the tripple buffer
     // newdata[] have samples that just 'created' empty ones
     // calculated samples dont have empty samples
@@ -46,5 +46,5 @@ bool CBandSignal::Refresh(double newdata[], int count) {
         else
             add(0); // nothing
     }
-    return true;
+    return m_calculated;
 }

@@ -197,7 +197,7 @@ TEST(Indicators, CBandSignal) {
 
 TEST(Expert, Initialize) {
     Initialize(3, 15, 5, 100,
-        10.5, 16.5,
+        10.5, 16.5, 1.00, 
         25000, 100, 10,
         100, 0.01, 0.01,
         100e4); // 1MM BRL to form 1 money bar
@@ -231,6 +231,7 @@ TEST(Expert, Refresh){
 }
 
 TEST(Expert, LabelClasses) {
+
     LabelClasses();
 }
 

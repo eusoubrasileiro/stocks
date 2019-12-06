@@ -7,7 +7,7 @@
 #define             Expert_Fracdif           0.6         // fraction for fractional difference
 #define             Expert_Fracdif_Window    512         // window size fraction fracdif
 #define             Expert_Delay             8000        // delay to perform an order sucessfully after evaluating an entry (ms)
-
+#define             Expert_IncMax            3           // max number of increases on a position
 
 #ifdef BUILDING_DLL
 #define EXPORT
@@ -89,7 +89,7 @@ void verifyEntry();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
-int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy);
+int LabelSignal(bsignal signal, size_t bfidx, std::list<std::pair<uint64_t, int>> nextn, XyPair& xy);
 int CreateXFeatureVector(XyPair &xypair);
 
 std::tuple<py::array, py::array> pyGetXyvectors();

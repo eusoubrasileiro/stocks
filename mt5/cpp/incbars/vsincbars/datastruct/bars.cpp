@@ -51,6 +51,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
         // control to not have bars with ticks of different days
         gmtime_s(&ctime, &tick.time);
         if (m_bar.nticks == 0) {// entry time for this bar
+            m_bar.time = ctime;
             m_bar.smsc = tick.time_msc;
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;            
@@ -60,13 +61,13 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             // clean up (ignore) previous data 
             // for starting a new bar
             m_bar.nticks = 0;
+            m_bar.time = ctime;
             m_bar.smsc = tick.time_msc;
             m_count_money = 0;
             m_pvs = m_vs = 0;
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;
-        }
-        m_bar.time = ctime;
+        }       
         m_bar.nticks++;
         m_count_money += tick.volume_real * tick.last * m_point_value;        
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick

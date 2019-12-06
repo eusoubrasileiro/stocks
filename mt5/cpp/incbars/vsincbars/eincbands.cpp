@@ -50,11 +50,11 @@ int m_ntraining;
 int m_xtrain_dim; // dimension of x train vector
 buffer<XyPair> m_xypairs;
 
-// For labelling  
+// For labelling
 // execution of positions and orders
 // max time to hold a position in miliseconds
-int64_t m_expire_time; 
-// operational window for expert since 00:00:00 
+int64_t m_expire_time;
+// operational window for expert since 00:00:00
 double m_start_hour;
 double m_end_hour;
 // round price minimum volume of symbol 100's stocks 1 for future contracts
@@ -75,8 +75,7 @@ double m_targetprofit; //targetprofit in $$$ per order
 //double m_last_volume; // last volume + (buy) or - (sell)
 //double m_volume; // current volume of open or not positions
 
-// max number of increases on a position
-//int m_incmax = 3;
+
 
 // python sklearn model trainning
 //bool m_recursive;
@@ -93,12 +92,12 @@ unsigned long m_model_last_training; // referenced on m_xypair_count's
 void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit,
-    double lotsmin, double ticksize, double tickvalue, 
+    double lotsmin, double ticksize, double tickvalue,
     double moneybar_size) // R$ to form 1 money bar
 {
     m_start_hour = start_hour;
     m_end_hour = end_hour;
-    m_expire_time = (int64_t) expire_hour*3600*1000; // to ms 
+    m_expire_time = (int64_t) expire_hour*3600*1000; // to ms
     m_lotsmin = lotsmin;
     m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;
@@ -222,7 +221,7 @@ bool Refresh()
 
     if (ncalculated > 0) {
     // valid samples calculated
-    // store only signal ocurrences        
+    // store only signal ocurrences
     int i = BufferTotal() - ncalculated;
     for (; i < BufferTotal(); i++)
         for (int j = 0; j < m_nbands; j++)
@@ -321,6 +320,26 @@ int lastRawSignals() {
 }
 
 
+// next n signals with same sign <buffer index, band number>
+// and band number higher than previous
+// we can only increase positions if band higher than previous
+inline std::list<std::pair<uint64_t, int>> bufidxNextnSame(std::list<bsignal>::iterator start,
+                             std::list<bsignal>::iterator end, int sign, int band, uint64_t bfidx_ct){
+    std::list<std::pair<uint64_t, int>> bufidxnextn; // indexes of next n signals same sign
+    int ncount = 0;
+    int last_band = band;
+    // go to next - first signal after passed-signal
+    start++;
+    while (start != end && ncount < Expert_IncMax){
+        if (start->sign == sign && start->band > last_band) {
+            bufidxnextn.push_back(std::make_pair(start->tuidx - bfidx_ct, start->band)); // current buffer index
+            ncount++;
+            last_band = start->band;
+        }
+        start++;
+    }
+    return bufidxnextn;
+}
 
 // Create target class by analysing raw band signals
 // label or re-label or re-classify every signal on every band
@@ -334,14 +353,15 @@ void LabelClasses(){
     XyPair xy;
     int res;
     auto iter = m_bsignals.begin();
-    uint64_t bfidx_ct = 0; 
+    uint64_t bfidx_ct = 0;
 
     // correction of position of signals to current buffer index position
     if (iter != m_bsignals.end()) // correction between uid's and current buffer index
-        bfidx_ct = iter->tuidx - m_bars.Search(iter->tuidx);  
+        bfidx_ct = iter->tuidx - m_bars.Search(iter->tuidx);
 
-    while(iter != m_bsignals.end()){    
-        res = LabelSignal(*iter, iter->tuidx - bfidx_ct, xy); iter++;
+    while(iter != m_bsignals.end()){
+        auto nextn = bufidxNextnSame(iter, m_bsignals.end(), iter->sign, iter->band, bfidx_ct);
+        res = LabelSignal(*iter, iter->tuidx - bfidx_ct, nextn, xy); iter++;
         if (res == -2) // not enough data to start labelling - stop everything
             break;
         else
@@ -356,14 +376,15 @@ void LabelClasses(){
     }
 }
 
-int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy){
+int LabelSignal(bsignal signal, size_t bfidx, std::list<std::pair<uint64_t, int>> nextn, XyPair& xy){
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in R$
-    int day = 0;    
+    int day = 0;
     double entryprice = 0;
     double profit = 0;
     double slprofit = 0; // high-low profit (based on ask-bid prices)
     double quantity = 0; // number of contracts or stocks shares
+
 
     // get 'real' price of execution of this signal
     // first bar considering the operational time delay
@@ -374,38 +395,46 @@ int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy){
         return -2; //  did not find bar, not enough data in future
 
     entryprice = m_bars[start_bfidx].avgprice;
-    
-    // save this buy or sell 
+
+    // save this buy or sell
     xy.tidx = m_bars[bfidx].uid;
     xy.y = signal.sign;
     // for this position
-    // start time 
-    int64_t start_time = m_bars[bfidx].emsc;
+    // start time - where buy/sell really takes place
+    int64_t start_time = m_bars[start_bfidx].emsc;
     // current day
-    tm time = m_bars[bfidx].time;
-
+    tm time = m_bars[start_bfidx].time;
     day = time.tm_mday; // day-of-month identifier for crossing-day
 
     // ignore a signal if it is after
     // the operational window
     // to avoid contaminating model
-
     // current hour decimal
     double chour = (time.tm_sec / 3600. + time.tm_min / 60.) + time.tm_hour;
     if (chour > m_end_hour || chour < m_start_hour)
         return -3;
+
+    int secs_toend_day = (m_end_hour - chour) * 3600;
+    // time in ms for operations end of day
+    int64_t end_day = m_bars[start_bfidx].smsc + secs_toend_day * 1000;
+
+    // buffer index of next signal with same sign
+    auto nextsignidx = nextn.begin();
+
+    // will only increase position 
+    // if signal comes from a superior band -- higher number
+    int last_band = signal.band; 
 
     quantity = roundVolume(m_ordersize / entryprice);
     // starting jump forward to where the buy/sell really takes place
     for (int i=start_bfidx; i<BufferTotal(); i++) { // from past to present
 
         // see if should close:
-        // - calculate profit / stoploss 
+        // - calculate profit / stoploss
         // - closed by time
 
-        // use avgprice for TP 
+        // use avgprice for TP
         // and high-low bid from ticks to stop_loss
-        // or even ticks ask, bid ohlc? -- better
         if (signal.sign > 0) { // long
             profit = (m_bars[i].avgprice - entryprice) * quantity;// # avg. current profit
             //  stop-loss profit - people buy at bid -  (low worst scenario)
@@ -425,11 +454,47 @@ int LabelSignal(bsignal signal, size_t bfidx, XyPair& xy){
             xy.y = 0; // not a good deal, was better not to entry
             return 1;
         }
-        // third barrier - time (expire-time or day-end)
+        // third barrier - time 
+        // 1.expire-time or 2.day-end 
+        // or 3.crossed-to a new day (should never happen)
         if(m_bars[i].emsc - start_time > m_expire_time ||
-            m_bars[i].time.tm_mday != day){
+            m_bars[i].emsc > end_day || // operations end of day
+            m_bars[i].time.tm_mday != day) { // crossed to a new day
             xy.y = 0; // expired position
             return 1;
+        }
+        // increase position if 
+        // 1. can increase position - maxinc restriction
+        // 2. is time for that
+        // 3. it is from a higher band - starting w. original signal
+        // pair is <buffer index, band number>
+        if (nextsignidx != nextn.end() && 
+            nextsignidx->first == i && 
+            nextsignidx->second > last_band){
+            // find entry time
+            auto new_posbfidx = m_bars.SearchStime(m_bars[nextsignidx->first].emsc + Expert_Delay);
+            if (new_posbfidx == -1) // cannot continue labelling
+                return -2; //  did not find bar, not enough data in future
+            // to avoid contaminating model
+            // ignore the new signal if it is after
+            // 1. the operational window
+            // 2. expire time
+            // 3. crossed to a new day
+            if (m_bars[new_posbfidx].emsc - start_time > m_expire_time ||
+                m_bars[new_posbfidx].emsc > end_day || // operations end of day
+                m_bars[new_posbfidx].time.tm_mday != day) { // crossed to a new day                
+                nextsignidx = nextn.end(); // cannot increase any other position
+                continue;
+            }
+            auto new_entryprice = m_bars[new_posbfidx].avgprice;
+            auto new_quantity = roundVolume(m_ordersize / new_entryprice);
+            // updtate to weighted average price
+            entryprice = (new_entryprice * new_quantity) + (entryprice * quantity);
+            entryprice /= (new_quantity + quantity);
+            // sum quantity
+            quantity += new_quantity;            
+            last_band = nextsignidx->second;
+            nextsignidx++;
         }
     }
     // if reaches here did not close the position
@@ -464,7 +529,7 @@ int CreateXFeatureVector(XyPair &xypair)
 
     // cannot assembly X feature train with such an old signal
     //  not in buffer anymore - such should be removed ...
-    if (bufi < 0) 
+    if (bufi < 0)
         return -1;
     // not enough : bands raw signal, features in time to form a batch
     // cannot create a X feature vector and will never will
@@ -497,8 +562,8 @@ int CreateXFeatureVector(XyPair &xypair)
 
         // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)
         // data is reliable since I also need to interpolate it
-        // also ask prices are 'fake' appearances 
-        // so better not use         
+        // also ask prices are 'fake' appearances
+        // so better not use
 
         // some indicators might contain EMPTY_VALUE == DBL_MAX values
         // sklearn throws an exception because of that
@@ -564,5 +629,3 @@ std::tuple<py::array, py::array> pyGetXyvectors(){
 int pyGetXdim() {
     return m_xtrain_dim;
 }
-
-

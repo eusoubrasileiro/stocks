@@ -2,6 +2,22 @@ from io import StringIO
 import pandas as pd
 import datetime
 import numpy as np
+import sys
+
+def progressbar(it, prefix="", size=80):
+    count = len(it)
+    def _show(_i):
+        x = int(size*_i/count)
+        sys.stdout.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), _i, count))
+        sys.stdout.flush()
+
+    _show(0)
+    for i, item in enumerate(it):
+        yield item
+        _show(i+1)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
 
 def fromMt5OptParam(fname='optNaiveGap'):
     """ read mt5 optimization param *.set file
@@ -73,16 +89,20 @@ def ticksnbars(tickfileinput, verbose=False):
     OHLC are on executed prices (deals) that means tick.last when volume > 0
     Otherwise bars would be crazy up and down on ask or bid nonsense.
     """
+    if verbose:
+        print('Reading and Parsing...')
 
     ticks = pd.read_csv(tickfileinput,
-                names=['date', 'time', 'bid', 'ask', 'last', 'vol'], skiprows=1, delimiter='\t')
+            names=['date', 'time', 'bid', 'ask', 'last', 'vol'], skiprows=1, delimiter='\t',
+                   parse_dates={'dtindex' : [0, 1]}, infer_datetime_format=True, keep_date_col=True)
+    # 10x faster if use pare_dates here to convert (on reading) to ms to_datetime
 
     newticks = pd.DataFrame()
 
     if verbose:
         print('Processing Ticks First Time...')
     # must be by day to avoid forwarding ask, bid, last to next day
-    for gticksday in ticks.groupby(ticks.date):
+    for i, gticksday in progressbar(list(enumerate(ticks.groupby(ticks.date))), "Daily Ticks: ", 60):
         gticksday = gticksday[1]
         # ask, bid, last copy forward last valid values - might be wrong but better option
         gticksday.loc[:, ['bid', 'ask', 'last']] = gticksday.loc[:, ['bid', 'ask', 'last']].fillna(method='ffill')
@@ -92,31 +112,36 @@ def ticksnbars(tickfileinput, verbose=False):
         # fixing creation of fake ticks by Metatrader 5 (everytick)
         # remove start of day ticks without volume - only requotes
         size = gticksday.shape[0]
-        start_index = 0
+        start_index = size-1 # case everything is == 0
         for i in range(size):
             if gticksday.vol.iloc[i] != 0:
                 start_index = i
                 break
         # remove end of day ticks without volume - only requotes
-        end_index = size-1
+        end_index = 0 # case everything is == 0
         for i in range(size-1, 0, -1):
             if gticksday.vol.iloc[i] != 0:
                 end_index = i
                 break
+        # all ticks with volume == 0 -- day skipped
+        if(end_index < start_index):
+            continue
         newticks = newticks.append(gticksday.iloc[start_index:end_index])
+
+    del ticks
 
     newticks.reset_index(drop=True, inplace=True)
     ticks = newticks
 
     # create datetime index
-    dtindex = pd.to_datetime(ticks.apply(lambda x: str(x[0])+ ' ' +str(x[1]), axis=1), unit='ns')
-    ticks.set_index(dtindex, inplace=True)
+    ticks.set_index(ticks.dtindex, inplace=True)
+    del ticks['dtindex']
 
     if verbose:
         print('Creating Bars ...')
 
     bars1m_all = pd.DataFrame()
-    for group in ticks.groupby(ticks.date):
+    for i, group in enumerate(ticks.groupby(ticks.date)):
         resampled1m = group[1].resample('1T')
         openfilled = resampled1m['last'].max().fillna(method='ffill') # copy last 'open' forward
         openfilled.fillna(0, inplace=True)
@@ -129,15 +154,12 @@ def ticksnbars(tickfileinput, verbose=False):
         bar1m_deals = group[1].loc[ group[1]['vol'] > 0 ]
         tick_volume = bar1m_deals.resample('1T')['last'].count()
         bars1m.loc[tick_volume.index, 'nticks'] = tick_volume.values
-        # get valid end of day bars - removing 0 volume bars
-        end_index = 0
-        for i in range(size):
-            if bars1m.vol.iloc[i] == 0:
-                end_index = i
-                break
-        bars1m_all = bars1m_all.append(bars1m.iloc[:end_index], sort=False)
+        # remove every 1 minute without volume -- metatrader does that
+        # metatrader doesnt require all minutes be present
+        bars1m.drop(bars1m[bars1m.vol == 0].index, inplace=True)
+        bars1m_all = bars1m_all.append(bars1m, sort=False)
         if verbose:
-            print('day last valid bar: ', bars1m_all.index[-1])
+            print('day valid bars: ', bars1m.index[0], '-', bars1m.index[-1].time())
 
     bars1m_all['date'] = bars1m_all.index.date
     bars1m_all['time'] = bars1m_all.index.time
@@ -154,7 +176,7 @@ def ticksnbars(tickfileinput, verbose=False):
         daybounds.append([barsday.index[0], barsday.index[-1]])
 
     newticks = pd.DataFrame()
-    for i, ticksday in enumerate(ticks.groupby(ticks.date)):
+    for i, ticksday in progressbar(list(enumerate(ticks.groupby(ticks.date))), "Daily Ticks Clipping: ", 60):
         ticksday = ticksday[1]
         newticks = newticks.append(ticksday.loc[daybounds[i][0]:
                                      daybounds[i][1] + datetime.timedelta(minutes=1)])

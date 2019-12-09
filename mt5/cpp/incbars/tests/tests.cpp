@@ -196,9 +196,9 @@ TEST(Indicators, CBandSignal) {
 #include <fstream>
 
 TEST(Expert, Initialize) {
-    Initialize(3, 15, 5, 100,
+    Initialize(3, 15, 1, 100,
         10.5, 16.5, 1.00, 
-        25000, 100, 10,
+        25000, 100, 50, 3, // 3 increases => 1+3 = 4 total max positions
         100, 0.01, 0.01,
         100e4); // 1MM BRL to form 1 money bar
 }
@@ -208,7 +208,8 @@ TEST(Expert, AddTicks) {
     std::streampos begin, end;
 
     // calculate number of ticks on file
-    fh.open("D:\\MetaTrader 5\\npticks.bin", std::fstream::in | std::fstream::binary);
+    fh.open("C:\\Users\\andre\\Projects\\stocks\\data\\PETR4_2019_Ticks_jan_dec_mqltick.bin", 
+        std::fstream::in | std::fstream::binary);
     begin = fh.tellg();
     fh.seekg(0, std::ios::end);
     end = fh.tellg();
@@ -220,7 +221,7 @@ TEST(Expert, AddTicks) {
     fh.read((char*)cstyle_ticks, end);
     //std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
 
-    AddTicks(cstyle_ticks, nticks);
+    AddTicks(cstyle_ticks, 2e5);
 
     delete[] cstyle_ticks;
 }

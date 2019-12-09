@@ -65,6 +65,7 @@ double m_lotsmin;
 double m_ordersize;
 double m_stoploss; // stop loss value in $$$ per order
 double m_targetprofit; //targetprofit in $$$ per order
+int    m_incmax;// max number of increases on a position
 
 // max number of orders
 // position being a execution of one order or increment
@@ -91,10 +92,11 @@ unsigned long m_model_last_training; // referenced on m_xypair_count's
 
 void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
-    double ordersize, double stoploss, double targetprofit,
+    double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size) // R$ to form 1 money bar
 {
+    m_incmax = incmax;
     m_start_hour = start_hour;
     m_end_hour = end_hour;
     m_expire_time = (int64_t) expire_hour*3600*1000; // to ms
@@ -330,7 +332,7 @@ inline std::list<std::pair<uint64_t, int>> bufidxNextnSame(std::list<bsignal>::i
     int last_band = band;
     // go to next - first signal after passed-signal
     start++;
-    while (start != end && ncount < Expert_IncMax){
+    while (start != end && ncount < m_incmax){
         if (start->sign == sign && start->band > last_band) {
             bufidxnextn.push_back(std::make_pair(start->tuidx - bfidx_ct, start->band)); // current buffer index
             ncount++;
@@ -362,7 +364,7 @@ void LabelClasses(){
     while(iter != m_bsignals.end()){
         auto nextn = bufidxNextnSame(iter, m_bsignals.end(), iter->sign, iter->band, bfidx_ct);
         res = LabelSignal(*iter, iter->tuidx - bfidx_ct, nextn, xy); iter++;
-        if (res == -2) // not enough data to start labelling - stop everything
+        if (res == -2) // not enough data for labelling - stop everything
             break;
         else
         if (res == 1) {
@@ -598,12 +600,13 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
     return *ppymbars;
 }
 
-std::tuple<py::array, py::array> pyGetXyvectors(){
+std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
     // pybind11 automatically casts/converts std:: types
     // vectors got to a list
     // but you can use cast to convert to a numpy array
     // needs "pybind11/stl.h"
     std::vector<double> X;
+    std::vector<uint64_t> tidx(m_xypairs.size());
     std::vector<double> Y(m_xypairs.size());  // if use push_back dont need set size
     X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
 
@@ -613,16 +616,19 @@ std::tuple<py::array, py::array> pyGetXyvectors(){
             std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(),
                 X.begin() + idx * m_xtrain_dim);
             Y[idx]= m_xypairs[idx].y;
+            tidx[idx] = m_xypairs[idx].tidx;
         }
     }
 
     X.resize(idx * m_xtrain_dim); // to data size
     Y.resize(idx);
+    tidx.resize(idx);
     py::array pyX = py::cast(X);
     py::array pyY = py::cast(Y);
+    py::array pyIdx = py::cast(tidx);
     pyX.resize({ idx, m_xtrain_dim });
 
-    return std::make_tuple(pyX, pyY);
+    return std::make_tuple(pyX, pyY, pyIdx);
 }
 
 

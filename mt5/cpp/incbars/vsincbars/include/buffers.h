@@ -12,7 +12,7 @@
 #define INT_EMPTY_VALUE INT_MAX
 
 // indicators, bars etc. buffer needed
-#define BUFFERSIZE       100000      
+#define BUFFERSIZE       1000000      
 
 // FIFO first in first out
 // Buffer single is an array when new data is added

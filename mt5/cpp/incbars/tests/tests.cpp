@@ -208,7 +208,9 @@ TEST(Expert, AddTicks) {
     std::streampos begin, end;
 
     // calculate number of ticks on file
-    fh.open("C:\\Users\\andre\\Projects\\stocks\\data\\PETR4_2019_Ticks_jan_dec_mqltick.bin", 
+    std::string user_data = std::string(std::getenv("USERPROFILE"))+ "\\Projects\\stocks\\data\\PETR4_2019_mqltick.bin";
+
+    fh.open(user_data,
         std::fstream::in | std::fstream::binary);
     begin = fh.tellg();
     fh.seekg(0, std::ios::end);

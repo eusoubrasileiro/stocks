@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="UserMacros">
     <PYTHONHOME>$(USERPROFILE)\AppData\Local\Programs\Python\Python37</PYTHONHOME>
@@ -25,12 +29,26 @@
     <CharacterSet>Unicode</CharacterSet>
     <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>
+    </UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>
+    </CharacterSet>
+    <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
+    <WholeProgramOptimization />
+    <SpectreMitigation />
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -41,13 +59,23 @@
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(Platform)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>
+    </LinkIncremental>
+    <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <OutDir>$(SolutionDir)$(Platform)\</OutDir>
+    <IntDir>$(Platform)\</IntDir>
+    <IgnoreImportLibrary />
+    <GenerateManifest />
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
@@ -58,6 +86,97 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(SolutionDir)\incbars.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <PostBuildEvent>
+      <Command>copy $(TargetDir)$(TargetFileName) "D:\Metatrader 5\$(TargetFileName)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <WarningLevel>
+      </WarningLevel>
+      <Optimization>
+      </Optimization>
+      <SDLCheck>
+      </SDLCheck>
+      <PreprocessorDefinitions>_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>
+      </ConformanceMode>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <DebugInformationFormat />
+      <SupportJustMyCode />
+      <SuppressStartupBanner />
+      <TreatWarningAsError />
+      <DiagnosticsFormat />
+      <InlineFunctionExpansion />
+      <IntrinsicFunctions />
+      <FavorSizeOrSpeed>
+      </FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations />
+      <WholeProgramOptimization />
+      <BasicRuntimeChecks />
+      <StructMemberAlignment />
+      <BufferSecurityCheck />
+      <DisableLanguageExtensions />
+      <TreatWChar_tAsBuiltInType />
+      <ForceConformanceInForLoopScope />
+      <RemoveUnreferencedCodeData />
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <CallingConvention />
+      <CompileAs />
+      <ShowIncludes />
+      <UseFullPaths />
+      <OmitDefaultLibName />
+      <ErrorReporting />
+      <UndefineAllPreprocessorDefinitions />
+      <IgnoreStandardIncludePath />
+      <PreprocessToFile />
+      <PreprocessSuppressLineNumbers />
+      <PreprocessKeepComments />
+      <MinimalRebuild />
+      <SmallerTypeCheck />
+      <FloatingPointModel />
+      <ExpandAttributedSource />
+      <ProgramDataBaseFileName />
+      <GenerateXMLDocumentationFiles />
+      <BrowseInformation />
+      <AssemblerOutput />
+      <AssemblerListingLocation />
+      <BrowseInformationFile />
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>
+      </GenerateDebugInformation>
+      <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(SolutionDir)\incbars.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+      <SuppressStartupBanner />
+      <RegisterOutput />
+      <PerUserRedirection />
+      <ProgramDatabaseFile />
+      <GenerateMapFile />
+      <MapExports />
+      <ProfileGuidedDatabase />
+      <IgnoreEmbeddedIDL />
+      <TypeLibraryResourceID />
+      <ManifestFile />
+      <AllowIsolation />
+      <EnableUAC />
+      <UACExecutionLevel />
+      <UACUIAccess />
+      <SwapRunFromCD />
+      <SwapRunFromNET />
+      <Driver />
+      <TurnOffAssemblyGeneration />
+      <CLRImageType />
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

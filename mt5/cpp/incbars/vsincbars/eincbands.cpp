@@ -128,7 +128,11 @@ void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
     // 2 - time to form a bar in seconds - stationary adfuller test
     // 3 - number of ticks to form a bar  - stationary adfuller test
     m_nsignal_features = m_nbands + 3;
-    m_xtrain_dim = m_nsignal_features * m_batch_size;
+    // one additional feature - last value
+    // +1 - band number - disambiguation - 
+    //     equal X's might need to be classified differently 
+    //     due comming from a different band
+    m_xtrain_dim = m_nsignal_features * m_batch_size + 1;
 
     // group of samples and signal vectors to train the model
     // resize buffer of training pairs
@@ -363,7 +367,7 @@ void LabelClasses(){
 
     while(iter != m_bsignals.end()){
         auto nextn = bufidxNextnSame(iter, m_bsignals.end(), iter->sign, iter->band, bfidx_ct);
-        res = LabelSignal(*iter, iter->tuidx - bfidx_ct, nextn, xy); iter++;
+        res = LabelSignal(*iter, iter->tuidx - bfidx_ct, nextn, xy); 
         if (res == -2) // not enough data for labelling - stop everything
             break;
         else
@@ -375,6 +379,7 @@ void LabelClasses(){
         if (res == -3) { // outside the operational window
             m_bsignals.erase(iter); // remove this
         }
+        iter++;
     }
 }
 
@@ -399,8 +404,8 @@ int LabelSignal(bsignal signal, size_t bfidx, std::list<std::pair<uint64_t, int>
     entryprice = m_bars[start_bfidx].avgprice;
 
     // save this buy or sell
-    xy.tidx = m_bars[bfidx].uid;
-    xy.y = signal.sign;
+    xy.bsg = signal;
+    xy.y = signal.sign; // start by beliving 
     // for this position
     // start time - where buy/sell really takes place
     int64_t start_time = m_bars[start_bfidx].emsc;
@@ -526,31 +531,31 @@ int CreateXFeatureVector(XyPair &xypair)
         return 0;
 
     // find xypair.time current position on all buffers (have same size)
-    // uidtime is allways sorted
-    int bufi = m_bars.Search(xypair.tidx);
+    // for the signal that triggered this xypair
+    // uidxtime is allways sorted
+    int bfidxsg = m_bars.Search(xypair.bsg.tuidx);
 
     // cannot assembly X feature train with such an old signal
     //  not in buffer anymore - such should be removed ...
-    if (bufi < 0)
+    if (bfidxsg < 0)
         return -1;
+    // I want to include the signal the originates this xypair
+    bfidxsg += 1;
+    int batch_start_idx = bfidxsg - m_batch_size;
     // not enough : bands raw signal, features in time to form a batch
     // cannot create a X feature vector and will never will
     // remove it
-    if (bufi - m_batch_size < 0)
+    if (batch_start_idx < 0)
         return -1;
 
     xypair.X.resize(m_xtrain_dim);
-
     int xifeature = 0;
     // something like
     // double[Expert_BufferSize][nsignal_features] would be awesome
     // easier to copy to X also to create cross-features
-    // using a constant on the second dimension is possible
-    //bufi = BufferTotal()-1-bufi;
-    bufi -= m_batch_size;
-    int batch_end_idx = bufi + m_batch_size;
-    for (int timeidx = bufi; timeidx < batch_end_idx; timeidx++) {
-        // from past to present
+    // using a constant on the second dimension is possible    
+    for (int timeidx = batch_start_idx; timeidx < bfidxsg; timeidx++) {
+        // from past to present [bufi-batch_size:bufi+1)
         // features from band signals
         for (int i = 0; i < m_nbands; i++, xifeature++) {
             xypair.X[xifeature] = m_rbandsgs[i][timeidx];
@@ -573,6 +578,10 @@ int CreateXFeatureVector(XyPair &xypair)
         // is catched behind the scenes and a valid model will only be available
         // once correct samples are available
     }
+    // last feature
+    // disambiguation - band number
+    xypair.X[xifeature++] = xypair.bsg.band;
+
     xypair.isready = true;
     return 1; // suceeded
 }
@@ -616,7 +625,7 @@ std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
             std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(),
                 X.begin() + idx * m_xtrain_dim);
             Y[idx]= m_xypairs[idx].y;
-            tidx[idx] = m_xypairs[idx].tidx;
+            tidx[idx] = m_xypairs[idx].bsg.tuidx;
         }
     }
 

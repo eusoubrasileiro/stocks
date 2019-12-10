@@ -205,37 +205,41 @@ size_t NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
 // start index and count of new bars that just arrived
 bool Refresh()
 {
-    int ncalculated = 0;
+    //int valid_start = 0;
 
-    // arrays of new data update them
-    m_bars.RefreshArrays();
-    // all bellow must be called to maintain alligment of buffers
-    // by creating empty samples
+    //// arrays of new data update them
+    //m_bars.RefreshArrays();
+    //// all bellow must be called to maintain alligment of buffers
+    //// by creating empty samples
 
-    // features indicators
-    // fracdif on bar prices order of && matter
-    // first is what you want to do and second what you want to try
-    ncalculated = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+    //// features indicators
+    //// fracdif on bar prices order of && matter
+    //// first is what you want to do and second what you want to try
+    //m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
 
-    // update signals based on all bollinger bands
-    for (int j = 0; j < m_nbands; j++) {
-        int result = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
-        // get only the intersection - region where samples were calculated
-        // on all indicators
-        ncalculated = (result < ncalculated) ? result : ncalculated;
-    }
+    //valid_start = m_fd_mbarp.validIdx();
 
-    if (ncalculated > 0) {
-    // valid samples calculated
-    // store only signal ocurrences
-    int i = BufferTotal() - ncalculated;
-    for (; i < BufferTotal(); i++)
-        for (int j = 0; j < m_nbands; j++)
-            if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-                m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
-    }
+    //// update signals based on all bollinger bands
+    //for (int j = 0; j < m_nbands; j++) {
+    //    m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+    //    int tmp_start = m_rbandsgs[j].validIdx();
+    //    // get only the intersection - region where samples were calculated
+    //    // on all indicators
+    //    valid_start = (result < ncalculated) ? result : ncalculated;
+    //}
 
-    return (ncalculated > 0);
+    //if (ncalculated > 0) {
+    //// valid samples calculated
+    //// store only signal ocurrences
+    //int i = BufferTotal() - ncalculated;
+    //for (; i < BufferTotal(); i++)
+    //    for (int j = 0; j < m_nbands; j++)
+    //        if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
+    //            m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
+    //}
+
+    //return (ncalculated > 0);
+    return true;
 }
 
 

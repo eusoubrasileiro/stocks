@@ -34,33 +34,28 @@ int CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
     return taSTDDEV(0,  size, indata, m_window, outdata);
 }
 
-
-
 // BBANDS
-
-
 // triple buffer indicator
-// cleanear code with multiple inheritance
+// cleanear code with multiple inheritance and templates
 
-void CTaBBANDS::Init(int window, double devs, int ma_type){
+void CTaBBANDS::Init(int window, double devs, int ma_type) {
     m_devs = devs;
     m_tama_type = ma_type;
     IWindowIndicator::Init(window);
 };
 
-void CTaBBANDS::AddEmpty(int count){
-    m_upper.addempty(count);
-    m_middle.addempty(count);
-    m_down.addempty(count);
+void CTaBBANDS::AddEmpty(int count) {
+    for (int i = 0; i < count; i++)
+        add({ DBL_EMPTY_VALUE, DBL_EMPTY_VALUE });
 }
 
-int CTaBBANDS::Calculate(double indata[], int size, double outdata[])
+int CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
 {
     m_out_upper.resize(size);
     m_out_middle.resize(size);
     m_out_down.resize(size);
 
-    return taBBANDS(0, // start the calculation at index
+    int ncalculated = taBBANDS(0, // start the calculation at index
         size, // end the calculation at index
         indata,
         m_window, // From 1 to 100000  - MA window
@@ -69,16 +64,11 @@ int CTaBBANDS::Calculate(double indata[], int size, double outdata[])
         m_out_upper.data(),
         m_out_middle.data(),
         m_out_down.data());
-}
 
-void CTaBBANDS::AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end){
-    // totally ignores signature since I have to add in three buffers
-    m_upper.addrange(m_out_upper.begin(), m_out_upper.begin()+m_calculated);
-    m_middle.addrange(m_out_middle.begin(), m_out_middle.begin()+m_calculated);
-    m_down.addrange(m_out_down.begin(), m_out_down.begin()+m_calculated);
-};
+    for (int i = 0; i < ncalculated; i++) {
+        outdata[i].up = m_out_upper[i];
+        outdata[i].down = m_out_down[i];
+    }
 
-
-int CTaBBANDS::Size(){
-    return m_middle.size();
+    return ncalculated;
 }

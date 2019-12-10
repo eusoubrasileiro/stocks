@@ -135,6 +135,38 @@ TEST(Indicators, CTaMAIndicator){
 
 }
 
+
+
+TEST(Indicators, validIdx) {
+    int window = 2;
+    CTaMAIndicator cta_MA;
+    cta_MA.Init(window, 0);	 // simple MA
+
+    double a[] = { 1 };
+    double c[] = { 3, 4, 5, 5 };
+    cta_MA.Refresh(a, 1);
+    EXPECT_EQ(cta_MA.validIdx(), -1);
+    cta_MA.Refresh(a, 1);
+    EXPECT_EQ(cta_MA.validIdx(), 1);
+    cta_MA.Refresh(c, 4);
+    EXPECT_EQ(cta_MA.validIdx(), 1);
+
+    // fills the buffer
+    for(int i=0; cta_MA.size()<BUFFERSIZE; i++)
+        cta_MA.Refresh(c, 1);
+
+    double last = cta_MA[BUFFERSIZE - 1];
+
+    EXPECT_EQ(cta_MA.validIdx(), 1);
+
+    // overwrites the first
+    for (int i = 0; i < window-1; i++)
+        cta_MA.Refresh(a, 1);
+
+    EXPECT_EQ(cta_MA.validIdx(), 0);
+}
+
+
 TEST(Indicators, CTaBBANDS){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
     std::vector<double> ta_truth_upper = { DBL_EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };

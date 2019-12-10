@@ -24,39 +24,53 @@ int CFracDiffIndicator::Calculate(double indata[], int size, double outdata[])
 // hold  0 : nothing usefull happend
 
 void CBandSignal::Init(int window, double devs, int ma_type) {
-    bands.Init(window, devs, ma_type);
+    // needs bbands window samples + 1 
+    // to produce 1 signal output
+    CWindowIndicator::Init(window+1);
+    bands.Init(window, devs, ma_type);  
 }    
 
-int CBandSignal::Refresh(double newdata[], int count) {    
-    bool result = bands.Refresh(newdata, count); // update bands 
-    m_calculated = bands.m_calculated;
-    addempty(bands.m_nempty);
-    if (!result)
-        return m_calculated;
-
-    // at least one calculated sample on the tripple buffer
-    // first call
-    if (size() == 0) // add 1 empty sample
-        add(0);
-    
-    //just need to check if there are enough samples >= 2
-    if (bands.Size() == 1)// only 1 added sample
-        return 0; // nothing to do
-
-    // newdata[] have samples that just 'created' empty ones
-    // calculated samples dont have empty samples
-    int inew = bands.m_nempty;    
-    for (int i=1; i <bands.m_calculated; i++) {
-        if (newdata[inew+i] >= bands.m_out_upper[i] && 
-            newdata[inew+i-1] < bands.m_out_upper[i-1])
-            add(-1); // sell
-        else
-        if (newdata[inew+i] <= bands.m_out_down[i] &&
-            newdata[inew+i-1] > bands.m_out_down[i-1])
-            add(+1); // buy
-        else
-            add(0); // nothing
+int CBandSignal::Calculate(double indata[], int size, int outdata[])
+{
+    // will arrive here only when indata has 
+    // enough sample to calculate at least 
+    // 1 band-signal value 
+    // and consequently at least 
+    // 2 bollinger bands values
+    bands.Refresh(indata, size); // update bands 
+    // keep signal buffer allignment with b. bands buffers
+    addempty(bands.m_nempty);     
+    // add 1 empty sample - now buffers fully allign
+    if (m_first_call) { // first call   
+        addempty(1);  
+        m_first_call = false;
     }
 
-    return m_calculated;
+    // indata[] will allways have >= m_window-1 previous samples 
+    // that is enough for >= 1 output signal
+    m_ncalculated = size - (m_window - 1);
+
+    // where starts the new calculated data on bands
+    int idx_data_bands = bands.size() - bands.m_ncalculated;
+
+    // newdata[] might have samples that just 'created' empty ones
+    // calculated samples dont have empty samples
+    int inew = bands.m_nempty;
+
+    // start of samples
+    for (int i = 1; i < size; i++) {
+        if (indata[inew + i] >= bands[idx_data_bands + i].up &&
+            indata[inew + i - 1] < bands[idx_data_bands + i - 1].up)
+            outdata[i - 1] = -1; // sell
+        else
+            if (indata[inew + i] <= bands[idx_data_bands + i].down &&
+                indata[inew + i - 1] > bands[idx_data_bands + i - 1].down)
+                outdata[i - 1] = +1; // buy
+            else
+                outdata[i - 1] = 0; // nothing
+    }
+
+    return m_ncalculated;
 }
+
+

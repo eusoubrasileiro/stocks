@@ -1,7 +1,10 @@
 #include "buffers.h"
 
-// an indicator the each sample calculated depends itself + window-1 samples before it
+// an indicator the each sample calculated 
+// depends itself + window-1 samples before it
 // or u need window samples to produce 1 output
+// TypeSt for storage
+// TypeIn for input
 template<typename TypeSt, typename TypeIn>
 class IWindowIndicator
 {
@@ -78,7 +81,7 @@ public:
       std::copy(newdata, newdata + count, m_calculating.begin() + nprev);
 
       m_calculated.resize(nprev+count); // output
-      m_ncalculated = Calculate(m_calculating.data(), nprev+count, m_calculated.begin());
+      m_ncalculated = Calculate(m_calculating.data(), nprev+count, m_calculated.data());
 
       AddRange(m_calculated.begin(), m_calculated.begin()+ m_ncalculated);
       m_count += m_ncalculated;
@@ -108,7 +111,7 @@ protected:
  private:
 
     // calculate m_valid_start and m_all_valid samples on buffer
-    inline void updateValidIdx() override {
+    inline void updateValidIdx(){
         if (!m_all_valid) {
             if (m_count >= BUFFERSIZE + (m_window - 1)) {
                 m_valid_start = 0; m_all_valid = true;
@@ -125,7 +128,7 @@ class CWindowIndicator : public buffer<TypeSt>, public IWindowIndicator<TypeSt, 
 {
 public:
 
-    CWindowIndicator(void) { set_capacity(BUFFERSIZE); };
+    CWindowIndicator(void) { buffer<TypeSt>::set_capacity(BUFFERSIZE); };
 
     void AddRange(typename std::vector<TypeSt>::iterator start, 
         typename std::vector<TypeSt>::iterator end) override {
@@ -231,7 +234,6 @@ public:
 // buy   1 : crossing down-outside it's buy
 // sell -1 : crossing up-outside it's sell
 // hold  0 : nothing usefull happend
-// storing int/short as a double -- but who cares?! for now...
 class CBandSignal : public CWindowIndicator<int, double>
 {
 protected:
@@ -248,4 +250,8 @@ public:
     void Init(int window, double devs, int ma_type);
 
     int Calculate(double indata[], int size, int outdata[]);
+
+    void AddEmpty(int count) override {
+        buffer<int>::addempty(count);
+    }
 };

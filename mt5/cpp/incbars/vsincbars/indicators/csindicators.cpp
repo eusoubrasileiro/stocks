@@ -33,18 +33,30 @@ int CBandSignal::Refresh(double newdata[], int count) {
     addempty(bands.m_nempty);
     if (!result)
         return m_calculated;
+
     // at least one calculated sample on the tripple buffer
+    // first call
+    if (size() == 0) // add 1 empty sample
+        add(0);
+    
+    //just need to check if there are enough samples >= 2
+    if (bands.Size() == 1)// only 1 added sample
+        return 0; // nothing to do
+
     // newdata[] have samples that just 'created' empty ones
     // calculated samples dont have empty samples
     int inew = bands.m_nempty;    
-    for (int i=0; i <bands.m_calculated; i++) {
-        if (newdata[inew+i] > bands.m_out_upper[i])
+    for (int i=1; i <bands.m_calculated; i++) {
+        if (newdata[inew+i] >= bands.m_out_upper[i] && 
+            newdata[inew+i-1] < bands.m_out_upper[i-1])
             add(-1); // sell
         else
-        if (newdata[inew+i] < bands.m_out_down[i])
+        if (newdata[inew+i] <= bands.m_out_down[i] &&
+            newdata[inew+i-1] > bands.m_out_down[i-1])
             add(+1); // buy
         else
             add(0); // nothing
     }
+
     return m_calculated;
 }

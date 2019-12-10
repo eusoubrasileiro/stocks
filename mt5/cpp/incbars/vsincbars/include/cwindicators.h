@@ -85,9 +85,8 @@ protected:
 
     virtual void AddEmpty(int count) = 0;
 
-    virtual void Add(Type value) = 0;
-
-    virtual void AddRange(typename std::vector<Type>::iterator start, typename std::vector<Type>::iterator end) = 0;
+    virtual void AddRange(typename std::vector<Type>::iterator start, 
+        typename std::vector<Type>::iterator end) = 0;
 };
 
 
@@ -101,10 +100,6 @@ public:
 
     void AddEmpty(int count) override {
         buffer<double>::addempty(count);
-    }
-
-    void Add(double value) override {
-        buffer<double>::add(value);
     }
 
     void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) override  {
@@ -173,8 +168,6 @@ public:
 
     void AddRange(std::vector<double>::iterator start, std::vector<double>::iterator end) override;
 
-    void Add(double value) override {}; // does nothing since this is tripple buffer
-
     int Size();
 };
 
@@ -199,8 +192,9 @@ public:
 };
 
 
-// not a window indicator : each sample only depends on the current
-// values on the bollinger bands
+// a window indicator of size
+// each sample only depends on the current and previous
+// values on the bollinger bands 
 
 // Based on a bollinger band defined by upper-band and lower-band
 // calculate signals:

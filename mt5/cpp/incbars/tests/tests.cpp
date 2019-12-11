@@ -145,11 +145,11 @@ TEST(Indicators, validIdx) {
     double a[] = { 1 };
     double c[] = { 3, 4, 5, 5 };
     cta_MA.Refresh(a, 1);
-    EXPECT_EQ(cta_MA.validIdx(), -1);
+    EXPECT_EQ(cta_MA.valididx(), -1);
     cta_MA.Refresh(a, 1);
-    EXPECT_EQ(cta_MA.validIdx(), 1);
+    EXPECT_EQ(cta_MA.valididx(), 1);
     cta_MA.Refresh(c, 4);
-    EXPECT_EQ(cta_MA.validIdx(), 1);
+    EXPECT_EQ(cta_MA.valididx(), 1);
 
     // fills the buffer
     for(int i=0; cta_MA.size()<BUFFERSIZE; i++)
@@ -157,13 +157,13 @@ TEST(Indicators, validIdx) {
 
     double last = cta_MA[BUFFERSIZE - 1];
 
-    EXPECT_EQ(cta_MA.validIdx(), 1);
+    EXPECT_EQ(cta_MA.valididx(), 1);
 
     // overwrites the first
     for (int i = 0; i < window-1; i++)
         cta_MA.Refresh(a, 1);
 
-    EXPECT_EQ(cta_MA.validIdx(), 0);
+    EXPECT_EQ(cta_MA.valididx(), 0);
 }
 
 
@@ -203,7 +203,7 @@ TEST(Indicators, CTaBBANDS){
 }
 
 // Python code - base for test
-//x = np.array([1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1], dtype = np.double)
+//x = np.array([1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1,  8, 5, 5], dtype = np.double)
 //up, med, down = ta.BBANDS(x, 5, 1.5, 1.5, matype=2)
 //plt.figure(figsize = (10, 4))
 //plt.plot(x, '-k.')
@@ -211,11 +211,11 @@ TEST(Indicators, CTaBBANDS){
 //plt.plot(down, '-r.', lw = 0.5)
 //plt.grid()
 TEST(Indicators, CBandSignal) {
-    double in[] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1};
+    double in[14] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1, 8, 5, 5};
     std::vector<int> truth_band_signal = { INT_EMPTY_VALUE, INT_EMPTY_VALUE,
                                         INT_EMPTY_VALUE, INT_EMPTY_VALUE,
                                         INT_EMPTY_VALUE,   0,   0,   0,  
-                                         1,   0,   0};
+                                         1,   0,   0,  -1,  0,  0};
     int window = 5;
     int bfsize = 20;
     CBandSignal cbsignal;
@@ -226,23 +226,25 @@ TEST(Indicators, CBandSignal) {
     double b[] = { 1 };
     double c[] = { 1, 2, 5, 5, 5};
     double d[] = { 5, 1, 1, 1};
+    double e[] = { 8, 5, 5 };
     cbsignal.Refresh(a, 1);
     cbsignal.Refresh(b, 1);
     cbsignal.Refresh(c, 5);
     cbsignal.Refresh(d, 4);
+    cbsignal.Refresh(e, 3);
 
-    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.begin(), 11, 0.0001);
+    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.begin(), 14, 0.0001);
 }
 
 #include <iostream>
 #include <fstream>
 
 TEST(Expert, Initialize) {
-    Initialize(3, 15, 1, 100,
-        10.5, 16.5, 1.00, 
-        25000, 100, 50, 3, // 3 increases => 1+3 = 4 total max positions
-        100, 0.01, 0.01,
-        100e4); // 1MM BRL to form 1 money bar
+    Initialize(5, 15, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
+        10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
+        25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
+        100, 0.01, 0.01, // minlot, ticksize, tickvalue
+        500e3);
 }
 
 TEST(Expert, AddTicks) {
@@ -265,7 +267,7 @@ TEST(Expert, AddTicks) {
     fh.read((char*)cstyle_ticks, end);
     //std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
 
-    AddTicks(cstyle_ticks, 2e5);
+    AddTicks(cstyle_ticks, 2e6);
 
     delete[] cstyle_ticks;
 }

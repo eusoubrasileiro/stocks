@@ -19,9 +19,9 @@ void CTaMAIndicator::Init(int window, int tama_type){
     CWindowIndicator::Init(window);
 };
 
-int CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
+void CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
 {
-    return taMA(0, size, indata, m_window, m_tama_type, outdata);
+    taMA(0, size, indata, m_window, m_tama_type, outdata);
 }
 
 
@@ -29,9 +29,9 @@ int CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
 
 void CTaSTDDEV::Init(int window){ CWindowIndicator::Init(window); };
 
-int CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
+void CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
 {
-    return taSTDDEV(0,  size, indata, m_window, outdata);
+    taSTDDEV(0,  size, indata, m_window, outdata);
 }
 
 // BBANDS
@@ -49,12 +49,8 @@ void CTaBBANDS::AddEmpty(int count) {
         add({ DBL_EMPTY_VALUE, DBL_EMPTY_VALUE });
 }
 
-int CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
+void CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
 {
-    m_out_upper.resize(size);
-    m_out_middle.resize(size);
-    m_out_down.resize(size);
-
     int ncalculated = taBBANDS(0, // start the calculation at index
         size, // end the calculation at index
         indata,
@@ -69,6 +65,4 @@ int CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
         outdata[i].up = m_out_upper[i];
         outdata[i].down = m_out_down[i];
     }
-
-    return ncalculated;
 }

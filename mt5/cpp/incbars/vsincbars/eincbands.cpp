@@ -202,44 +202,51 @@ size_t BufferTotal() { return m_bars.size(); }
 // start index on all buffers of new bars after AddTicks > 0
 size_t NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
 
+// start index of valid data on all buffers (indicators) any time
+size_t ValidDataIdx() {
+    size_t valid_start = 0;
+    valid_start = m_fd_mbarp.valididx();
+    for (int j = 0; j < m_nbands; j++){
+        size_t tmp_start = m_rbandsgs[j].valididx();
+        valid_start = (tmp_start > valid_start) ? tmp_start : valid_start;
+    }
+    return valid_start;
+}
+
 // start index and count of new bars that just arrived
 bool Refresh()
 {
-    //int valid_start = 0;
+    int ncalculated = 0;
 
-    //// arrays of new data update them
-    //m_bars.RefreshArrays();
-    //// all bellow must be called to maintain alligment of buffers
-    //// by creating empty samples
+    // arrays of new data update them
+    m_bars.RefreshArrays();
+    // all bellow must be called to maintain alligment of buffers
+    // by creating empty samples
 
-    //// features indicators
-    //// fracdif on bar prices order of && matter
-    //// first is what you want to do and second what you want to try
-    //m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+    // features indicators
+    // fracdif on bar prices order of && matter
+    // first is what you want to do and second what you want to try
+    ncalculated = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
 
-    //valid_start = m_fd_mbarp.validIdx();
+    // update signals based on all bollinger bands
+    for (int j = 0; j < m_nbands; j++) {
+        int tmp_calc = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+        // get only the intersection - smallest region 
+        // where samples were calculated on all indicators
+        ncalculated = (tmp_calc < ncalculated) ? tmp_calc : ncalculated;
+    }
 
-    //// update signals based on all bollinger bands
-    //for (int j = 0; j < m_nbands; j++) {
-    //    m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
-    //    int tmp_start = m_rbandsgs[j].validIdx();
-    //    // get only the intersection - region where samples were calculated
-    //    // on all indicators
-    //    valid_start = (result < ncalculated) ? result : ncalculated;
-    //}
+    if (ncalculated > 0) {
+        // valid samples calculated
+        // store only signal ocurrences
+        int i = BufferTotal()-ncalculated;
+        for (; i < BufferTotal(); i++)
+            for (int j = 0; j < m_nbands; j++)
+                if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
+                    m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
+    }
 
-    //if (ncalculated > 0) {
-    //// valid samples calculated
-    //// store only signal ocurrences
-    //int i = BufferTotal() - ncalculated;
-    //for (; i < BufferTotal(); i++)
-    //    for (int j = 0; j < m_nbands; j++)
-    //        if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-    //            m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
-    //}
-
-    //return (ncalculated > 0);
-    return true;
+    return (ncalculated > 0);
 }
 
 
@@ -331,20 +338,25 @@ int lastRawSignals() {
 
 
 // next n signals with same sign <buffer index, band number>
-// and band number higher than previous
+// 1. and band number higher than previous
+// 2. and time higher than previous (cannot accept signs in different bands at the same time)
 // we can only increase positions if band higher than previous
-inline std::list<std::pair<uint64_t, int>> bufidxNextnSame(std::list<bsignal>::iterator start,
-                             std::list<bsignal>::iterator end, int sign, int band, uint64_t bfidx_ct){
+inline std::list<std::pair<uint64_t, int>> 
+    bufidxNextnSame(std::list<bsignal>::iterator start, std::list<bsignal>::iterator end,
+                    bsignal current, uint64_t bfidx_ct)
+{
     std::list<std::pair<uint64_t, int>> bufidxnextn; // indexes of next n signals same sign
     int ncount = 0;
-    int last_band = band;
+    int last_band = current.band;
+    uint64_t last_time = current.tuidx;
     // go to next - first signal after passed-signal
     start++;
     while (start != end && ncount < m_incmax){
-        if (start->sign == sign && start->band > last_band) {
+        if (start->sign == current.sign && start->band > last_band && start->tuidx > last_time) {
             bufidxnextn.push_back(std::make_pair(start->tuidx - bfidx_ct, start->band)); // current buffer index
             ncount++;
             last_band = start->band;
+            last_time = start->tuidx;
         }
         start++;
     }
@@ -370,7 +382,7 @@ void LabelClasses(){
         bfidx_ct = iter->tuidx - m_bars.Search(iter->tuidx);
 
     while(iter != m_bsignals.end()){
-        auto nextn = bufidxNextnSame(iter, m_bsignals.end(), iter->sign, iter->band, bfidx_ct);
+        auto nextn = bufidxNextnSame(iter, m_bsignals.end(), *iter, bfidx_ct);
         res = LabelSignal(*iter, iter->tuidx - bfidx_ct, nextn, xy); 
         if (res == -2) // not enough data for labelling - stop everything
             break;

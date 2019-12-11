@@ -11,9 +11,9 @@ void CFracDiffIndicator::Init(int window, double dfraction){
     setFracDifCoefs(m_dfraction, window);
 };
 
-int CFracDiffIndicator::Calculate(double indata[], int size, double outdata[])
+void CFracDiffIndicator::Calculate(double indata[], int size, double outdata[])
 {
-    return FracDifApply(indata, size, outdata);
+    FracDifApply(indata, size, outdata);
 }
 
 
@@ -24,46 +24,49 @@ int CFracDiffIndicator::Calculate(double indata[], int size, double outdata[])
 // hold  0 : nothing usefull happend
 
 void CBandSignal::Init(int window, double devs, int ma_type) {
-    // needs bbands window samples + 1 
+    // needs bbands window 2 samples
     // to produce 1 signal output
     CWindowIndicator::Init(window+1);
     bands.Init(window, devs, ma_type);  
 }    
 
-int CBandSignal::Calculate(double indata[], int size, int outdata[])
+int CBandSignal::Refresh(double newdata[], int count) {
+    // mwindow-1 size
+    bands.Refresh(newdata, count); // update bands     
+    // mwindow size
+    return CWindowIndicator::Refresh(newdata, count); 
+}
+
+void CBandSignal::Calculate(double indata[], int size, int outdata[])
 {
-    // will arrive here only when indata has 
-    // enough sample to calculate at least 
-    // 1 band-signal value 
-    // and consequently at least 
-    // 2 bollinger bands values
-    bands.Refresh(indata, size); // update bands 
-
-    // indata[] will allways have >= m_window-1 previous samples 
-    // that is enough for >= 1 output signal
-    m_ncalculated = size - (m_window - 1);
-
+    // will come here only when 
+    // size with >= m_window samples
+    // first valid sample in indata is at 
+    // m_window - 1
+    // but bellow I work using -1 so lets add + 1
+    int instart = (m_window - 1);
     // where starts the new calculated data on bands
-    int idx_data_bands = bands.size() - bands.m_ncalculated;
+    // but bellow I work using -1 so lets add + 1
+    int idx_bands = bands.size() - bands.m_ncalculated;
 
-    // newdata[] might have samples that just 'created' empty ones
-    // calculated samples dont have empty samples
-    int inew = bands.m_nempty;
+    // this is uggly and possibly wrong?
+    // effect of m_window difference of 1 
+    // between bbands and this
+    // seen just on first call?
+    if (bands[idx_bands - 1].up == DBL_EMPTY_VALUE) // or idx_bands == bands.valididx() 
+        idx_bands++;
 
-    // start of samples
-    for (int i = 1; i < size; i++) {
-        if (indata[inew + i] >= bands[idx_data_bands + i].up &&
-            indata[inew + i - 1] < bands[idx_data_bands + i - 1].up)
-            outdata[i - 1] = -1; // sell
+    for (int i = instart; i < size; i++, idx_bands++) {
+        if (indata[i] >= bands[idx_bands].up &&
+            indata[i - 1] < bands[idx_bands - 1].up)
+            outdata[i - instart] = -1; // sell
         else
-            if (indata[inew + i] <= bands[idx_data_bands + i].down &&
-                indata[inew + i - 1] > bands[idx_data_bands + i - 1].down)
-                outdata[i - 1] = +1; // buy
+            if (indata[i] <= bands[idx_bands].down &&
+                indata[i - 1] > bands[idx_bands - 1].down)
+                outdata[i - instart] = +1; // buy
             else
-                outdata[i - 1] = 0; // nothing
+                outdata[i - instart] = 0; // nothing
     }
-
-    return m_ncalculated;
 }
 
 

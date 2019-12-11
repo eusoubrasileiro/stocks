@@ -63,6 +63,7 @@ DLL_EXPORT bool Refresh(void);
 DLL_EXPORT size_t BufferSize(); // size of all buffers
 DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
+DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
 
 // classes and features
 DLL_EXPORT void LabelClasses();

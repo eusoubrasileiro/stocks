@@ -170,7 +170,6 @@ TEST(Indicators, validIdx) {
 TEST(Indicators, CTaBBANDS){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
     std::vector<double> ta_truth_upper = { DBL_EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
-    std::vector<double> ta_truth_middle = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
     std::vector<double> ta_truth_down = { DBL_EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
 
     int size = 8;
@@ -188,9 +187,19 @@ TEST(Indicators, CTaBBANDS){
     cta_BBANDS.Refresh(c, 5);
     cta_BBANDS.Refresh(d, 2);
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, cta_BBANDS.m_upper.begin(), 9, 0.001);
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_middle, cta_BBANDS.m_middle.begin(), 9, 0.001);
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, cta_BBANDS.m_down.begin(), 9, 0.001);
+    double *up, *down;
+    up = new double[cta_BBANDS.size()];
+    down = new double[cta_BBANDS.size()];
+    for (int i = 0; i < cta_BBANDS.size(); i++) {
+        up[i] = cta_BBANDS[i].up;
+        down[i] = cta_BBANDS[i].down;
+    }
+    
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, up, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, down, 9, 0.001);
+
+    delete[] up;
+    delete[] down;
 }
 
 // Python code - base for test
@@ -203,9 +212,10 @@ TEST(Indicators, CTaBBANDS){
 //plt.grid()
 TEST(Indicators, CBandSignal) {
     double in[] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1};
-    std::vector<double> truth_band_signal = { DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
-                                        DBL_EMPTY_VALUE, DBL_EMPTY_VALUE,
-                                        -1,   0,   0,   0,  1,   0,   0};
+    std::vector<int> truth_band_signal = { INT_EMPTY_VALUE, INT_EMPTY_VALUE,
+                                        INT_EMPTY_VALUE, INT_EMPTY_VALUE,
+                                        INT_EMPTY_VALUE,   0,   0,   0,  
+                                         1,   0,   0};
     int window = 5;
     int bfsize = 20;
     CBandSignal cbsignal;

@@ -237,15 +237,10 @@ public:
 class CBandSignal : public CWindowIndicator<int, double>
 {
 protected:
-
     CTaBBANDS bands;
 
 public:
-    bool m_first_call;
-
-    CBandSignal() {
-        m_first_call = true;
-    };
+    CBandSignal() {};
 
     void Init(int window, double devs, int ma_type);
 

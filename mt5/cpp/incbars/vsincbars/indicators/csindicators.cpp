@@ -38,13 +38,6 @@ int CBandSignal::Calculate(double indata[], int size, int outdata[])
     // and consequently at least 
     // 2 bollinger bands values
     bands.Refresh(indata, size); // update bands 
-    // keep signal buffer allignment with b. bands buffers
-    addempty(bands.m_nempty);     
-    // add 1 empty sample - now buffers fully allign
-    if (m_first_call) { // first call   
-        addempty(1);  
-        m_first_call = false;
-    }
 
     // indata[] will allways have >= m_window-1 previous samples 
     // that is enough for >= 1 output signal

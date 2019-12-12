@@ -168,7 +168,12 @@ BOOL __stdcall DllMain( HMODULE hModule,
     return TRUE;
 }
 
-void setbyPython(){
-    std::cout << "calledbyPython changed " << std::endl;
-    calledbyPython = true;
-}
+//void unloadModule(){
+//    PyGILState_Release(gstate);
+//    if (Py_IsInitialized()) {
+//        pycode.~module(); // must destroy here otherwise will try to destroy
+//        //after the interpreter is destroyed and booom!!!$&##��*�@!(@
+//        py::finalize_interpreter();
+//        debugfile << "finalized interpreter" << std::endl;
+//    } // also kills the jupyter python kernel 
+//}

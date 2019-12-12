@@ -76,6 +76,8 @@ size_t pyAddTicks(py::array_t<MqlTick> ticks);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 
+// index offset correction between uid and current buffer indexes
+inline void updateBufferUidOffset();
 
 void verifyEntry();
 // verify a signal in any band
@@ -89,7 +91,7 @@ void verifyEntry();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
-int LabelSignal(bsignal signal, size_t bfidx, std::list<std::pair<uint64_t, int>> nextn, XyPair& xy);
+int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterator end, XyPair& xy);
 int CreateXFeatureVector(XyPair &xypair);
 
 std::tuple<py::array, py::array, py::array> pyGetXyvectors();

@@ -29,8 +29,6 @@ PYBIND11_MODULE(incbars, m) {
     // is loaded the DllMain will be called? are you sure?
     DllMain(0, DLL_PROCESS_ATTACH, 0); // just to make sure
 
-    calledbyPython = true; // makes DllMain finalize_interpreter when DLL_PROCESS_DETACH
-
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
@@ -70,6 +68,7 @@ PYBIND11_MODULE(incbars, m) {
     m.def("getxdim", &pyGetXdim, "get x feature vector dimension");
     
     m.def("labelsignals", &LabelClasses, "label available b. band signals creating xypairs with y target class assigned");
-        
+ 
+    //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter too
 }
 

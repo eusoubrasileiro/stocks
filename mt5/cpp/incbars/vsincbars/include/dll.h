@@ -22,12 +22,11 @@ BOOL __stdcall DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved);
 
-extern bool calledbyPython; // if called by Python dll behaves differently
-
 /*  To use this exported function of dll, include this header
  *  in your project.
  */
 
+// void unloadModule();
 
 
 #endif //DLLEXPORTS_H

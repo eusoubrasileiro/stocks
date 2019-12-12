@@ -9,6 +9,8 @@
 
 DLL_EXPORT int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
     char* model, int pymodel_size_max);
+
 DLL_EXPORT int pyPredictwModel(double X[], int xtrain_dim,
     char* model, int pymodel_size);
 
+DLL_EXPORT void setbyPython();

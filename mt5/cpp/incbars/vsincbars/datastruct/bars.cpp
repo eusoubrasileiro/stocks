@@ -1,10 +1,5 @@
 #include "bars.h"
 
-// iterator 'like' begin of new bars
-MoneyBar *MoneyBarBuffer::BeginNewBars() {
-    return &(end()-(m_nnew-1))[0];
-}
-
 // index based
 size_t MoneyBarBuffer::BeginNewBarsIdx() {
     return size()-m_nnew;
@@ -21,9 +16,8 @@ MoneyBarBuffer::MoneyBarBuffer() {
 
 // return only new ... data added
 void MoneyBarBuffer::RefreshArrays() {
-    auto bar = BeginNewBars();
-    for(int i=0; i<m_nnew; i++)
-        new_avgprices[i] = bar[i].avgprice;
+    for(size_t i=BeginNewBarsIdx(); i<size(); i++)
+        new_avgprices[i] = (*this)[i].avgprice;
 }
 
 void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize){

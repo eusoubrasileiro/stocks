@@ -43,7 +43,7 @@ PYBIND11_MODULE(incbars, m) {
     m.doc() = "incbars metatrader 5 expert - python api pybind11";
 
     m.def("initialize", &Initialize, "Initialize Increase Bands Expert",
-        py::arg("nbands"), py::arg("bbwindow"), py::arg("batch_size"), py::arg("ntraining"), 
+        py::arg("nbands"), py::arg("bbwindow"), py::arg("stddevs"), py::arg("batch_size"), py::arg("ntraining"),
         py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"), 
         py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), py::arg("incmax"),
         py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 

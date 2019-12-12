@@ -88,14 +88,15 @@ unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 
 
+double m_devs;
 
-
-void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
+void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size) // R$ to form 1 money bar
 {
+    m_devs = devs;
     m_incmax = incmax;
     m_start_hour = start_hour;
     m_end_hour = end_hour;
@@ -151,7 +152,7 @@ void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
     // raw signal storage + ctalib bbands
     double inc = m_bbwindow_inc;
     for (int i = 0; i < m_nbands; i++) { // create multiple increasing bollinger bands
-        m_rbandsgs[i].Init(m_bbwindow * inc, 2.5, 2); // 2-Weighted type
+        m_rbandsgs[i].Init(m_bbwindow * inc, m_devs, 2); // 2-Weighted type
         // weighted seams more meaning since i know each bar
         // represents same ammount of money so have a equal weight
         inc += m_bbwindow_inc;

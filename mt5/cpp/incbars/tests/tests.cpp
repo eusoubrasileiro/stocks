@@ -240,7 +240,7 @@ TEST(Indicators, CBandSignal) {
 #include <fstream>
 
 TEST(Expert, Initialize) {
-    Initialize(5, 15, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
+    Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue

@@ -39,7 +39,7 @@ namespace py = pybind11;
 // so will not use __stdcall specifier since Python is also x64
 // extern "C" guarantes no decoration is inserted on the function name
 
-DLL_EXPORT void Initialize(int nbands, int bbwindow, int batch_size, int ntraining,
+DLL_EXPORT void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,

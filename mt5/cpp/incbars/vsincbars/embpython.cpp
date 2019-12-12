@@ -167,3 +167,8 @@ BOOL __stdcall DllMain( HMODULE hModule,
     }
     return TRUE;
 }
+
+void setbyPython(){
+    std::cout << "calledbyPython changed " << std::endl;
+    calledbyPython = true;
+}

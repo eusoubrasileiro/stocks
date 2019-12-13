@@ -132,8 +132,8 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
     // 3 - number of ticks to form a bar  - stationary adfuller test
     m_nsignal_features = m_nbands + 3;
     // one additional feature - last value
-    // +1 - band number - disambiguation - 
-    //     equal X's might need to be classified differently 
+    // +1 - band number - disambiguation -
+    //     equal X's might need to be classified differently
     //     due comming from a different band
     m_xtrain_dim = m_nsignal_features * m_batch_size + 1;
 
@@ -234,7 +234,7 @@ bool Refresh()
     // update signals based on all bollinger bands
     for (int j = 0; j < m_nbands; j++) {
         int tmp_calc = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
-        // get only the intersection - smallest region 
+        // get only the intersection - smallest region
         // where samples were calculated on all indicators
         ncalculated = (tmp_calc < ncalculated) ? tmp_calc : ncalculated;
     }
@@ -345,14 +345,14 @@ int lastRawSignals() {
 // 2. and time higher than last_time (cannot accept signs in different bands at the same time)
 // we can only increase positions if band higher than previous
 // and time greater than previous
-inline std::list<std::pair<uint64_t, int>> 
+inline std::list<std::pair<uint64_t, int>>
     bufidxNextnSame(std::list<bsignal>::iterator start, std::list<bsignal>::iterator end, uint64_t last_uidtime)
 {
     std::list<std::pair<uint64_t, int>> bufidxnextn; // indexes of next n signals same sign
     bsignal current = *start;
     int ncount = 0;
     int last_band = current.band;
-    // go to next - first signal after passed-signal    
+    // go to next - first signal after passed-signal
     start++;
     while (start != end && ncount < m_incmax){
         if (start->sign == current.sign && start->band > last_band && start->tuidx > last_uidtime) {
@@ -367,7 +367,7 @@ inline std::list<std::pair<uint64_t, int>>
 }
 
 // correction between uid's and current buffer index
-// actual uid position on buffer is 
+// actual uid position on buffer is
 // uid - m_bfoffset
 inline void updateBufferUidOffset(){
     // uid starts at 0 alligned with bars (and all buffers) BUT
@@ -382,7 +382,7 @@ inline void updateBufferUidOffset(){
 // Create target class by analysing raw band signals
 // label or re-label or re-classify every signal on every band
 // that are different than 0
-// those that went true receive 1 buy or -1 sell
+// those that went sucess receive 1
 // those that went bad receive 0 hold
 void LabelClasses(){
     // w. bags of signals saved
@@ -434,7 +434,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
 
     // save this buy or sell
     xy.bsg = *current;
-    xy.y = current->sign; // start by beliving 
+    xy.y = 1; // start by beliving
     // for this position
     // start time - where buy/sell really takes place
     int64_t start_time = m_bars[start_bfidx].emsc;
@@ -455,16 +455,16 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
     int64_t end_day = m_bars[start_bfidx].smsc + secs_toend_day * 1000;
 
     // after getting the start_bfidx we search for the nextn
-    // buffer index of next signal 
-    // 1. with same sign 
+    // buffer index of next signal
+    // 1. with same sign
     // 2. in a higher band
     // 3. uid time greater than start_bfidx
     auto nextn = bufidxNextnSame(current, end, m_bars[start_bfidx].uid);
     auto nextsignidx = nextn.begin();
 
-    // will only increase position 
+    // will only increase position
     // if signal comes from a superior band -- higher number
-    int last_band = current->band; 
+    int last_band = current->band;
 
     quantity = roundVolume(m_ordersize / entryprice);
     // starting jump forward to where the buy/sell really takes place
@@ -495,23 +495,23 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             xy.y = 0; // not a good deal, was better not to entry
             return 1;
         }
-        // third barrier - time 
-        // 1.expire-time or 2.day-end 
+        // third barrier - time
+        // 1.expire-time or 2.day-end
         // or 3.crossed-to a new day (should never happen)
         if(m_bars[i].emsc - start_time > m_expire_time ||
             m_bars[i].emsc > end_day || // operations end of day
             m_bars[i].time.tm_mday != day) { // crossed to a new day
             xy.y = 0; // expired position
-            // could include a minimal profit to be still valid 
+            // could include a minimal profit to be still valid
             return 1;
         }
-        // increase position if 
+        // increase position if
         // 1. can increase position - maxinc restriction
         // 2. is time for that
         // 3. it is from a higher band - starting w. original signal
         // pair is <buffer index, band number>
-        if (nextsignidx != nextn.end() && 
-            nextsignidx->first == i && 
+        if (nextsignidx != nextn.end() &&
+            nextsignidx->first == i &&
             nextsignidx->second > last_band){
             // find entry time
             auto new_posbfidx = m_bars.SearchStime(m_bars[nextsignidx->first].emsc + Expert_Delay);
@@ -524,7 +524,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             // 3. crossed to a new day
             if (m_bars[new_posbfidx].emsc - start_time > m_expire_time ||
                 m_bars[new_posbfidx].emsc > end_day || // operations end of day
-                m_bars[new_posbfidx].time.tm_mday != day) { // crossed to a new day                
+                m_bars[new_posbfidx].time.tm_mday != day) { // crossed to a new day
                 nextsignidx = nextn.end(); // cannot increase any other position
                 continue;
             }
@@ -534,7 +534,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             entryprice = (new_entryprice * new_quantity) + (entryprice * quantity);
             entryprice /= (new_quantity + quantity);
             // sum quantity
-            quantity += new_quantity;            
+            quantity += new_quantity;
             last_band = nextsignidx->second;
             nextsignidx++;
         }
@@ -588,7 +588,7 @@ int CreateXFeatureVector(XyPair &xypair)
     // something like
     // double[Expert_BufferSize][nsignal_features] would be awesome
     // easier to copy to X also to create cross-features
-    // using a constant on the second dimension is possible    
+    // using a constant on the second dimension is possible
     for (int timeidx = batch_start_idx; timeidx < bfidxsg; timeidx++) {
         // from past to present [bufi-batch_size:bufi+1)
         // features from band signals
@@ -644,7 +644,7 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
     return *ppymbars;
 }
 
-std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
+std::tuple<py::array, py::array, py::array, py::array> pyGetXyvectors(){
     // pybind11 automatically casts/converts std:: types
     // vectors got to a list
     // but you can use cast to convert to a numpy array
@@ -652,6 +652,10 @@ std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
     std::vector<double> X;
     std::list<uint64_t> tidx;
     std::list<int> Y;  // if use push_back dont need set size
+    // make it possible to split training samples for two classifiers
+    // buy signals and sell signals
+    std::list<int> bandsg;  // raw band sign source of classification
+    // will be used to split X -1 and X 1
     X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
 
     int idx = 0;
@@ -660,6 +664,7 @@ std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
             std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(),
                 X.begin() + idx * m_xtrain_dim);
             Y.push_back(m_xypairs[idx].y);
+            bandsg.push_back(m_xypairs[idx].bsg.sign);
             tidx.push_back(m_xypairs[idx].bsg.tuidx);
         }
     }
@@ -667,9 +672,10 @@ std::tuple<py::array, py::array, py::array> pyGetXyvectors(){
     py::array pyX = py::cast(X);
     py::array pyY = py::cast(Y);
     py::array pyIdx = py::cast(tidx);
+    py::array pyBandsg = py::cast(bandsg);
     pyX.resize({ (int) m_xypairs.size(), m_xtrain_dim });
 
-    return std::make_tuple(pyX, pyY, pyIdx);
+    return std::make_tuple(pyX, pyY, pyIdx, pyBandsg);
 }
 
 

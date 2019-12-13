@@ -94,7 +94,7 @@ int lastRawSignals();
 int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterator end, XyPair& xy);
 int CreateXFeatureVector(XyPair &xypair);
 
-std::tuple<py::array, py::array, py::array> pyGetXyvectors();
+std::tuple<py::array, py::array, py::array, py::array> pyGetXyvectors();
 int pyGetXdim();
 
 // sklearn model

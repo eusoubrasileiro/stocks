@@ -75,7 +75,12 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             uidtimes.add(m_bar.uid);
             add(m_bar);
             m_pvs = m_vs = 0;
-            m_bar.nticks = 0;
+            m_bar.nticks = 0; 
+            // case when multiple bars created for same tick
+            // start and exit time are the same
+            m_bar.smsc = tick.time_msc;
+            // wil be overwritten when a new tick
+            // createas a new bar
             m_count_money -= m_moneybarsize;
             m_nnew++;
         }

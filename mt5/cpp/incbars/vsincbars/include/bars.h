@@ -46,7 +46,7 @@ protected:
     // will never have in any scenary this ammount of money bars so rest safe
     // there is be no problems on binary search for money bars
     uint64_t cuid;
-    // current tm time the bar being formed
+    // start tm time the bar being formed
     // if a day is crossed the data for this bar is ignored
     tm ctime;
 

@@ -22,6 +22,7 @@ struct MoneyBar
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars
+    double dtp; // time difference to previous bar in seconds (only inside a day)
     double askh;
     double askl; // high and lowest value ask during this bar
     double bidh;

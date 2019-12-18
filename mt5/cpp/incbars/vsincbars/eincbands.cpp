@@ -102,7 +102,7 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
     m_incmax = incmax;
     m_start_hour = start_hour;
     m_end_hour = end_hour;
-    m_expire_time = (int64_t) expire_hour*3600*1000; // to ms
+    m_expire_time = (int64_t) ((double) expire_hour*3600*1000); // to ms
     m_lotsmin = lotsmin;
     m_moneybar_size = moneybar_size;
     m_bbwindow_inc = 0.5;

@@ -47,6 +47,8 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
         if (m_bar.nticks == 0) {// entry time for this bar
             m_bar.time = ctime;
             m_bar.smsc = tick.time_msc;
+            // time difference in seconds to previous bar
+            m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;            
         }
@@ -57,6 +59,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.nticks = 0;
             m_bar.time = ctime;
             m_bar.smsc = tick.time_msc;
+            m_bar.dtp = 0; // no previous bar 
             m_count_money = 0;
             m_pvs = m_vs = 0;
             m_bar.bidh = m_bar.bidl = tick.bid;
@@ -76,9 +79,10 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             add(m_bar);
             m_pvs = m_vs = 0;
             m_bar.nticks = 0; 
-            // case when multiple bars created for same tick
+            m_bar.dtp = 0;
+            // case when multiple bars created from same tick
             // start and exit time are the same
-            m_bar.smsc = tick.time_msc;
+            m_bar.smsc = tick.time_msc;            
             // wil be overwritten when a new tick
             // createas a new bar
             m_count_money -= m_moneybarsize;

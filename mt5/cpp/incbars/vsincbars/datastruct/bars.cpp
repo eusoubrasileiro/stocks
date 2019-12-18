@@ -12,9 +12,9 @@ MoneyBarBuffer::MoneyBarBuffer() {
     m_pvs = m_vs = 0; // v. weighted price for this bar
     m_moneybarsize = DBL_EMPTY_VALUE;
     m_point_value = 0;
-    m_bar.bidh = m_bar.bidl = tick.bid = 0; // not sure this is needed
-    m_bar.askh = m_bar.askl = tick.ask = 0;
-    m_bar.smsc - m_bar.emsc = 0;  // first dtp calc. needs this
+    m_bar.bidh = m_bar.bidl = 0; // not sure this is needed
+    m_bar.askh = m_bar.askl = 0;
+    m_bar.smsc = m_bar.emsc = 0;  // first dtp calc. needs this
 }
 
 // return only new ... data added
@@ -56,7 +56,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.askh = m_bar.askl = tick.ask;
         }
         else // just crossed to a new day
-        if(ctime.tm_wday != m_bar.time.tm_wday){
+        if(ctime.tm_yday != m_bar.time.tm_yday){
             // clean up (ignore) previous data
             // for starting a new bar
             m_bar.nticks = 0;

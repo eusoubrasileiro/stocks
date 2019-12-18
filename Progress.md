@@ -286,29 +286,10 @@ copy ticks from file created by python from original cleanned ticks. Doing so `b
 to do with reality but only for the execution of orders. Everything else can be used.
     - Another alternative is to give up metatrader backtesting because x86 version of MT4 according to
 Hindenburgo lack and fails in optimization. And use C code backtest engine created + python packages for genetic (minimization/optimization). Since my algos are not complicated for execution that would not be very throublesome.
-    - Also notice that mql5 code of my experts can be easily ported almost entirely to c++. Only data capture and
-    order execution will still be needed to be done on mql5/mql4.
-
-  - [ ] To proper test the expert I am thinking that make C++ wrappers for Python/Mql is the best.
-  - Since I very much want to avoid re-writting code/copying code since it is the source/prone to more error/bugs.
-  - Advantage of passing most code to C++ is writting code and tests much easier. I can even call python .dll and mock a signature of `CopyTicksRange` reading MqlTicks from file.
 
  - [x] Using one thread for the back-testing is enough since sklearn get all other threads once `.fit` is called.
 So cpu is allways in 100%.
-
-  - Todo:
-    - [x] Max number of open positions
-    - [ ] Labeling samples
-      - [ ] Tripple barrier method. Implement missing expire time for positions.
-      - [ ] Correct for delay on execution with random integer max bars allowed on execution.
-    - [ ] Cross-validation to check if model is ready. In fact better to use `oob_score_` to check if model is good at first fit call.
-    Then is better to use `accuracy_score` from `sklearn.metrics` with `sample_weight` to check if a new model is needed.
-    - [ ] Change number of estimatiors to 1k
-    - [ ] Use `warm_start` to make a partial fit on new data also adding on n_estimators (e.g  clf.n_estimators += 100)
-Is not the same thing as training the model with all data but might be useful.
-    - [x] Use adasyn or smote for correcting for class inbalance seem too much for now (overkill).
-Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subsample' is due the bootstrap process to created each random tree.
-    - [x] Also use `max_features` smaller than the `xdim` to fight overfitting.
+ - [x] Max number of open positions
     - [x] ArrayCopy of `CBuffer` and `CStructBuffer<MqlTicks>` is way too slow, even without any Python call, because of ArrayCopy.
 Unfortunately circular buffer is needed now.
         - [x] Created `CCBuffer` and `CCStructBuffer` using circular buffer fixed size.
@@ -316,3 +297,26 @@ Unfortunately circular buffer is needed now.
     - [x] To speed-up code better replace all buffers for the circular version (note: with fixed size defined different from mql5 array size).
 `ArrayCopy` of `CBuffer` is taking 95.24% on profiling.
         - Circular Buffers everywhere. As much fast as possible. Using C code for timestamp to week day. Better than this only a C++ dll with parallel call. Also MoneyBar or any struct/class that needs the timestamp week day should store a pointer to it. Doing so, the calculation could be left for after or being assync in parallel. The timestamp week day would be added inside class as a pointer.
+
+- Changed almost all code to C++ - MoneyBar Expert
+
+- Only data capture and order execution will still be needed to be done on mql5/mql4.
+- [x] To proper test the expert I made C++ wrappers for Python/Mql
+- Since I very much want to avoid re-writting code/copying code since it is the source/prone to more error/bugs.
+- Advantages of C++ are greater including code and tests much easier.
+- All buffers changed to boost::circular_buffer
+- [x] Work with ticks and MoneyBars now almost everything in C++. Only what MUST be in Mql5 will be.
+C++14/17 is thousands times better for dev. and faster.
+   - [x] Labeling samples
+     - [x] Tripple barrier method. Implement missing expire time for positions.
+     - [x] Correct for delay on execution with random integer max bars allowed on execution.
+     - Start simple first
+       - Will not double or tripple orders when reaching new bands too risk. Orders will be almost equal size.
+ - [ ] Cross-validation to check if model is ready. In fact better to use `oob_score_` to check if model is good at first fit call.
+ Then is better to use `accuracy_score` from `sklearn.metrics` with `sample_weight` to check if a new model is needed.
+ - [ ] Change number of estimatiors to 1k
+ - [ ] Use `warm_start` to make a partial fit on new data also adding on n_estimators (e.g  clf.n_estimators += 100)
+Is not the same thing as training the model with all data but might be useful.
+       - [x] Use adasyn or smote for correcting for class inbalance seem too much for now (overkill).
+   Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subsample' is due the bootstrap process to created each random tree.
+       - [x] Also use `max_features` smaller than the `xdim` to fight overfitting.      

@@ -440,7 +440,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
     int64_t start_time = m_bars[start_bfidx].emsc;
     // current day
     tm time = m_bars[start_bfidx].time;
-    day = time.tm_mday; // day-of-month identifier for crossing-day
+    day = time.tm_yday; // day-of-year identifier for crossing-day
 
     // ignore a signal if it is after
     // the operational window
@@ -500,7 +500,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
         // or 3.crossed-to a new day (should never happen)
         if(m_bars[i].emsc - start_time > m_expire_time ||
             m_bars[i].emsc > end_day || // operations end of day
-            m_bars[i].time.tm_mday != day) { // crossed to a new day
+            m_bars[i].time.tm_yday != day) { // crossed to a new day
             xy.y = 0; // expired position
             // could include a minimal profit to be still valid
             return 1;

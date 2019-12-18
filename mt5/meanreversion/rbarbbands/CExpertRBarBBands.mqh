@@ -73,12 +73,12 @@ protected:
     // max number of orders
     // position being a execution of one order or increment
     // on the same direction
-    // number of maximum 'positions'                             
+    // number of maximum 'positions'
     int m_max_positions; // maximum number of 'positions'
     int m_last_positions; // last number of 'positions'
     double m_last_volume; // last volume + (buy) or - (sell)
     double m_volume; // current volume of open or not positions
-    
+
     // python sklearn model trainning
     bool m_recursive;
     sklearnModel m_model;
@@ -100,7 +100,6 @@ protected:
      int max_positions=-1);
 
   void Deinit(void);
-
   // start index and count of new bars that just arrived
   bool Refresh();
 
@@ -114,39 +113,7 @@ protected:
   virtual void verifyEntry();
 
   protected:
-
-  void CreateYTargetClasses();
-  void BandCreateYTargetClasses(CCBuffer<int> &bandsg_raw,
-        CObjectBuffer<XyPair> &xypairs, int band_number);
-  void CreateXFeatureVectors(CObjectBuffer<XyPair> &xypairs);
-  bool CreateXFeatureVector(XyPair &xypair);
-  void CreateOtherFeatureIndicators();
   void BuySell(int sign);
-
-  bool PythonTrainModel();
-  int  PythonPredict(XyPair &xypair);
-
-  // verify an entry signal in any band
-  // on the last m_added bars
-  // get the latest signal
-  // return index on buffer of existent entry signal
-  // only if more than one signal
-  // all in the same direction
-  // otherwise returns -1
-  // only call when there's at least one signal
-  // stored in the buffer of raw signal bands
-  int lastRawSignals();
-  void CreateBBands();
-  void RefreshRawBandSignals(double &last[], int count, int empty);
-// Global Buffer Size (all buffers MUST and HAVE same size)
-// that's why they all use same SetSize for setting
-// Expert_BufferSize 
-// All are updated after bars so that's the main
-// begin of new bar is also begin of new data on all buffers
-  int BufferSize();
-  int BufferTotal();
-  int BeginNewData();
-  
   // events
   bool TradeEventPositionOpened();
   bool TradeEventPositionClosed();

@@ -3,7 +3,7 @@
 
 #include "..\..\TrailingMA.mqh"
 #include "..\..\Util.mqh"
-#include "RBarBBands.mqh"
+#include "CExpertIncBars.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -18,15 +18,11 @@ input int                   Expert_NTraining          = 600;
 // orderSize in $$$
 input double                Expert_OrderSize          = 25e3;
 // stop loss for each order $$$
-input double                Expert_Train_StopLoss     = 100;
+input double                Expert_StopLoss     = 100;
 // target profit per order $$$
-input double              Expert_Train_TargetProfit   = 15;
-// stop loss for each order $$$
-input double              Expert_Run_TargetProfit     = 15;
-// target profit per order $$$
-input double              Expert_Run_StopLoss        = 100;
+input double              Expert_TargetProfit   = 15;
 // recursive == kalman filter option
-input bool                Expert_Recursive           = false;
+//input bool                Expert_Recursive           = false;
 
 
 const bool                     Expert_EveryTick       = false;
@@ -38,7 +34,7 @@ const int Expert_OrdersPerDay = 100; // Number of orders placed per day
 const double Expert_PositionExpireHours = 1.5; // Time to expire a position (close it)
 const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
-CExpertRBarBands cExpert = new CExpertRBarBands;
+CExpertIncBars cExpert = new CExpertIncBars;
 
 //| Expert initialization function
 int OnInit(){

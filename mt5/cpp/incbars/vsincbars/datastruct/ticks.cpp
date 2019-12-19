@@ -65,7 +65,7 @@ bool BufferMqlTicks::correctMt5UnrealTicks(){
   int real_nnew = 0;
   int begin_refpos = m_refpos;
   for(int i=0; i<m_nnew && m_refpos < m_refsize; i++){
-    if(m_copied_ticks[i].time_msc
+    if(m_mt5ticks[i].time_msc
         == m_refticks[m_refpos].time_msc){ // could and should be an iterator 
       real_nnew++; m_refpos++;
     }
@@ -133,8 +133,8 @@ void BufferMqlTicks::loadCorrectTicks(std::string symbol)
       m_bgidx = 0; scheck = true;
     }
     else{ // security check 
-      for(int i=0; i<m_ncopied; i++)
-        if(m_copied_ticks[i].time_msc == (*this)[m_cmpbegin+i].time_msc){
+      for(int i=0; i<m_mt5ncopied; i++)
+        if(m_mt5ticks[i].time_msc == (*this)[m_cmpbegin+i].time_msc){
           scheck=true; // must have at least one sample equal
           // for security check of sync with server
         }
@@ -144,7 +144,7 @@ void BufferMqlTicks::loadCorrectTicks(std::string symbol)
         }
     }
     // the difference is the number of new ticks
-    m_nnew = m_ncopied - m_bgidx;
+    m_nnew = m_mt5ncopied - m_bgidx;
     return (scheck);
   }
 
@@ -186,8 +186,8 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
 // will compare with ticks 
 int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
-    m_copied_ticks = mt5_pmqlticks;
-    m_ncopied = mt5_ncopied;
+    m_mt5ticks = mt5_pmqlticks;
+    m_mt5ncopied = mt5_ncopied;
 
     if(!beginNewTicks()){
         debugfile << "Data Without Sync With Server!" << std::endl;
@@ -196,9 +196,9 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
     // allign array of new ticks to zero
     // ArrayCopy(m_copied_ticks, m_copied_ticks, 0, m_bgidx, m_nnew);
-    m_copied_ticks = m_copied_ticks + m_bgidx;
+    m_mt5ticks = m_mt5ticks + m_bgidx;
     // fix nonsense last, ask, bid empty
-    fixArrayTicks(m_copied_ticks, m_nnew);
+    fixArrayTicks(m_mt5ticks, m_nnew);
 
     // if on back-test
     // dont use ticks from metatrader, only times!
@@ -207,14 +207,14 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
             return 0; // no new ticks
     }
     else{ // real time operation
-        addrange(m_copied_ticks, m_nnew);
+        addrange(m_mt5ticks, m_nnew);
     }
 
     // get begin time of comparison to check for new ticks
     // last tick ms-1 on buffer
     // get index of first tick with time >= (last tick ms) - (1 ms)
     // begin time of comparison is tick with time >= [last copied tick - 1 ms)]
-    m_cmpbegin_time = m_copied_ticks[m_nnew-1].time_msc-1;
+    m_cmpbegin_time = m_mt5ticks[m_nnew-1].time_msc-1;
     m_cmpbegin = 0;
     for(int64_t i=size()-1; i>=0; i--)
         if((*this)[i].time_msc < m_cmpbegin_time){

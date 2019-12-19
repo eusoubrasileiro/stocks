@@ -260,10 +260,10 @@ TEST(Expert, OnTicks) {
 
     // Read a file and simulate CopyTicksRange 
 
-    int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 2e6); // 2MM
+    int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 1e6); // 1MM
     BufferMqlTicks* pticks = GetTicks();                                                                 
-    // send in chunck of 500k ticks
-    size_t chunck_s = (size_t)500e3;
+    // send in chunck of 250k ticks
+    size_t chunck_s = (size_t)250e3;
 
     auto next_timebg = OnTicks(ticks.data(), chunck_s);
     EXPECT_EQ(pticks->size(), chunck_s);

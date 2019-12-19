@@ -52,8 +52,8 @@ class BufferMqlTicks : public buffer<MqlTick>
 protected:
   std::string m_symbol;
   // will come from metatrader already allocated
-  MqlTick *m_copied_ticks; 
-  int m_ncopied; // last count of ticks copied on buffer
+  MqlTick *m_mt5ticks; 
+  int m_mt5ncopied; // last count of ticks sent by metatrader 
   
   bool scheck; // security check of sync with data server
   int64_t m_cmpbegin_time;

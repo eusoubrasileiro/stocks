@@ -8,13 +8,6 @@
 namespace py = pybind11;
 static py::module pycode; // python module to be loaded
 
-#ifdef EMBPYDEBUG
-#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("embpython_log.txt");
-#else
-#define debugfile std::cout
-#endif
-
 inline const std::string BoolToString(bool b){ 	return b ? "true" : "false"; }
 inline const std::string PtrToString(LPVOID b) { return b ? "not-null" : "null"; }
 
@@ -42,7 +35,7 @@ int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 		// call python code
 		strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();
 		size_t size = strpyModel.length();
-#ifdef DEBUG
+#ifdef PYDEBUG
 		if (ntraining > 2) {
 			debugfile << "X: " << X[ntraining-3] << " " << X[ntraining-2] << " " << X[ntraining-1] << std::endl;
 			debugfile << "y: " << y[ntraining-3] << " " << y[ntraining-2] << " " << y[ntraining-1] << std::endl;
@@ -87,7 +80,7 @@ int pyPredictwModel(double X[], int xtrain_dim,	char *model, int pymodel_size)
 	try {
 		// call python code
 		y_pred = pycode.attr("pyPredictwModel")(pyX, strpyModel).cast<int>();
-#ifdef DEBUG
+#ifdef PYDEBUG
 		if (xtrain_dim > 2) {
 			debugfile << "X: " << X[xtrain_dim-3] << " " << X[xtrain_dim-2] << " " << X[xtrain_dim-1] << std::endl;
 			debugfile << "y_pred: " << y_pred << std::endl;
@@ -168,6 +161,7 @@ BOOL __stdcall DllMain( HMODULE hModule,
     return TRUE;
 }
 
+// kills the jupyter python interpreter
 //void unloadModule(){
 //    PyGILState_Release(gstate);
 //    if (Py_IsInitialized()) {

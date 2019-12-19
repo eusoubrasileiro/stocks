@@ -95,8 +95,9 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
     return m_nnew;
 }
 
-// add ticks for python support
-size_t MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end) {
+// add ticks for metatrader support
+size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start, 
+    boost::circular_buffer<MqlTick>::iterator end) {
     size_t nnew = 0;
     for (auto element = start; element != end; element++)
         nnew += AddTick(*element);
@@ -104,7 +105,7 @@ size_t MoneyBarBuffer::AddTicks(std::vector<MqlTick>::iterator start, std::vecto
     return m_nnew;
 }
 
-// add ticks for metatrader support
+// add ticks for python support
 size_t MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
 {
     size_t nnew = 0;

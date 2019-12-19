@@ -43,11 +43,19 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow, double devs, int batch_size
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
-    double moneybar_size);
+    double moneybar_size,  // R$ to form 1 money bar
+    // ticks control
+    bool isbacktest, char* symbol, int symboln, int64_t mt5_timenow);
 
-// will be called every < 1 second
-// by Metatrader 5
-DLL_EXPORT size_t AddTicks(const MqlTick *cticks, int size);
+
+
+// called by mt5 after 
+// m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
+// COPY_TICKS_ALL, m_cmpbegin_time, 0)
+// passing m_copied_ticks as *mt5_pticks
+// returns the next cmpbegin_time
+DLL_EXPORT int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks);
+// int64_t same as long for Mql5
 
 // update everything with new bars that just arrived
 // AddTicks > 0
@@ -65,6 +73,11 @@ DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
 DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
 
+
+DLL_EXPORT BufferMqlTicks *GetTicks(); // get m_ticks variable
+
+
+
 // classes and features
 DLL_EXPORT void LabelClasses();
 DLL_EXPORT void CreateXFeatureVectors();
@@ -72,7 +85,7 @@ DLL_EXPORT void CreateXFeatureVectors();
 #ifdef EXPORT
 
 // by Python
-size_t pyAddTicks(py::array_t<MqlTick> ticks);
+int64_t pyAddTicks(py::array_t<MqlTick> ticks);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

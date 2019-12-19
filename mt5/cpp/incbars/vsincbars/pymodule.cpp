@@ -45,7 +45,9 @@ PYBIND11_MODULE(incbars, m) {
         py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"), 
         py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), py::arg("incmax"),
         py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
-        py::arg("moneybarsize"));  
+        py::arg("moneybarsize"), // R$ to form 1 money bar
+        // ticks control
+        py::arg("isbacktest"), py::arg("chsymbol"), py::arg("chsymboln"), py::arg("mt5_timenow"));        
 
     // signature with py::array_t for AddTicks
     m.def("addticks", &pyAddTicks, "send ticks to the expert", 

@@ -14,7 +14,7 @@
 // any openning of positions
 
 // Base Data
-//std::shared_ptr<CCBufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
+BufferMqlTicks m_ticks; // buffer of ticks w. control to download unique ones.
 
 // All Buffer-Derived classes bellow have indexes alligned
 MoneyBarBuffer m_bars; // buffer of money bars base for everything
@@ -88,15 +88,15 @@ unsigned int m_model_refresh; // how frequent to update the model
 // helpers to count training samples
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
-
-
 double m_devs;
 
 void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
-    double moneybar_size) // R$ to form 1 money bar
+    double moneybar_size,  // R$ to form 1 money bar
+    // ticks control
+    bool isbacktest, char *symbol, int symboln, int64_t mt5_timenow) 
 {
     m_devs = devs;
     m_incmax = incmax;
@@ -110,7 +110,10 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
     m_xypair_count = 0;
     m_model_last_training = 0;
     m_last_raw_signal_index = -1;
-    // set safe pointers to new objects
+
+    m_ticks.Init(std::string(symbol, symbol+ symboln), 
+        isbacktest, mt5_timenow);
+        
     m_bars.Init(tickvalue,
         ticksize, m_moneybar_size);
 
@@ -187,13 +190,22 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
 //    // 2. and by trailing stop
 //}
 
-// will be called every < 1 second
-//  Metatrader 5
-size_t AddTicks(const MqlTick* cticks, int size) {
 
-    return m_bars.AddTicks(cticks, size);
+// returns the next cmpbegin_time
+int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
+    int64_t cmpbegin_time = m_ticks.Refresh(mt5_pticks, mt5_nticks);
+
+    if (m_ticks.m_nnew != 0){
+        m_bars.AddTicks(m_ticks.end() - m_ticks.m_nnew, 
+                                        m_ticks.end());
+    }
+
+    return cmpbegin_time; 
 }
+
+
+
 
 // Since all buffers must be alligned and also have same size
 // Expert_BufferSize
@@ -214,6 +226,11 @@ size_t ValidDataIdx() {
         valid_start = (tmp_start > valid_start) ? tmp_start : valid_start;
     }
     return valid_start;
+}
+
+DLL_EXPORT BufferMqlTicks* GetTicks() // get m_ticks variable
+{ 
+    return &m_ticks;
 }
 
 // start index and count of new bars that just arrived
@@ -630,9 +647,12 @@ int CreateXFeatureVector(XyPair &xypair)
 
 
 // or by Python
-size_t pyAddTicks(py::array_t<MqlTick> ticks)
+int64_t pyAddTicks(py::array_t<MqlTick> ticks)
 {
-    return AddTicks(ticks.data(), ticks.size());
+    // make a copy to be able to use fixticks (non const)
+    std::vector<MqlTick> nonconst_ticks(ticks.data(), ticks.data()+ticks.size());
+
+    return OnTicks(nonconst_ticks.data(), nonconst_ticks.size());
 }
 
 std::shared_ptr<py::array_t<MoneyBar>> ppymbars;

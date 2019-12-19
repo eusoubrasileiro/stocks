@@ -61,10 +61,11 @@ public:
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created
-    size_t AddTick(MqlTick tick);
-    // add ticks for python support
-    size_t AddTicks(std::vector<MqlTick>::iterator start, std::vector<MqlTick>::iterator end);
+    size_t AddTick(MqlTick tick);    
     // add ticks for metatrader support
+    size_t AddTicks(boost::circular_buffer<MqlTick>::iterator start,
+        boost::circular_buffer<MqlTick>::iterator end);
+    // add ticks for python support
     size_t AddTicks(const MqlTick* cticks, int size);
 
     MoneyBar* BeginNewBars();

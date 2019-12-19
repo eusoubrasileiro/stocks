@@ -22,11 +22,12 @@ BOOL __stdcall DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved);
 
-/*  To use this exported function of dll, include this header
- *  in your project.
- */
-
-// void unloadModule();
+#ifdef PYDEBUG
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("incbandslog.txt");
+#else
+#define debugfile std::cout
+#endif
 
 
 #endif //DLLEXPORTS_H

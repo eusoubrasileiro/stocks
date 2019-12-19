@@ -2,10 +2,10 @@
 
 
 #include "buffers.h"
+#include "dll.h"
 #include <string>
 #include <iostream>
-
-typedef long datetime;
+#include <time.h>
 
 #pragma pack(push, 2)
 struct MqlTick
@@ -29,6 +29,16 @@ struct MqlTick
 // 64     TICK_FLAG_SELL � a tick is a result of a sell deal
 
 
+int64_t ReadTicks(std::vector<MqlTick> *mqlticks, 
+    std::string filename, size_t nticks);
+
+void fixArrayTicks(MqlTick* ticks, size_t nticks);
+
+// return index on ring buffer / std::vector for
+// for first tick with time_ms bigger or equal than or -1 not finding
+size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time);
+
+
 // Messed ticks from Meta5 will also come to C++
 // here we fix then replacing by a file of correct ones
 
@@ -40,19 +50,20 @@ const int Max_Tick_Copy = 10e3;
 class BufferMqlTicks : public buffer<MqlTick>
 {
 protected:
-  string m_symbol;
-  MqlTick m_copied_ticks[]; // fixed size number of ticks copied every x seconds
+  std::string m_symbol;
+  // will come from metatrader already allocated
+  MqlTick *m_copied_ticks; 
   int m_ncopied; // last count of ticks copied on buffer
-  int m_nnew; // number of new ticks last copied
+  
   bool scheck; // security check of sync with data server
   int64_t m_cmpbegin_time;
-  int m_cmpbegin;
+  int m_cmpbegin; // begin time of comparison for security check for new ticks (sync with server)
   int m_bgidx; // temp:: where the new ticks starts on array m_copied_ticks
 
   //////////////////////////////////////////////
   ////// backtest workaround for stupid mt5 fake ticks creation
-  bool isbacktest;
-  MqlTick m_refticks[]; // correct ticks without stupid modifications
+  bool m_isbacktest;
+  std::vector<MqlTick> m_refticks; // correct ticks (from file) without stupid mt5 modifications
   int m_refsize; // size of reference data
   // on volume etc by MT5 to fuc** with everything serious
   std::string m_refcticks_file;
@@ -61,24 +72,23 @@ protected:
   ////////////////////////////////////////////
   ////// for testing against Python/C++ since i need to
   ////// know boundaries of new ticks (since data comes in chuncks)
-  int m_bound_ticks[];
+  std::vector<int> m_bound_ticks;
   int ib_tick; // count of calls to AddRange
 
   bool correctMt5UnrealTicks();
 
-  void loadCorrectTicks(string symbol);
+  void loadCorrectTicks(std::string symbol);
 //////////////////////////////////////////////
 //////////////////////////////////////////////
   bool beginNewTicks();
 
 public:
+  int m_nnew; // number of new ticks added
 
   BufferMqlTicks(void);
 
-  BufferMqlTicks(std::string symbol);
+  void Init(std::string symbol, bool isbacktest, time_t timenow);
 
-  int nNew(){ return m_nnew; } // number of new ticks after calling Refresh()
-
-  int Refresh(MqlTick *ticks, int count); // will be called somehow by mt5
+  int64_t Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); // will be called somehow by mt5
 
 };

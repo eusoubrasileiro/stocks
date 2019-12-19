@@ -240,36 +240,54 @@ TEST(Indicators, CBandSignal) {
 #include <fstream>
 
 TEST(Expert, Initialize) {
+    char symbol[6] = "PETR4"; // is null terminated 
     Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue
-        500e3);
+        500e3, // must ignore the null terminating character at 6th position
+        true, symbol, 5, 0); // time first tick or time of day
 }
 
-TEST(Expert, AddTicks) {
+TEST(Expert, OnTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
     // calculate number of ticks on file
     std::string user_data = std::string(std::getenv("USERPROFILE"))+ "\\Projects\\stocks\\data\\PETR4_2019_mqltick.bin";
 
-    fh.open(user_data,
-        std::fstream::in | std::fstream::binary);
-    begin = fh.tellg();
-    fh.seekg(0, std::ios::end);
-    end = fh.tellg();
-    long nticks= (end- begin)/sizeof(MqlTick);
-    fh.seekg(0, std::ios::beg);
+    std::vector<MqlTick> ticks;
 
-    MqlTick* cstyle_ticks;
-    cstyle_ticks = new MqlTick[nticks];
-    fh.read((char*)cstyle_ticks, end);
-    //std::vector<MqlTick> ticks(cstyle, cstyle+nticks);
+    // Read a file and simulate CopyTicksRange 
 
-    AddTicks(cstyle_ticks, 2e6);
+    int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 2e6); // 2MM
+    BufferMqlTicks* pticks = GetTicks();                                                                 
+    // send in chunck of 500k ticks
+    size_t chunck_s = (size_t)500e3;
 
-    delete[] cstyle_ticks;
+    auto next_timebg = OnTicks(ticks.data(), chunck_s);
+    EXPECT_EQ(pticks->size(), chunck_s);
+
+    // get allowed overlapping of 1ms
+    // get idx first tick with time >= next_timebg 
+    auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);    
+    auto overlap = chunck_s - next_idx;
+    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    EXPECT_EQ(pticks->size(), chunck_s*2);
+
+    // get allowed overlapping of 1ms
+    next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
+    overlap = 2*chunck_s - next_idx;
+    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    EXPECT_EQ(pticks->size(), chunck_s*3);
+
+    // get allowed overlapping of 1ms
+    next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
+    overlap = 3*chunck_s - next_idx;
+    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap);
+
+    EXPECT_EQ(pticks->size(), chunck_s*4);   
+
 }
 
 

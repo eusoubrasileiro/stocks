@@ -155,6 +155,11 @@ BufferMqlTicks::BufferMqlTicks()
     m_isbacktest = false;
 }
 
+// number of new ticks added on last call to Refresh(...)
+int BufferMqlTicks::nNew(){ // you may add more data than the buffer
+    return (m_nnew > BUFFERSIZE) ? BUFFERSIZE : m_nnew;
+}
+
 void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
     m_isbacktest = isbacktest;
     m_symbol = symbol;

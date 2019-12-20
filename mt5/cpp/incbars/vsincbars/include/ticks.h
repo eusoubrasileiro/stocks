@@ -74,6 +74,7 @@ protected:
   ////// know boundaries of new ticks (since data comes in chuncks)
   std::vector<int> m_bound_ticks;
   int ib_tick; // count of calls to AddRange
+  int m_nnew; // number of new ticks added
 
   bool correctMt5UnrealTicks();
 
@@ -83,9 +84,10 @@ protected:
   bool beginNewTicks();
 
 public:
-  int m_nnew; // number of new ticks added
 
   BufferMqlTicks(void);
+
+  int nNew(); // number of new ticks added
 
   void Init(std::string symbol, bool isbacktest, time_t timenow);
 

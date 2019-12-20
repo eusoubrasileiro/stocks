@@ -206,8 +206,8 @@ int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
     int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
 
-    if (m_ticks->m_nnew != 0){
-        m_bars->AddTicks(m_ticks->begin() + (m_ticks->size() - m_ticks->m_nnew),
+    if (m_ticks->nNew() != 0){
+        m_bars->AddTicks(m_ticks->begin() + (m_ticks->size() - m_ticks->nNew()),
                                         m_ticks->end());
     }
 

@@ -47,6 +47,7 @@ void fixArrayTicks(MqlTick &ticks[]){
 uint gticks = 0;
 const int Max_Tick_Copy = 10e3;
 
+
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called
 // 1 ms time-frame suggested using OnTimer

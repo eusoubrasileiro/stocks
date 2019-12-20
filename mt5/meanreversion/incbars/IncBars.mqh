@@ -1,11 +1,4 @@
 #include "CExpertIncBars.mqh"
-//#define USE_DEBUG
-
-#ifdef _DEBUG
-#ifdef USE_DEBUG
-#define FILE_DEBUG
-#endif
-#endif
 
 CExpertIncBars::CExpertIncBars(void){
    m_last_positions = 0; // number of 'positions' openend
@@ -19,9 +12,6 @@ CExpertIncBars::~CExpertIncBars(void){
 
 void CExpertIncBars::Deinit(void){
   CExpertMain::Deinit();
-  #ifdef FILE_DEBUG
-  FileClose(file_io_hnd);
-  #endif
 }
 
 void CExpertIncBars::Initialize(int nbands, int bbwindow,
@@ -30,8 +20,21 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
      double run_stoploss, double run_targetprofit, bool recursive,
      int max_positions=-1)
 {
+    // C++ init
 
+
+
+    // Ticks download control
+    ArrayResize(m_copied_ticks, Max_Tick_Copy);
+    m_ncopied = 0;
+    // first m_cmpbegin_time must be done here others
+    // will come from C++
+    // time now in ms will work 'coz next tick.ms value will be bigger
+    // and will take its place
+    m_cmpbegin_time = long (TimeCurrent())*1000; // turn in ms
+    m_cmpbegin = 0;
 }
+
 // will be called every < 1 second
 // OnTick + OnTimer garantee a better refresh rate
 // than 1 second
@@ -40,37 +43,37 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
 // has not being processed yet
 void CExpertIncBars::CheckTicks(void)
 {
-  if(m_ticks.Refresh() > 0){
-  #ifdef FILE_DEBUG
-    //FileSeek(file_io_hnd, 0, SEEK_SET);
-    FileWriteArray(file_io_hnd, m_ticks.m_data,
-        m_ticks.beginNewTicks(), m_ticks.nNew());
-    FileFlush(file_io_hnd);
-  #endif
-      if(m_bars.AddTicks(m_ticks) > 0)
-      {
-        // some new ticks arrived and new bars created
-        // at least one new money bar created
-        // refresh whatever possible with new bars
-        if(Refresh()){
-          // sucess of updating everything w. new data
-            verifyEntry();
-        }
-      }
+  // copy all ticks from last copy time - 1 milisecond to now
+  // to avoid missing ticks on same ms)
+  m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
+       COPY_TICKS_ALL, m_cmpbegin_time, 0);
+
+  if(m_ncopied < 1){
+     int error = GetLastError();
+     if(error == ERR_HISTORY_TIMEOUT)
+       // ticks synchronization waiting time is up, the function has sent all it had.
+       Print("ERR_HISTORY_TIMEOUT");
+     else
+     if(error == ERR_HISTORY_SMALL_BUFFER)
+       //static buffer is too small. Only the amount the array can store has been sent.
+       Print("ERR_HISTORY_SMALL_BUFFER");
+     else
+     if(error == ERR_NOT_ENOUGH_MEMORY)
+       // insufficient memory for receiving a history from the specified range to the dynamic
+       // tick array. Failed to allocate enough memory for the tick array.
+       Print("ERR_NOT_ENOUGH_MEMORY");
+     // better threatment here ??...better ignore and wait for next call
+     return -1;
   }
-  // update indicators (trailing stop)
-  // m_symbol.RefreshRates();
-  m_indicators.Refresh();
+
+  // call C++ passing ticks
+  m_cmpbegin_time = OnTicks(m_copied_ticks, m_ncopied);
 
   // check to see if we should close any position
   if(SelectPosition()){ // if any open position
     CloseOpenPositionsbyTime();
     CheckTrailingStop();
   }
-}
-
-void CExpertIncBars::verifyEntry(){
-
 }
 
 

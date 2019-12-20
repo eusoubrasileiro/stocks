@@ -101,13 +101,15 @@ bool BufferMqlTicks::correctMt5UnrealTicks(){
 
 void BufferMqlTicks::loadCorrectTicks(std::string symbol)
 {
-    // must load specific file with ticks e.g. PETR4_backtest_ticks.bin
-    // located on Metatrader folder
+    // must load specific file with ticks e.g. PETR4_ticks.bin
+    // located user profile \stocks\data folder
     // if ticks on this file are not compatible with
     // your tick history. Problems will come
     // advised to use a custom symbol to avoid that
-    m_refcticks_file = std::string("D:\\Metatrader 5\\") + 
-        symbol + std::string("_backtest_ticks.bin");    
+    
+    m_refcticks_file = std::string(std::getenv("USERPROFILE")) + 
+        std::string("\\Projects\\stocks\\data\\") +
+        symbol + std::string("_mqltick.bin");    
     m_refsize = ReadTicks(&m_refticks, m_refcticks_file);
 
     // seek to the start positon of ticks for the 
@@ -161,12 +163,12 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
     // time_t same as int64_t unixtime stamp
     // real time operations get current time now
     if (!isbacktest) {
-        // time now in ms will work 'coz next tick.ms value will be bigger
-        // and will take its place
         // get raw time than convert to struct tm and them get 
         // first 1 hour of day 1:00 am 
         time(&timenow);
     } 
+    // time now in ms will work 'coz next tick.ms value will be bigger
+    // and will take its place
     tm tm_time;
     gmtime_s(&tm_time, &timenow); // unixtime timestamp to tm_struct
     // begin of day at 1:00 am

@@ -1,8 +1,4 @@
 #include "pch.h"
-#include "..\vsincbars\include\buffers.h"
-#include "..\vsincbars\include\cwindicators.h"
-#include "..\vsincbars\include\ticks.h"
-#include "..\vsincbars\include\eincbands.h"
 #include <array>
 
 // Since I just want to test the code
@@ -241,6 +237,7 @@ TEST(Indicators, CBandSignal) {
 
 TEST(Expert, Initialize) {
     char symbol[6] = "PETR4"; // is null terminated 
+
     Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
@@ -254,7 +251,8 @@ TEST(Expert, OnTicks) {
     std::streampos begin, end;
 
     // calculate number of ticks on file
-    std::string user_data = std::string(std::getenv("USERPROFILE"))+ "\\Projects\\stocks\\data\\PETR4_2019_mqltick.bin";
+    std::string user_data = std::string(std::getenv("USERPROFILE")) + 
+        std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
 
     std::vector<MqlTick> ticks;
 
@@ -287,6 +285,51 @@ TEST(Expert, OnTicks) {
     next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap);
 
     EXPECT_EQ(pticks->size(), chunck_s*4);   
+
+}
+
+TEST(ExpertPythonAPI, pyAddTicks) {
+    std::fstream fh;
+    std::streampos begin, end;
+
+    // calculate number of ticks on file
+    std::string user_data = std::string(std::getenv("USERPROFILE")) +
+        std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
+
+    std::vector<MqlTick> ticks;
+
+    // start again first - same as reset
+    char symbol[6] = "PETR4"; // is null terminated 
+    Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
+        10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
+        25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
+        100, 0.01, 0.01, // minlot, ticksize, tickvalue
+        500e3, // must ignore the null terminating character at 6th position
+        true, symbol, 5, 0); // time first tick or time of day
+
+    // Read a file and simulate CopyTicksRange 
+    int nticks = int(1e6);
+    ReadTicks(&ticks, user_data, (size_t) nticks); // 1MM
+    BufferMqlTicks* pticks = GetTicks();
+    // send in chunck of 250k ticks
+    size_t chunck_s = (size_t)250e3;
+        
+    // create py::array_t<MqlTick> mocking Python iterp. call
+
+    PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
+    auto b = py::buffer_info(
+        NULL,
+        sizeof(MqlTick), //itemsize
+        py::format_descriptor<MqlTick>::format(),
+        1, // ndim
+        std::vector<size_t> { int(1e6) }, // shape
+        std::vector<size_t> { sizeof(MqlTick)} // strides
+    );
+    auto pyticks = py::array_t<MqlTick>(b);
+    auto dptr = (MqlTick*) pyticks.request().ptr;
+    std::memcpy(dptr, ticks.data(), nticks *sizeof(MqlTick));
+
+    pyAddTicks(pyticks);
 
 }
 

@@ -26,8 +26,7 @@ extern std::shared_ptr<py::array_t<MoneyBar>> ppymbars;
 PYBIND11_MODULE(incbars, m) {
 
     // dont need to init anything since when the python module (this dll)
-    // is loaded the DllMain will be called? are you sure?
-    DllMain(0, DLL_PROCESS_ATTACH, 0); // just to make sure
+    // is loaded the DllMain will be called
 
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);

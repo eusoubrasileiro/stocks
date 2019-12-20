@@ -14,10 +14,10 @@
 // any openning of positions
 
 // Base Data
-BufferMqlTicks m_ticks; // buffer of ticks w. control to download unique ones.
+std::shared_ptr<BufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
 
 // All Buffer-Derived classes bellow have indexes alligned
-MoneyBarBuffer m_bars; // buffer of money bars base for everything
+std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
 std::vector<double> m_mlast; // moneybar.last values of last added money bars
 double m_moneybar_size; // R$ to form 1 money bar
 // offset correction between uid and current buffer indexes
@@ -30,7 +30,7 @@ int m_bbwindow; // reference size of bollinger band indicator others
 double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
 
 // feature indicators
-CFracDiffIndicator m_fd_mbarp; // frac diff on money bar prices
+std::shared_ptr<CFracDiffIndicator> m_fd_mbarp; // frac diff on money bar prices
 
 // store buy|sell|hold signals for each bband - raw
 std::vector<CBandSignal> m_rbandsgs;
@@ -111,10 +111,19 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
     m_model_last_training = 0;
     m_last_raw_signal_index = -1;
 
-    m_ticks.Init(std::string(symbol, symbol+ symboln), 
+
+    // reset everythin first
+    m_ticks.reset(new BufferMqlTicks());
+    m_bars.reset(new MoneyBarBuffer());
+    m_fd_mbarp.reset(new CFracDiffIndicator());
+    m_xypairs.clear();    
+    m_rbandsgs.clear();
+    m_last_raw_signal.clear();
+
+    m_ticks->Init(std::string(symbol, symbol+ symboln), 
         isbacktest, mt5_timenow);
         
-    m_bars.Init(tickvalue,
+    m_bars->Init(tickvalue,
         ticksize, m_moneybar_size);
 
     m_nbands = nbands;
@@ -165,8 +174,9 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
 
     // CreateOtherFeatureIndicators();
     // only fracdiff on prices
-    m_fd_mbarp.Init(Expert_Fracdif_Window, Expert_Fracdif);
+    m_fd_mbarp->Init(Expert_Fracdif_Window, Expert_Fracdif);
 }
+
 
 
 // breaking apart is better for testing and cleanner code
@@ -194,11 +204,11 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
 // returns the next cmpbegin_time
 int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
-    int64_t cmpbegin_time = m_ticks.Refresh(mt5_pticks, mt5_nticks);
+    int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
 
-    if (m_ticks.m_nnew != 0){
-        m_bars.AddTicks(m_ticks.end() - m_ticks.m_nnew, 
-                                        m_ticks.end());
+    if (m_ticks->m_nnew != 0){
+        m_bars->AddTicks(m_ticks->end() - m_ticks->m_nnew, 
+                                        m_ticks->end());
     }
 
     return cmpbegin_time; 
@@ -212,15 +222,15 @@ int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 // Same new bars will come for all indicators and else
 // All are updated after bars so that's the main
 // begin of new bar is also begin of new data on all buffers
-size_t BufferSize() { return m_bars.capacity(); }
-size_t BufferTotal() { return m_bars.size(); }
+size_t BufferSize() { return m_bars->capacity(); }
+size_t BufferTotal() { return m_bars->size(); }
 // start index on all buffers of new bars after AddTicks > 0
-size_t NewDataIdx() { return m_bars.BeginNewBarsIdx();  }
+size_t NewDataIdx() { return m_bars->BeginNewBarsIdx();  }
 
 // start index of valid data on all buffers (indicators) any time
 size_t ValidDataIdx() {
     size_t valid_start = 0;
-    valid_start = m_fd_mbarp.valididx();
+    valid_start = m_fd_mbarp->valididx();
     for (int j = 0; j < m_nbands; j++){
         size_t tmp_start = m_rbandsgs[j].valididx();
         valid_start = (tmp_start > valid_start) ? tmp_start : valid_start;
@@ -230,7 +240,7 @@ size_t ValidDataIdx() {
 
 DLL_EXPORT BufferMqlTicks* GetTicks() // get m_ticks variable
 { 
-    return &m_ticks;
+    return &(*m_ticks);
 }
 
 // start index and count of new bars that just arrived
@@ -239,18 +249,18 @@ bool Refresh()
     int ncalculated = 0;
 
     // arrays of new data update them
-    m_bars.RefreshArrays();
+    m_bars->RefreshArrays();
     // all bellow must be called to maintain alligment of buffers
     // by creating empty samples
 
     // features indicators
     // fracdif on bar prices order of && matter
     // first is what you want to do and second what you want to try
-    ncalculated = m_fd_mbarp.Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+    ncalculated = m_fd_mbarp->Refresh(m_bars->new_avgprices, m_bars->m_nnew);
 
     // update signals based on all bollinger bands
     for (int j = 0; j < m_nbands; j++) {
-        int tmp_calc = m_rbandsgs[j].Refresh(m_bars.new_avgprices, m_bars.m_nnew);
+        int tmp_calc = m_rbandsgs[j].Refresh(m_bars->new_avgprices, m_bars->m_nnew);
         // get only the intersection - smallest region
         // where samples were calculated on all indicators
         ncalculated = (tmp_calc < ncalculated) ? tmp_calc : ncalculated;
@@ -263,7 +273,7 @@ bool Refresh()
         for (; i < BufferTotal(); i++)
             for (int j = 0; j < m_nbands; j++)
                 if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-                    m_bsignals.push_back({ m_bars.uidtimes[i], j, (int)m_rbandsgs[j][i] });
+                    m_bsignals.push_back({ m_bars->uidtimes[i], j, (int)m_rbandsgs[j][i] });
     }
 
     return (ncalculated > 0);
@@ -390,7 +400,7 @@ inline void updateBufferUidOffset(){
     // uid starts at 0 alligned with bars (and all buffers) BUT
     // when buffers gets full allignment is lost
     // but a constant offset exists betwen uid and indexes of buffers
-    m_bfoffset = m_bars[0].uid - m_bars.Search(m_bars[0].uid);
+    m_bfoffset = m_bars->at(0).uid - m_bars->Search(m_bars->at(0).uid);
 }
 
 
@@ -442,21 +452,21 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
     // get 'real' price of execution of this signal
     // first bar considering the operational time delay
     // first bar with time >= expert delay included
-    int start_bfidx = m_bars.SearchStime(m_bars[bfidx].emsc + Expert_Delay);
+    int start_bfidx = m_bars->SearchStime(m_bars->at(bfidx).emsc + Expert_Delay);
 
     if (start_bfidx == -1) // cannot start labelling
         return -2; //  did not find bar, not enough data in future
 
-    entryprice = m_bars[start_bfidx].avgprice;
+    entryprice = m_bars->at(start_bfidx).avgprice;
 
     // save this buy or sell
     xy.bsg = *current;
     xy.y = 1; // start by beliving
     // for this position
     // start time - where buy/sell really takes place
-    int64_t start_time = m_bars[start_bfidx].emsc;
+    int64_t start_time = m_bars->at(start_bfidx).emsc;
     // current day
-    tm time = m_bars[start_bfidx].time;
+    tm time = m_bars->at(start_bfidx).time;
     day = time.tm_yday; // day-of-year identifier for crossing-day
 
     // ignore a signal if it is after
@@ -469,14 +479,14 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
 
     int secs_toend_day = (m_end_hour - chour) * 3600;
     // time in ms for operations end of day
-    int64_t end_day = m_bars[start_bfidx].smsc + secs_toend_day * 1000;
+    int64_t end_day = m_bars->at(start_bfidx).smsc + secs_toend_day * 1000;
 
     // after getting the start_bfidx we search for the nextn
     // buffer index of next signal
     // 1. with same sign
     // 2. in a higher band
     // 3. uid time greater than start_bfidx
-    auto nextn = bufidxNextnSame(current, end, m_bars[start_bfidx].uid);
+    auto nextn = bufidxNextnSame(current, end, m_bars->at(start_bfidx).uid);
     auto nextsignidx = nextn.begin();
 
     // will only increase position
@@ -494,14 +504,14 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
         // use avgprice for TP
         // and high-low bid from ticks to stop_loss
         if (current->sign > 0) { // long
-            profit = (m_bars[i].avgprice - entryprice) * quantity;// # avg. current profit
+            profit = (m_bars->at(i).avgprice - entryprice) * quantity;// # avg. current profit
             //  stop-loss profit - people buy at bid -  (low worst scenario)
-            slprofit = (m_bars[i].bidl - entryprice) * quantity;
+            slprofit = (m_bars->at(i).bidl - entryprice) * quantity;
         }
         else { // short
-            profit = (entryprice - m_bars[i].avgprice) * quantity;// # avg. current profif
+            profit = (entryprice - m_bars->at(i).avgprice) * quantity;// # avg. current profif
             //  stop-loss profit - people buy at bid - (high worst scenario)
-            slprofit = (entryprice - m_bars[i].bidh) * quantity;
+            slprofit = (entryprice - m_bars->at(i).bidh) * quantity;
         }
         // first barrier
         if (profit >= m_targetprofit) // done classifying this signal
@@ -515,9 +525,9 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
         // third barrier - time
         // 1.expire-time or 2.day-end
         // or 3.crossed-to a new day (should never happen)
-        if(m_bars[i].emsc - start_time > m_expire_time ||
-            m_bars[i].emsc > end_day || // operations end of day
-            m_bars[i].time.tm_yday != day) { // crossed to a new day
+        if(m_bars->at(i).emsc - start_time > m_expire_time ||
+            m_bars->at(i).emsc > end_day || // operations end of day
+            m_bars->at(i).time.tm_yday != day) { // crossed to a new day
             xy.y = 0; // expired position
             // could include a minimal profit to be still valid
             return 1;
@@ -531,7 +541,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             nextsignidx->first == i &&
             nextsignidx->second > last_band){
             // find entry time
-            auto new_posbfidx = m_bars.SearchStime(m_bars[nextsignidx->first].emsc + Expert_Delay);
+            auto new_posbfidx = m_bars->SearchStime(m_bars->at(nextsignidx->first).emsc + Expert_Delay);
             if (new_posbfidx == -1) // cannot continue labelling
                 return -2; //  did not find bar, not enough data in future
             // to avoid contaminating model
@@ -539,13 +549,13 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             // 1. the operational window
             // 2. expire time
             // 3. crossed to a new day
-            if (m_bars[new_posbfidx].emsc - start_time > m_expire_time ||
-                m_bars[new_posbfidx].emsc > end_day || // operations end of day
-                m_bars[new_posbfidx].time.tm_mday != day) { // crossed to a new day
+            if (m_bars->at(new_posbfidx).emsc - start_time > m_expire_time ||
+                m_bars->at(new_posbfidx).emsc > end_day || // operations end of day
+                m_bars->at(new_posbfidx).time.tm_mday != day) { // crossed to a new day
                 nextsignidx = nextn.end(); // cannot increase any other position
                 continue;
             }
-            auto new_entryprice = m_bars[new_posbfidx].avgprice;
+            auto new_entryprice = m_bars->at(new_posbfidx).avgprice;
             auto new_quantity = roundVolume(m_ordersize / new_entryprice);
             // updtate to weighted average price
             entryprice = (new_entryprice * new_quantity) + (entryprice * quantity);
@@ -613,11 +623,11 @@ int CreateXFeatureVector(XyPair &xypair)
             xypair.X[xifeature] = m_rbandsgs[i][timeidx];
         }
         // fracdif feature
-        xypair.X[xifeature++] = m_fd_mbarp[timeidx];
+        xypair.X[xifeature++] = m_fd_mbarp->at(timeidx);
         // time to form a bar in seconds
-        xypair.X[xifeature++] = (m_bars[timeidx].emsc- m_bars[timeidx].smsc)/1000.;
+        xypair.X[xifeature++] = (m_bars->at(timeidx).emsc- m_bars->at(timeidx).smsc)/1000.;
         // number of ticks to form a bar
-        xypair.X[xifeature++] = m_bars[timeidx].nticks;
+        xypair.X[xifeature++] = m_bars->at(timeidx).nticks;
 
         // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)
         // data is reliable since I also need to interpolate it
@@ -660,7 +670,7 @@ std::shared_ptr<py::array_t<MoneyBar>> ppymbars;
 py::array_t<MoneyBar> pyGetMoneyBars() {
     MoneyBar* pbuf = (MoneyBar*)ppymbars->request().ptr;
     for (size_t idx = 0; idx<BUFFERSIZE; idx++)
-        pbuf[idx] = m_bars[idx];
+        pbuf[idx] = m_bars->at(idx);
     return *ppymbars;
 }
 

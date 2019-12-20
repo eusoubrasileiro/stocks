@@ -42,7 +42,7 @@ size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time);
 // Messed ticks from Meta5 will also come to C++
 // here we fix then replacing by a file of correct ones
 
-const int Max_Tick_Copy = 10e3;
+const int Max_Tick_Copy = int(10e3);
 
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called

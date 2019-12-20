@@ -1,22 +1,30 @@
 #pragma once
 
-//const int                Expert_MaxFeatures = 100;     // max features allowed - not used
-//const double             Expert_MoneyBar_Size = 100e3; // R$ to form 1 money bar
-
 
 #define             Expert_Fracdif           0.6         // fraction for fractional difference
 #define             Expert_Fracdif_Window    512         // window size fraction fracdif
 #define             Expert_Delay             8000        // delay to perform an order sucessfully after evaluating an entry (ms)
 
+// the grace of x64 arch
+// for MQL5 or even C++ call - thankfully __stdcall is useless in x64 arch
+// so will not use __stdcall specifier since Python is also x64
+// extern "C" guarantes no decoration is inserted on the function name
+
+#define NOMINMAX
+
 #ifdef BUILDING_DLL
 #define EXPORT
 #define DLL_EXPORT extern "C" __declspec(dllexport)
 
-#include "ticks.h"
 #include "time.h"
 #include "bars.h"
-#include "cwindicators.h"
 #include "xypair.h"
+
+#else // Google Tests only 
+#define IMPORT 
+#define DLL_EXPORT extern "C" __declspec(dllimport)
+
+#endif
 
 #include <tuple>
 #include "pybind11/embed.h"
@@ -24,20 +32,12 @@
 #include "pybind11/numpy.h"
 #include "pybind11/stl.h"
 #include "pybind11/functional.h"
+#include "ticks.h"
+#include "cwindicators.h"
 
 namespace py = pybind11;
 
-#else
-#define IMPORT
-#define DLL_EXPORT extern "C" __declspec(dllimport)
 
-#include "ticks.h"
-
-#endif
-
-// for MQL5 or even C++ call - thankfully __stdcall is useless in x64 arch
-// so will not use __stdcall specifier since Python is also x64
-// extern "C" guarantes no decoration is inserted on the function name
 
 DLL_EXPORT void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
@@ -82,10 +82,10 @@ DLL_EXPORT BufferMqlTicks *GetTicks(); // get m_ticks variable
 DLL_EXPORT void LabelClasses();
 DLL_EXPORT void CreateXFeatureVectors();
 
-#ifdef EXPORT
+// API Python - only for gtests
+DLL_EXPORT int64_t pyAddTicks(py::array_t<MqlTick> ticks);
 
-// by Python
-int64_t pyAddTicks(py::array_t<MqlTick> ticks);
+#ifdef EXPORT
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

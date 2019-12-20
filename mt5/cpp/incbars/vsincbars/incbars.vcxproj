@@ -75,7 +75,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>BUILDING_DLL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
@@ -118,7 +118,7 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <Optimization>MaxSpeed</Optimization>
       <SDLCheck>
       </SDLCheck>
-      <PreprocessorDefinitions>BUILDING_DLL;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;</PreprocessorDefinitions>
       <ConformanceMode>
       </ConformanceMode>
       <PrecompiledHeaderFile>

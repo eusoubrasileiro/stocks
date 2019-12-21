@@ -119,6 +119,7 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
     m_xypairs.clear();    
     m_rbandsgs.clear();
     m_last_raw_signal.clear();
+    m_bsignals.clear();
 
     m_ticks->Init(std::string(symbol, symbol+ symboln), 
         isbacktest, mt5_timenow);

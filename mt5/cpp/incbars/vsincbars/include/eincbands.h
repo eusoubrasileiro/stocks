@@ -73,14 +73,10 @@ DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
 DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
 
-
 DLL_EXPORT BufferMqlTicks *GetTicks(); // get m_ticks variable
 
-
-
 // classes and features
-DLL_EXPORT void LabelClasses();
-DLL_EXPORT void CreateXFeatureVectors();
+DLL_EXPORT void CreateXyVectors();
 
 // API Python - only for gtests
 DLL_EXPORT int64_t pyAddTicks(py::array_t<MqlTick> ticks);
@@ -104,10 +100,11 @@ void verifyEntry();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
-int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterator end, XyPair& xy);
-int CreateXFeatureVector(XyPair &xypair);
+void CreateXyVectors();
+int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, XyPair& xy);
+bool FillOutXFeatures(XyPair &xypair);
 
-std::tuple<py::array, py::array, py::array, py::array> pyGetXyvectors();
+std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors();
 int pyGetXdim();
 
 // sklearn model

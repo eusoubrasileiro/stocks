@@ -32,6 +32,7 @@ PYBIND11_MODULE(incbars, m) {
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
     PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, time, smsc, emsc, uid, dtp, askh, askl, bidh, bidl);
+    PYBIND11_NUMPY_DTYPE(LbSignal, twhen, band, sign, y, ninc, tdone);
 
     // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
     ppymbars.reset(new py::array_t<MoneyBar>(BUFFERSIZE));
@@ -62,14 +63,12 @@ PYBIND11_MODULE(incbars, m) {
   
     m.def("moneybars", &pyGetMoneyBars, "get MoneyBar buffer as is");
 
-    m.def("createxvector", &CreateXFeatureVectors, "fill in xypairs creating x feature vector");
+    m.def("createxyvectors", &CreateXyVectors, "label b.signals and fill out X & y pair vectors");
 
     m.def("getxyvectors", &pyGetXyvectors, "get X feature vectors, y class labels and uid index for money bars");
 
     m.def("getxdim", &pyGetXdim, "get x feature vector dimension");
-    
-    m.def("labelsignals", &LabelClasses, "label available b. band signals creating xypairs with y target class assigned");
  
-    //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter too
+    //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter 
 }
 

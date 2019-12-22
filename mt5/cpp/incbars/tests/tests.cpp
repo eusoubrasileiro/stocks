@@ -338,15 +338,10 @@ TEST(Expert, Refresh){
     Refresh();
 }
 
-TEST(Expert, LabelClasses) {
 
-    LabelClasses();
+TEST(Expert, CreateXyVectors) {
+    CreateXyVectors();
 }
-
-TEST(Expert, CreateXFeatureVectors) {
-    CreateXFeatureVectors();
-}
-
 
 
 typedef int(__stdcall* funcpyTrainModel)(double*, int*, int, int, char*, int);

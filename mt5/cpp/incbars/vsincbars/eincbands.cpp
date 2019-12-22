@@ -40,7 +40,7 @@ int m_last_raw_signal_index; // related to m_bars buffer on refresh()
 
 // storage of signals
 // save only signal ocurrences
-std::list<bsignal> m_bsignals; // signals
+std::list<BSignal> m_bsignals; // signals
 // last uid of bar inserted on storage of signals
 int64_t m_bsignals_lastuid;
 
@@ -290,7 +290,7 @@ void verifyEntry() {
         int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
         // only when needed
-        LabelClasses();
+        //LabelClasses();
         //CreateXFeatureVectors(m_xypairs);
         // add number of xypairs added (cannot decrease)
         m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
@@ -374,20 +374,20 @@ int lastRawSignals() {
 // we can only increase positions if band higher than previous
 // and time greater than previous
 inline std::list<std::pair<uint64_t, int>>
-    bufidxNextnSame(std::list<bsignal>::iterator start, std::list<bsignal>::iterator end, uint64_t last_uidtime)
+    bufidxNextnSame(std::list<BSignal>::iterator start, std::list<BSignal>::iterator end, uint64_t last_uidtime)
 {
     std::list<std::pair<uint64_t, int>> bufidxnextn; // indexes of next n signals same sign
-    bsignal current = *start;
+    BSignal current = *start;
     int ncount = 0;
     int last_band = current.band;
     // go to next - first signal after passed-signal
     start++;
     while (start != end && ncount < m_incmax){
-        if (start->sign == current.sign && start->band > last_band && start->tuidx > last_uidtime) {
-            bufidxnextn.push_back(std::make_pair(start->tuidx - m_bfoffset, start->band)); // current buffer index
+        if (start->sign == current.sign && start->band > last_band && start->twhen > last_uidtime) {
+            bufidxnextn.push_back(std::make_pair(start->twhen - m_bfoffset, start->band)); // current buffer index
             ncount++;
             last_band = start->band;
-            last_uidtime = start->tuidx;
+            last_uidtime = start->twhen;
         }
         start++;
     }
@@ -405,14 +405,12 @@ inline void updateBufferUidOffset(){
 }
 
 
-
-
 // Create target class by analysing raw band signals
-// label or re-label or re-classify every signal on every band
+// label every signal on every band
 // that are different than 0
 // those that went sucess receive 1
 // those that went bad receive 0 hold
-void LabelClasses(){
+void CreateXyVectors(){
     // w. bags of signals saved
     // label every signal
     // Creating Xy pairs
@@ -429,7 +427,8 @@ void LabelClasses(){
         else
         if (res == 1) {
             m_bsignals.erase(current); // done with this
-            m_xypairs.add(xy);
+            if(FillOutXFeatures(xy)) // remove old signal or cannot create
+                m_xypairs.add(xy);
         }
         else
         if (res == -3) { // outside the operational window
@@ -439,7 +438,8 @@ void LabelClasses(){
     }
 }
 
-int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterator end, XyPair& xy){
+int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, 
+                XyPair& xy){
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in R$
     int day = 0;
@@ -448,7 +448,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
     double slprofit = 0; // high-low profit (based on ask-bid prices)
     double quantity = 0; // number of contracts or stocks shares
 
-    size_t bfidx = current->tuidx - m_bfoffset; // actual buffer index
+    size_t bfidx = current->twhen - m_bfoffset; // actual buffer index
 
     // get 'real' price of execution of this signal
     // first bar considering the operational time delay
@@ -461,8 +461,11 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
     entryprice = m_bars->at(start_bfidx).avgprice;
 
     // save this buy or sell
-    xy.bsg = *current;
-    xy.y = 1; // start by beliving
+    xy.band = current->band;
+    xy.sign = current->sign;
+    xy.twhen = current->twhen;
+    xy.ninc = 0; // no increases yet
+    xy.y = 1; // start beliving
     // for this position
     // start time - where buy/sell really takes place
     int64_t start_time = m_bars->at(start_bfidx).emsc;
@@ -515,12 +518,15 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             slprofit = (entryprice - m_bars->at(i).bidh) * quantity;
         }
         // first barrier
-        if (profit >= m_targetprofit) // done classifying this signal
+        if (profit >= m_targetprofit) { // done classifying this signal
+            xy.tdone = m_bars->uidtimes[i];
             return 1;
+        }
         // second barrier
         else
         if (slprofit <= (-m_stoploss)) { // re-classify as hold
             xy.y = 0; // not a good deal, was better not to entry
+            xy.tdone = m_bars->uidtimes[i];
             return 1;
         }
         // third barrier - time
@@ -530,6 +536,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
             m_bars->at(i).emsc > end_day || // operations end of day
             m_bars->at(i).time.tm_yday != day) { // crossed to a new day
             xy.y = 0; // expired position
+            xy.tdone = m_bars->uidtimes[i];
             // could include a minimal profit to be still valid
             return 1;
         }
@@ -556,6 +563,7 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
                 nextsignidx = nextn.end(); // cannot increase any other position
                 continue;
             }
+            xy.ninc++;
             auto new_entryprice = m_bars->at(new_posbfidx).avgprice;
             auto new_quantity = roundVolume(m_ordersize / new_entryprice);
             // updtate to weighted average price
@@ -575,40 +583,30 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
 }
 
 
-void CreateXFeatureVectors()
-{ 
-    // consumes a std::list<bsignal_labelled> 
-    // creating and adding XyPairs to m_xypairs
-    for (int i=0; i < m_xypairs.size(); i++) {
-        // no need to assembly any other if this is already ready
-        // olders will also be ready
-        if(CreateXFeatureVector(m_xypairs[i]) == -1) // old signal or cannot create
-           m_xypairs.erase(m_xypairs.begin() + i);
-    }
-}
 
-int CreateXFeatureVector(XyPair &xypair)
+bool FillOutXFeatures(XyPair &xypair)
 {
-    if (xypair.isready) // no need to assembly
-        return 0;
 
     // find xypair.time current position on all buffers (have same size)
     // for the signal that triggered this xypair
     // uidxtime is allways sorted - dont need to find only correct by offset
-    int bfidxsg = xypair.bsg.tuidx - m_bfoffset;
+    int bfidxsg = xypair.twhen - m_bfoffset;
 
     // cannot assembly X feature train with such an old signal
     //  not in buffer anymore - such should be removed ...
-    if (bfidxsg < 0)
-        return -1;
+    if ( bfidxsg < 0 ) 
+        return false;
+
     // I want to include the signal the originates this xypair
     bfidxsg += 1;
     int batch_start_idx = bfidxsg - m_batch_size;
     // not enough : bands raw signal, features in time to form a batch
     // cannot create a X feature vector and will never will
     // remove it
-    if (batch_start_idx < 0)
-        return -1;
+    if (batch_start_idx < 0 || 
+        // batch_start using invalid data , cannot use it
+        batch_start_idx < ValidDataIdx()) 
+        return false;
 
     xypair.X.resize(m_xtrain_dim);
     int xifeature = 0;
@@ -642,10 +640,9 @@ int CreateXFeatureVector(XyPair &xypair)
     }
     // last feature
     // disambiguation - band number
-    xypair.X[xifeature++] = xypair.bsg.band;
+    xypair.X[xifeature++] = xypair.band;
 
-    xypair.isready = true;
-    return 1; // suceeded
+    return true; // suceeded
 }
 
 
@@ -674,38 +671,33 @@ py::array_t<MoneyBar> pyGetMoneyBars() {
     return *ppymbars;
 }
 
-std::tuple<py::array, py::array, py::array, py::array> pyGetXyvectors(){
+std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
     // pybind11 automatically casts/converts std:: types
     // vectors got to a list
     // but you can use cast to convert to a numpy array
     // needs "pybind11/stl.h"
     std::vector<double> X;
-    std::list<uint64_t> tidx;
-    std::list<int> Y;  // if use push_back dont need set size
-    // make it possible to split training samples for two classifiers
-    // buy signals and sell signals
-    std::list<int> bandsg;  // raw band sign source of classification
-    // will be used to split X -1 and X 1
+    std::vector<int> Y;  // if use push_back dont need set size
+    py::array_t<LbSignal> lbsignals; // all info from every Xy pair
     X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
+    
+    lbsignals.resize({ m_xypairs.size() });
+    LbSignal* pbuf = (LbSignal*)lbsignals.request().ptr;
 
-    int idx = 0;
-    for (; idx < m_xypairs.size(); idx++) {
-        if (m_xypairs[idx].isready) {
-            std::copy(m_xypairs[idx].X.begin(), m_xypairs[idx].X.end(),
-                X.begin() + idx * m_xtrain_dim);
-            Y.push_back(m_xypairs[idx].y);
-            bandsg.push_back(m_xypairs[idx].bsg.sign);
-            tidx.push_back(m_xypairs[idx].bsg.tuidx);
-        }
+    size_t idx = 0;
+    for (auto item=m_xypairs.begin(); item != m_xypairs.end(); item++) {
+        std::copy((*item).X.begin(), 
+                  (*item).X.end(),
+                   X.begin() + 
+                   std::distance(m_xypairs.begin(), item) * m_xtrain_dim);
+        Y.push_back((*item).y);
+        pbuf[idx++] = (LbSignal)(*item);
     }
 
     py::array pyX = py::cast(X);
-    py::array pyY = py::cast(Y);
-    py::array pyIdx = py::cast(tidx);
-    py::array pyBandsg = py::cast(bandsg);
     pyX.resize({ (int) m_xypairs.size(), m_xtrain_dim });
 
-    return std::make_tuple(pyX, pyY, pyIdx, pyBandsg);
+    return std::make_tuple(pyX, py::cast(Y), lbsignals);
 }
 
 

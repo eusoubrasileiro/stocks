@@ -3,19 +3,22 @@
 
 #pragma pack(push, 2)
 struct bsignal { // bollinger band signal
-    uint64_t tuidx; // when that happend - 'time' idx
+    uint64_t twhen; // when that happend - 'time' idx
     int   band; // which band
     int   sign = 0; // what sign
+};
+struct bsignal_labelled : bsignal
+{
+    int y = 0; // y label value
+    int ninc = 0; // number of increases in position
+    uint64_t tdone; // when that happend - 'time' idx of labelling
 };
 #pragma pack(pop)
 
 // single element needed for training
-struct XyPair
+struct XyPair : bsignal_labelled
 {
-    bsignal bsg;
-    bool isready = false;
     std::vector<double> X;
-    int y = 0; // y label value
 };
 
 

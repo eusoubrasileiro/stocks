@@ -576,10 +576,9 @@ int LabelSignal(std::list<bsignal>::iterator current, std::list<bsignal>::iterat
 
 
 void CreateXFeatureVectors()
-{ // using the pre-filled buffer of y target classes
-  // assembly the X array of features for it
-  // from more recent to oldest
-  // if it is already filled (ready) stop
+{ 
+    // consumes a std::list<bsignal_labelled> 
+    // creating and adding XyPairs to m_xypairs
     for (int i=0; i < m_xypairs.size(); i++) {
         // no need to assembly any other if this is already ready
         // olders will also be ready

@@ -11,6 +11,7 @@ static py::module pycode; // python module to be loaded
 inline const std::string BoolToString(bool b){ 	return b ? "true" : "false"; }
 inline const std::string PtrToString(LPVOID b) { return b ? "not-null" : "null"; }
 
+
 int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 						char *model, int pymodel_size_max){
 	py::buffer_info buf;
@@ -35,7 +36,7 @@ int pyTrainModel(double X[], int y[], int ntraining, int xtrain_dim,
 		// call python code
 		strpyModel = pycode.attr("pyTrainModel")(pyX, pyY).cast<py::bytes>();
 		size_t size = strpyModel.length();
-#ifdef PYDEBUG
+#ifdef META5DEBUG
 		if (ntraining > 2) {
 			debugfile << "X: " << X[ntraining-3] << " " << X[ntraining-2] << " " << X[ntraining-1] << std::endl;
 			debugfile << "y: " << y[ntraining-3] << " " << y[ntraining-2] << " " << y[ntraining-1] << std::endl;
@@ -80,7 +81,7 @@ int pyPredictwModel(double X[], int xtrain_dim,	char *model, int pymodel_size)
 	try {
 		// call python code
 		y_pred = pycode.attr("pyPredictwModel")(pyX, strpyModel).cast<int>();
-#ifdef PYDEBUG
+#ifdef META5DEBUG
 		if (xtrain_dim > 2) {
 			debugfile << "X: " << X[xtrain_dim-3] << " " << X[xtrain_dim-2] << " " << X[xtrain_dim-1] << std::endl;
 			debugfile << "y_pred: " << y_pred << std::endl;

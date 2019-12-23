@@ -3,7 +3,7 @@
 
 #include "..\..\TrailingMA.mqh"
 #include "..\..\Util.mqh"
-#include "CExpertIncBars.mqh"
+#include "IncBars.mqh"
 #include <Expert\Money\MoneyNone.mqh>
 
 //Inputs
@@ -12,26 +12,23 @@ input int                      Expert_NBands          = 3;
 // reference window for bbands
 input int                      Expert_Window          = 21;
 // "memory" of patterns for training sklearn model
-input int                  Expert_Batch_Size          = 5;
+input int                      Expert_Batch_Size      = 5;
 // minimum number of samples for training
-input int                   Expert_NTraining          = 600;
+input int                      Expert_NTraining       = 100;
 // orderSize in $$$
-input double                Expert_OrderSize          = 25e3;
+input double                   Expert_OrderSize       = 25e3;
 // stop loss for each order $$$
-input double                Expert_StopLoss     = 100;
+input double                   Expert_StopLoss        = 100;
 // target profit per order $$$
-input double              Expert_TargetProfit   = 15;
-// recursive == kalman filter option
-//input bool                Expert_Recursive           = false;
+input double                   Expert_TargetProfit    = 15;
+input int                      Expert_MaxPositions    = 3; // max open positions Expert_OrderSize
 
-
-const bool                     Expert_EveryTick       = false;
+const bool                     Expert_EveryTick       = true;
 const int                      Expert_MagicNumber     = 2525;
-// expert operations end (no further sells or buys) close all positions
-const double Expert_DayEndHour = 15.5; // Operational window maximum day hour
+
+
 // current day not completed ohlc will not be equal
 const int Expert_OrdersPerDay = 100; // Number of orders placed per day
-const double Expert_PositionExpireHours = 1.5; // Time to expire a position (close it)
 const int Expert_TrailingEma = 5; //  EMA Trailing Stop Window in M1
 
 CExpertIncBars cExpert = new CExpertIncBars;
@@ -47,30 +44,29 @@ int OnInit(){
     if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber))
       return(-1);
 
-    cExpert.setDayTradeParams(Expert_PositionExpireHours, Expert_DayEndHour);
+//
+//   no trailing for while
+//
+//    CTrailingMA *trailing = new CTrailingMA(MODE_EMA, PRICE_CLOSE, Expert_TrailingEma);
+//    if(trailing==NULL)
+//       return(-2);
+//
+//    if(!cExpert.InitTrailing(trailing))
+//      return(-3);
 
-    CTrailingMA *trailing = new CTrailingMA(MODE_EMA, PRICE_CLOSE, Expert_TrailingEma);
-    if(trailing==NULL)
-       return(-2);
-
-    if(!cExpert.InitTrailing(trailing))
-      return(-3);
-
-    if(!trailing.ValidationSettings())
-       return(-4);
+//    if(!trailing.ValidationSettings())
+//      return(-4);
 
     CMoneyNone *money=new CMoneyNone;
     if(!cExpert.InitMoney(money))
        return(-6);
 
     if(!cExpert.InitIndicators())
-       return(-5);
-
+       return(-5);       
+      
     cExpert.Initialize(Expert_NBands, Expert_Window, Expert_Batch_Size,
-                        Expert_NTraining, Expert_OrderSize,
-                          Expert_Train_StopLoss, Expert_Train_TargetProfit,
-                          Expert_Run_StopLoss, Expert_Run_TargetProfit,
-                          Expert_Recursive);
+                       Expert_NTraining, Expert_OrderSize,
+                       Expert_StopLoss, Expert_TargetProfit, Expert_MaxPositions);
 
     return(INIT_SUCCEEDED);
 }

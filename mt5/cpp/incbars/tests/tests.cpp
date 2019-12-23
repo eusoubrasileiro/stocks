@@ -238,7 +238,7 @@ TEST(Indicators, CBandSignal) {
 TEST(Expert, Initialize) {
     char symbol[6] = "PETR4"; // is null terminated 
 
-    Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
+    CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue
@@ -263,26 +263,26 @@ TEST(Expert, OnTicks) {
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
-    auto next_timebg = OnTicks(ticks.data(), chunck_s);
+    auto next_timebg = CppOnTicks(ticks.data(), chunck_s);
     EXPECT_EQ(pticks->size(), chunck_s);
 
     // get allowed overlapping of 1ms
     // get idx first tick with time >= next_timebg 
     auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);    
     auto overlap = chunck_s - next_idx;
-    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap);
     EXPECT_EQ(pticks->size(), chunck_s*2);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 2*chunck_s - next_idx;
-    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap);
     EXPECT_EQ(pticks->size(), chunck_s*3);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 3*chunck_s - next_idx;
-    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
 
     EXPECT_EQ(pticks->size(), chunck_s*4);   
 
@@ -300,7 +300,7 @@ TEST(ExpertPythonAPI, pyAddTicks) {
 
     // start again first - same as reset
     char symbol[6] = "PETR4"; // is null terminated 
-    Initialize(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
+    CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue
@@ -335,7 +335,7 @@ TEST(ExpertPythonAPI, pyAddTicks) {
 
 
 TEST(Expert, Refresh){    
-    Refresh();
+    CppRefresh();
 }
 
 

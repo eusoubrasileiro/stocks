@@ -43,6 +43,8 @@ size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time);
 // here we fix then replacing by a file of correct ones
 
 const int Max_Tick_Copy = int(10e3);
+ 
+extern short mt5_debug_level; // metatrader debugging messages level
 
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called
@@ -89,7 +91,7 @@ public:
 
   int nNew(); // number of new ticks added
 
-  void Init(std::string symbol, bool isbacktest, time_t timenow);
+  void Init(std::string symbol, bool isbacktest, int64_t timenow);
 
   int64_t Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); // will be called somehow by mt5
 

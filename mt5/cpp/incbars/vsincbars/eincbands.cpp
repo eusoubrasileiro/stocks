@@ -2,6 +2,16 @@
 #include "eincbands.h"
 #include "embpython.h"
 
+
+#ifdef META5DEBUG
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("incbandslog.txt");
+#else
+#define debugfile std::cout
+#endif
+
+short mt5_debug_level; // metatrader debugging messages level 0 - few, 1 - a lot
+
 // I dont want to use a *.def file to export functions from a namespace
 // so I am not using namespaces {namespace eincbands}
 
@@ -90,14 +100,16 @@ unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 double m_devs;
 
-void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
+void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     // ticks control
-    bool isbacktest, char *symbol, int symboln, int64_t mt5_timenow) 
+    bool isbacktest, char *symbol, int symboln, int64_t mt5_timenow,
+    short mt5debug)
 {
+    mt5_debug_level = mt5debug; // level of messages while debugging on metatrader
     m_devs = devs;
     m_incmax = incmax;
     m_start_hour = start_hour;
@@ -203,7 +215,7 @@ void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntrai
 
 
 // returns the next cmpbegin_time
-int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks){
+int64_t CppOnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
     int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
 
@@ -245,7 +257,7 @@ DLL_EXPORT BufferMqlTicks* GetTicks() // get m_ticks variable
 }
 
 // start index and count of new bars that just arrived
-bool Refresh()
+bool CppRefresh()
 {
     int ncalculated = 0;
 
@@ -673,7 +685,7 @@ int64_t pyAddTicks(py::array_t<MqlTick> ticks)
     // make a copy to be able to use fixticks (non const)
     std::vector<MqlTick> nonconst_ticks(ticks.data(), ticks.data()+ticks.size());
 
-    return OnTicks(nonconst_ticks.data(), nonconst_ticks.size());
+    return CppOnTicks(nonconst_ticks.data(), nonconst_ticks.size());
 }
 
 std::shared_ptr<py::array_t<MoneyBar>> ppymbars;

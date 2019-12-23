@@ -39,13 +39,14 @@ namespace py = pybind11;
 
 
 
-DLL_EXPORT void Initialize(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
+DLL_EXPORT void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     // ticks control
-    bool isbacktest, char* symbol, int symboln, int64_t mt5_timenow);
+    bool isbacktest, char* symbol, int symboln, int64_t mt5_timenow,
+    short mt5debug = 0); // metatrader debugging level
 
 
 
@@ -54,14 +55,14 @@ DLL_EXPORT void Initialize(int nbands, int bbwindow, double devs, int batch_size
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
 // passing m_copied_ticks as *mt5_pticks
 // returns the next cmpbegin_time
-DLL_EXPORT int64_t OnTicks(MqlTick *mt5_pticks, int mt5_nticks);
+DLL_EXPORT int64_t CppOnTicks(MqlTick *mt5_pticks, int mt5_nticks);
 // int64_t same as long for Mql5
 
 // update everything with new bars that just arrived
 // AddTicks > 0
 // if sucessfull update creating new data on all
 // indicators and signal features return true
-DLL_EXPORT bool Refresh(void);
+DLL_EXPORT bool CppRefresh(void);
 
 // Global Buffer Size (all buffers MUST and HAVE same size)
 // that's why they all use same SetSize for setting

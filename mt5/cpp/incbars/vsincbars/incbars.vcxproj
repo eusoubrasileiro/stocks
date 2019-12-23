@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseMeta5|x64">
+      <Configuration>ReleaseMeta5</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -41,6 +45,16 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <SpectreMitigation />
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <LocalDebuggerEnvironment>Path=$(Path);$(PYTHONHOME);$(PYTHONHOME)\DLLs;$(PYTHONHOME)\Lib;$(PYTHONHOME)\Lib\site-packages;$(PYTHONHOME)\Scripts;$(PYTHONHOME);</LocalDebuggerEnvironment>
+    <LocalDebuggerCommand>$(SolutionDir)\$(Platform)\tests.exe</LocalDebuggerCommand>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <SpectreMitigation />
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -50,6 +64,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -63,6 +80,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>
     </LinkIncremental>
+    <OutDir>$(SolutionDir)</OutDir>
+    <IntDir>$(Platform)\</IntDir>
+    <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <GenerateManifest />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'">
+    <LinkIncremental />
     <OutDir>$(SolutionDir)</OutDir>
     <IntDir>$(Platform)\</IntDir>
     <LocalDebuggerWorkingDirectory>D:\Metatrader 5\</LocalDebuggerWorkingDirectory>
@@ -178,6 +203,116 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <TypeLibraryResourceID />
       <TurnOffAssemblyGeneration />
       <SuppressStartupBanner />
+    </Link>
+    <ProjectReference>
+      <UseLibraryDependencyInputs>
+      </UseLibraryDependencyInputs>
+    </ProjectReference>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5\$(ProjectName).pyd"
+copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <SDLCheck>
+      </SDLCheck>
+      <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;META5DEBUG;</PreprocessorDefinitions>
+      <ConformanceMode>
+      </ConformanceMode>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <CallingConvention>
+      </CallingConvention>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <CompileAs>
+      </CompileAs>
+      <TreatWChar_tAsBuiltInType>
+      </TreatWChar_tAsBuiltInType>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <IntrinsicFunctions>
+      </IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>
+      </EnableFiberSafeOptimizations>
+      <MinimalRebuild>
+      </MinimalRebuild>
+      <SmallerTypeCheck>
+      </SmallerTypeCheck>
+      <BasicRuntimeChecks>
+      </BasicRuntimeChecks>
+      <StructMemberAlignment>
+      </StructMemberAlignment>
+      <BufferSecurityCheck>
+      </BufferSecurityCheck>
+      <EnableEnhancedInstructionSet>
+      </EnableEnhancedInstructionSet>
+      <FloatingPointModel>
+      </FloatingPointModel>
+      <DisableLanguageExtensions>
+      </DisableLanguageExtensions>
+      <ForceConformanceInForLoopScope>
+      </ForceConformanceInForLoopScope>
+      <RemoveUnreferencedCodeData>
+      </RemoveUnreferencedCodeData>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>
+      </GenerateDebugInformation>
+      <EnableUAC>
+      </EnableUAC>
+      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ForceFileOutput>
+      </ForceFileOutput>
+      <OutputFile>$(ProjectName).dll</OutputFile>
+      <ManifestFile>
+      </ManifestFile>
+      <AllowIsolation>
+      </AllowIsolation>
+      <UACExecutionLevel>
+      </UACExecutionLevel>
+      <UACUIAccess>
+      </UACUIAccess>
+      <ProgramDatabaseFile>
+      </ProgramDatabaseFile>
+      <GenerateMapFile>
+      </GenerateMapFile>
+      <MapExports>
+      </MapExports>
+      <SwapRunFromCD>
+      </SwapRunFromCD>
+      <SwapRunFromNET>
+      </SwapRunFromNET>
+      <Driver>
+      </Driver>
+      <ProfileGuidedDatabase>
+      </ProfileGuidedDatabase>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
+      <IgnoreEmbeddedIDL>
+      </IgnoreEmbeddedIDL>
+      <TypeLibraryResourceID>
+      </TypeLibraryResourceID>
+      <TurnOffAssemblyGeneration>
+      </TurnOffAssemblyGeneration>
+      <SuppressStartupBanner>
+      </SuppressStartupBanner>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>

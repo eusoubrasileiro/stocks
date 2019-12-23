@@ -40,20 +40,21 @@ PYBIND11_MODULE(incbars, m) {
     // optional module docstring
     m.doc() = "incbars metatrader 5 expert - python api pybind11";
 
-    m.def("initialize", &Initialize, "Initialize Increase Bands Expert",
+    m.def("initialize", &CppExpertInit, "Initialize Increase Bands Expert",
         py::arg("nbands"), py::arg("bbwindow"), py::arg("stddevs"), py::arg("batch_size"), py::arg("ntraining"),
         py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"), 
         py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), py::arg("incmax"),
         py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
         py::arg("moneybarsize"), // R$ to form 1 money bar
         // ticks control
-        py::arg("isbacktest"), py::arg("chsymbol"), py::arg("chsymboln"), py::arg("mt5_timenow"));        
+        py::arg("isbacktest"), py::arg("chsymbol"), py::arg("chsymboln"), py::arg("mt5_timenow"),
+        py::arg("mt5_debug"));
 
     // signature with py::array_t for AddTicks
     m.def("addticks", &pyAddTicks, "send ticks to the expert", 
         py::arg("nprecords_mqltick"));
 
-    m.def("refresh", &Refresh, "update everything with newbars, after addticks > 0");
+    m.def("refresh", &CppRefresh, "update everything with newbars, after addticks > 0");
 
     m.def("buffersize", &BufferSize, "size of all buffers");
     

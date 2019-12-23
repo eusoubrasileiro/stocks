@@ -7,6 +7,7 @@
 // But here only the exports for mql5 or even c++ call
 //
 //
+#pragma once
 
 #ifndef DLLEXPORTS_H
 #define DLLEXPORTS_H
@@ -22,9 +23,9 @@ BOOL __stdcall DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved);
 
-#ifdef PYDEBUG
+#ifdef META5DEBUG
 #include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("incbandslog.txt");
+extern std::ofstream debugfile;
 #else
 #define debugfile std::cout
 #endif

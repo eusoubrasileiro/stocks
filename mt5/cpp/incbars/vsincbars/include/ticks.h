@@ -41,8 +41,6 @@ size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time);
 
 // Messed ticks from Meta5 will also come to C++
 // here we fix then replacing by a file of correct ones
-
-const int Max_Tick_Copy = int(10e3);
  
 extern short mt5_debug_level; // metatrader debugging messages level
 
@@ -57,33 +55,34 @@ protected:
   MqlTick *m_mt5ticks; 
   int m_mt5ncopied; // last count of ticks sent by metatrader 
   
-  bool scheck; // security check of sync with data server
-  int64_t m_cmpbegin_time;
-  int m_cmpbegin; // begin time of comparison for security check for new ticks (sync with server)
-  int m_bgidx; // temp:: where the new ticks starts on array m_copied_ticks
+  // sync check 
+  bool m_scheck; // security check of sync with data server
+  int64_t m_scheck_bg_time; // begin time of comparison for security check
+  int m_scheck_bg_idx; // begin idx ... for new ticks (sync with server)  
 
   //////////////////////////////////////////////
   ////// backtest workaround for stupid mt5 fake ticks creation
   bool m_isbacktest;
-  std::vector<MqlTick> m_refticks; // correct ticks (from file) without stupid mt5 modifications
-  int m_refsize; // size of reference data
+  std::vector<MqlTick> m_fticks; // correct ticks (from file) without stupid mt5 modifications
+  std::vector<MqlTick>::iterator m_cftick; // current position on reference ticks file
   // on volume etc by MT5 to fuc** with everything serious
-  std::string m_refcticks_file;
-  int m_refpos; // position on reference ticks file
   int m_trash_count;
+
   ////////////////////////////////////////////
   ////// for testing against Python/C++ since i need to
   ////// know boundaries of new ticks (since data comes in chuncks)
-  std::vector<int> m_bound_ticks;
-  int ib_tick; // count of calls to AddRange
+  //std::vector<int> m_bound_ticks;
+  //int ib_tick; // count of calls to AddRange
   int m_nnew; // number of new ticks added
 
-  bool correctMt5UnrealTicks();
+  bool addFromFileTicks();
 
   void loadCorrectTicks(std::string symbol);
 //////////////////////////////////////////////
-//////////////////////////////////////////////
-  bool beginNewTicks();
+
+  // secury check of sync with server of ticks
+  // and seek to begin of new ticks
+  bool seekBeginMt5Ticks();
 
 public:
 

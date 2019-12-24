@@ -1,6 +1,17 @@
 #include "ticks.h"
 #include <fstream>
 
+
+#ifdef META5DEBUG
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("incbandslog.txt");
+#else
+#define debugfile std::cout
+#endif
+
+short mt5_debug_level; // metatrader debugging messages level 0 - few, 1 - a lot
+
+
 int64_t ReadTicks(std::vector<MqlTick> *mqlticks, 
         std::string filename, size_t nticks=-1){
 
@@ -61,29 +72,34 @@ void fixArrayTicks(std::vector<MqlTick> ticks) {
 }
 
 
-bool BufferMqlTicks::correctMt5UnrealTicks(){
-  int real_nnew = 0;
-  int begin_refpos = m_refpos;
-  for(int i=0; i<m_nnew && m_refpos < m_refsize; i++){
-    if(m_mt5ticks[i].time_msc
-        == m_refticks[m_refpos].time_msc){ // could and should be an iterator 
-      real_nnew++; m_refpos++;
-    }
-  }
-#ifdef META5DEBUG
-  if (mt5_debug_level == 1) {
-      debugfile << "BufferMqlTicks correctMt5UnrealTicks m_refpos: " << m_refpos << std::endl;
-      debugfile << "BufferMqlTicks correctMt5UnrealTicks real_nnew: " << real_nnew << std::endl;
-   }
-#endif
+// correct Mt5 unreal Ticks by adding ticks from reference file
+bool BufferMqlTicks::addFromFileTicks(){
 
+  auto start_cftick = std::vector<MqlTick>::iterator(m_cftick);
+  // for every tick sent by metatrader 
+  // only add the tick if its time (time_msc)
+  // matchs the current tick position on file
+  // then that's a real tick
+  // ignore all the rest
+  for(int i=0; i<m_nnew && m_cftick != m_fticks.end(); i++)
+    if(m_mt5ticks[i].time_msc == m_cftick->time_msc) 
+        m_cftick++;    
+  
   // testing needs boundaries of data chuncks
-  m_bound_ticks[ib_tick++] = m_refpos;
+  //m_bound_ticks[ib_tick++] = std::distance(m_fticks.begin(), m_cftick);
 
   /////// add correct ticks from file
-  addrange(m_refticks.data() + begin_refpos, real_nnew);
+  addrange(start_cftick, m_cftick);
+  
+  m_nnew = std::distance(start_cftick, m_cftick);
 
-  m_nnew = real_nnew;
+#ifdef META5DEBUG
+  if (mt5_debug_level == 1) {
+      debugfile << "BufferMqlTicks addFromFileTicks refpos: " << std::distance(m_fticks.begin(), m_cftick) << std::endl;
+      debugfile << "BufferMqlTicks addFromFileTicks real nnew: " << m_nnew << std::endl;
+  }
+#endif
+
   if(m_nnew==0){ // number of trash ticks created by Metatrader
     m_trash_count++;
     return false;
@@ -93,7 +109,7 @@ bool BufferMqlTicks::correctMt5UnrealTicks(){
       m_trash_count = 0;
 #ifdef META5DEBUG
       std::tm ctime;
-      time_t timet = m_cmpbegin_time/1000;
+      time_t timet = m_scheck_bg_time/1000;
       gmtime_s(&ctime, &timet);
 
       char buffer[32];
@@ -117,71 +133,72 @@ void BufferMqlTicks::loadCorrectTicks(std::string symbol)
     // your tick history. Problems will come
     // advised to use a custom symbol to avoid that
     
-    m_refcticks_file = std::string(std::getenv("USERPROFILE")) + 
+    std::string cticks_file = std::string(std::getenv("USERPROFILE")) + 
         std::string("\\Projects\\stocks\\data\\") +
         symbol + std::string("_mqltick.bin");    
-    m_refsize = ReadTicks(&m_refticks, m_refcticks_file);
+    ReadTicks(&m_fticks, cticks_file);
 
-    // seek to the start positon of ticks for the 
-    // current back test
-    for(m_refpos = 0; m_refpos<m_refsize; m_refpos++)
-        if(m_refticks[m_refpos].time_msc >= m_cmpbegin_time) break;
-    m_trash_count = 0;
-    
+    // start iterator of ticks -> point to first tick on file
+    m_cftick = m_fticks.begin(); 
+
+    // seek to the start positon for the current back test    
+    for(; m_cftick!=m_fticks.end(); m_cftick++)
+        if(m_cftick->time_msc >= m_scheck_bg_time) break;
+
 #ifdef META5DEBUG
-    debugfile << "BufferMqlTicks m_refcticks_file: " << m_refcticks_file << std::endl;
-    debugfile << "BufferMqlTicks m_refsize: " << m_refsize << std::endl;
-    debugfile << "BufferMqlTicks m_refpos: " << m_refpos << std::endl;    
+    debugfile << "BufferMqlTicks refcticks_file: " << cticks_file << std::endl;
+    debugfile << "BufferMqlTicks refsize: " << m_fticks.size() << std::endl;
+    debugfile << "BufferMqlTicks refpos: " << std::distance(m_fticks.begin(), m_cftick) << std::endl;
 #endif
-
-
-    // array of boundary of chuncks of ticks
-    m_bound_ticks.resize(m_refsize);    
-    ib_tick = 0;    // first boundary will come 
 }
 
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 
-  bool BufferMqlTicks::beginNewTicks(){
-    scheck = false;
+// secury check of sync with server of ticks
+// and seek to begin of new ticks
+bool BufferMqlTicks::seekBeginMt5Ticks(){
+    m_scheck = false;
 
-#ifdef META5DEBUG
+    #ifdef META5DEBUG
     if (mt5_debug_level == 1) {
-        debugfile << "BufferMqlTicks beginNewTicks m_mt5ncopied: " << m_mt5ncopied << std::endl;
-        debugfile << "BufferMqlTicks beginNewTicks (TickCompare) 1st local tick: " << (*this)[m_cmpbegin + 0].time_msc << std::endl;
-        debugfile << "BufferMqlTicks beginNewTicks (TickCompare) 1st  mt5  tick: " << m_mt5ticks[0].time_msc << std::endl;
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks mt5ncopied: " << m_mt5ncopied << std::endl;
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks (Sync Check) 1st local tick: " << (*this)[m_scheck_bg_idx + 0].time_msc << std::endl;
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks (Sync Check) 1st  mt5  tick: " << m_mt5ticks[0].time_msc << std::endl;
     }
-#endif
+    #endif
 
+
+    int mt5i = 0; // indexer for received ticks
     // find index of first tick different
     // from what we already have using the comparision indexes
     if(this->size() == 0){ // we have nothing - will try copy everything
-      m_bgidx = 0; scheck = true;
+        m_scheck = true;
+        m_nnew = m_mt5ncopied;
     }
-    else{ // security check 
-      for(int i=0; i<m_mt5ncopied; i++)
-        if(m_mt5ticks[i].time_msc == (*this)[m_cmpbegin+i].time_msc){
-          scheck=true; // must have at least one sample equal
-          // for security check of sync with server
-        }
-        else{ // found begin new data
-          m_bgidx = i;
-          break;
-        }
+    else{
+        // security check and seek of begin of new ticks
+        // seek to begin of new ticks
+        // remember a c-style pointer can be used as an interator
+        for (; mt5i < m_mt5ncopied; mt5i++, m_mt5ticks++)
+            if (m_mt5ticks->time_msc == (*this)[m_scheck_bg_idx + mt5i].time_msc) {
+                m_scheck = true; // must have at least one sample equal
+                // for security check of sync with server
+            }
+            else // seeking finished to begin of new data - stop
+                break;
+        m_nnew = m_mt5ncopied - mt5i;
     }
-    // the difference is the number of new ticks
-    m_nnew = m_mt5ncopied - m_bgidx;
 
-#ifdef META5DEBUG
-    if (mt5_debug_level == 1) {
-        debugfile << "BufferMqlTicks beginNewTicks  m_nnew : " << m_nnew << std::endl;
-        debugfile << "BufferMqlTicks beginNewTicks m_bgidx : " << m_bgidx << std::endl;
+    #ifdef META5DEBUG
+    if (mt5_debug_level == 1) {        
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks  mt5 begin idx : " << mt5i << std::endl;
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks  nnew : " << m_nnew << std::endl;
     }
-#endif
+    #endif
 
-    return (scheck);
-  }
+    return (m_scheck);
+}
 
 BufferMqlTicks::BufferMqlTicks()
 {
@@ -210,18 +227,23 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, int64_t timenow){
     tm tm_time;
     gmtime_s(&tm_time, &timenow); // unixtime timestamp to tm_struct
     // begin of day at 1:00 am
-    m_cmpbegin_time = timenow - (tm_time.tm_hour*3600+tm_time.tm_min*60+tm_time.tm_sec) + 3600;
-    m_cmpbegin_time *= 1000;// turn in ms
-    m_cmpbegin = 0;    
+    m_scheck_bg_time = timenow - (tm_time.tm_hour*3600+tm_time.tm_min*60+tm_time.tm_sec) + 3600;
+    m_scheck_bg_time *= 1000;// turn in ms
+    m_scheck_bg_idx = 0;    
 
 #ifdef META5DEBUG
-    debugfile << "BufferMqlTicks m_symbol: " << m_symbol << std::endl;
+    debugfile << "BufferMqlTicks symbol: " << m_symbol << std::endl;
     debugfile << "BufferMqlTicks timenow: " << timenow << std::endl;
-    debugfile << "BufferMqlTicks cmp_begin_time: " << m_cmpbegin_time << std::endl;
+    debugfile << "BufferMqlTicks scheck_bg_time: " << m_scheck_bg_time << std::endl;
 #endif
 
-    if(isbacktest)
+    if (isbacktest) {
         loadCorrectTicks(symbol);
+        // array of boundary of chuncks of ticks
+        // m_bound_ticks.resize(m_fticks.size());
+        // ib_tick = 0;    // first boundary will come 
+        m_trash_count = 0;
+    }
 }
 
 // int64_t same as long for Mql5
@@ -235,22 +257,22 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
     m_mt5ticks = mt5_pmqlticks;
     m_mt5ncopied = mt5_ncopied;
 
-    if(!beginNewTicks()){
+    if (mt5_ncopied < 1) // no data
+        return m_scheck_bg_time;
+
+    if(!seekBeginMt5Ticks()){
         debugfile << "Data Without Sync With Server!" << std::endl;
         throw new std::runtime_error("Tick data out-of-sync with server!");
     }
 
-    // allign array of new ticks to zero
-    // ArrayCopy(m_copied_ticks, m_copied_ticks, 0, m_bgidx, m_nnew);
-    m_mt5ticks = m_mt5ticks + m_bgidx;
+
     // fix nonsense last, ask, bid empty
     fixArrayTicks(m_mt5ticks, m_nnew);
 
     // if on back-test
     // dont use ticks from metatrader, only times!
     if(m_isbacktest){
-        if(!correctMt5UnrealTicks())
-            return 0; // no new ticks
+        addFromFileTicks(); // get correct ticks and add 
     }
     else{ // real time operation
         addrange(m_mt5ticks, m_nnew);
@@ -260,15 +282,26 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
     // last tick ms-1 on buffer
     // get index of first tick with time >= (last tick ms) - (1 ms)
     // begin time of comparison is tick with time >= [last copied tick - 1 ms)]
-    m_cmpbegin_time = m_mt5ticks[m_nnew-1].time_msc-1;
-    m_cmpbegin = 0;
-    for(int64_t i=size()-1; i>=0; i--)
-        if((*this)[i].time_msc < m_cmpbegin_time){
-            m_cmpbegin = i+1; 
-            break;
-        }
 
-    return m_cmpbegin_time;
+    if (m_nnew > 0) {
+        m_scheck_bg_time = m_mt5ticks[m_nnew - 1].time_msc - 1;
+        m_scheck_bg_idx = 0;
+        for (int64_t i = size() - 1; i >= 0; i--)
+            if ((*this)[i].time_msc < m_scheck_bg_time) {
+                m_scheck_bg_idx = i + 1;
+                break;
+            }
+    }
+#ifdef META5DEBUG
+    if (mt5_debug_level == 1) {
+        debugfile << "BufferMqlTicks Refresh trash_count : " << m_trash_count << std::endl;
+        debugfile << "BufferMqlTicks Refresh nnew : " << m_nnew << std::endl;
+        debugfile << "BufferMqlTicks Refresh mt5ticks last new : " << m_mt5ticks[m_nnew - 1].time_msc << std::endl;
+        debugfile << "BufferMqlTicks Refresh scheck_bg_time : " << m_scheck_bg_time << std::endl;
+    }
+#endif
+
+    return m_scheck_bg_time;
 }
 
 

@@ -10,6 +10,7 @@ protected:
     MqlTick m_copied_ticks[]; // fixed size number of ticks copied every x seconds
     int m_ncopied; // last count of ticks copied on buffer
     long m_cmpbegin_time; // unix timestamp in ms begin of next copy
+    datetime m_check_time;
     
     // upper and down and middle
     int m_nbands; // number of bands

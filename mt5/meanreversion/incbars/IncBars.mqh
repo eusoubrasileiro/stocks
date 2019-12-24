@@ -73,7 +73,7 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
         Expert_MoneyBar_Size,  // R$ to form 1 money bar
         // ticks control
         MQL_TESTER, csymbol, nsymbol, m_cmpbegin_time,
-        1); // debug level 0 or 1 (a lot of messages (every OnTick))
+        0); // debug level 0 or 1 (a lot of messages (every OnTick))
 
     m_cmpbegin_time*=1000; // to ms next CopyTicksRange call
 }
@@ -86,6 +86,7 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
 // has not being processed yet
 void CExpertIncBars::CheckTicks(void)
 {
+  
   // copy all ticks from last copy time - 1 milisecond to now
   // to avoid missing ticks on same ms)
   m_ncopied = CopyTicksRange(m_symbol.Name(), m_copied_ticks,
@@ -108,10 +109,16 @@ void CExpertIncBars::CheckTicks(void)
      // better threatment here ??...better ignore and wait for next call
      return;
   }
-
+  
+//  datetime dtime=D'02.10.2019 16:54:00'; 
+//  m_check_time = (datetime) (m_cmpbegin_time*0.001);
+//  
+//  if(m_check_time >= dtime)
+//    Print("Here");
+    
   // call C++ passing ticks
   m_cmpbegin_time = CppOnTicks(m_copied_ticks, m_ncopied);
-
+  
   // check to see if we should close any position
   if(SelectPosition()){ // if any open position
     CloseOpenPositionsbyTime();

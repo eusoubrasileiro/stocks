@@ -2,16 +2,6 @@
 #include "eincbands.h"
 #include "embpython.h"
 
-
-#ifdef META5DEBUG
-#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("incbandslog.txt");
-#else
-#define debugfile std::cout
-#endif
-
-short mt5_debug_level; // metatrader debugging messages level 0 - few, 1 - a lot
-
 // I dont want to use a *.def file to export functions from a namespace
 // so I am not using namespaces {namespace eincbands}
 

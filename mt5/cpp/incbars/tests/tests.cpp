@@ -236,14 +236,14 @@ TEST(Indicators, CBandSignal) {
 #include <fstream>
 
 TEST(Expert, Initialize) {
-    char symbol[6] = "PETR4"; // is null terminated 
+    char *symbol = "PETR4"; // is null terminated by default - char* string literal C++
 
     CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue
         500e3, // must ignore the null terminating character at 6th position
-        true, symbol, 5, 0); // time first tick or time of day
+        true, symbol, 0); // time first tick or time of day
 }
 
 TEST(Expert, OnTicks) {
@@ -299,13 +299,13 @@ TEST(ExpertPythonAPI, pyAddTicks) {
     std::vector<MqlTick> ticks;
 
     // start again first - same as reset
-    char symbol[6] = "PETR4"; // is null terminated 
+    char *symbol = "PETR4"; // is null terminated by default C++
     CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
         10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
         25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
         100, 0.01, 0.01, // minlot, ticksize, tickvalue
         500e3, // must ignore the null terminating character at 6th position
-        true, symbol, 5, 0); // time first tick or time of day
+        true, symbol, 0); // time first tick or time of day
 
     // Read a file and simulate CopyTicksRange 
     int nticks = int(1e6);

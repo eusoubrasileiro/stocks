@@ -95,8 +95,10 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    // ticks control
-    bool isbacktest, char *symbol, int symboln, int64_t mt5_timenow,
+    // ticks control, 
+    bool isbacktest, 
+    char *cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
+    int64_t mt5_timenow,
     short mt5debug)
 {
     mt5_debug_level = mt5debug; // level of messages while debugging on metatrader
@@ -123,7 +125,7 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     m_last_raw_signal.clear();
     m_bsignals.clear();
 
-    m_ticks->Init(std::string(symbol, symbol+ symboln), 
+    m_ticks->Init(std::string(cs_symbol),
         isbacktest, mt5_timenow);
         
     m_bars->Init(tickvalue,
@@ -245,10 +247,21 @@ size_t ValidDataIdx() {
     return valid_start;
 }
 
-DLL_EXPORT BufferMqlTicks* GetTicks() // get m_ticks variable
+BufferMqlTicks* GetTicks() // get m_ticks variable
 { 
     return &(*m_ticks);
 }
+
+void TicksToFile(char* cs_filename) {
+    BufferMqlTicks* ticks = GetTicks();
+    SaveTicks(ticks, std::string(cs_filename));
+}
+
+bool isInsideFile(char* cs_filename) {
+    BufferMqlTicks* ticks = GetTicks();
+    return isInFile(ticks, std::string(cs_filename));
+}
+
 
 // start index and count of new bars that just arrived
 bool CppRefresh()

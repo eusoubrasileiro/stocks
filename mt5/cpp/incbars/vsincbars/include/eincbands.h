@@ -32,8 +32,8 @@
 #include "pybind11/numpy.h"
 #include "pybind11/stl.h"
 #include "pybind11/functional.h"
-#include "ticks.h"
 #include "cwindicators.h"
+#include "ticks.h"
 #include "callpython.h"
 
 namespace py = pybind11;
@@ -46,8 +46,8 @@ DLL_EXPORT void CppExpertInit(int nbands, int bbwindow, double devs, int batch_s
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     // ticks control
-    bool isbacktest, char* symbol, int symboln, int64_t mt5_timenow,
-    short mt5debug = 0); // metatrader debugging level
+    bool isbacktest, char *cs_symbol, int64_t mt5_timenow,
+    short mt5debug=0); // metatrader debugging level
 
 
 
@@ -78,6 +78,10 @@ DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (i
 DLL_EXPORT bool CppNewData(); // are there any new bars after call of OnTicks
 
 DLL_EXPORT BufferMqlTicks *GetTicks(); // get m_ticks variable
+
+DLL_EXPORT void TicksToFile(char *cs_filename);
+
+DLL_EXPORT bool isInsideFile(char *cs_filename);
 
 // classes and features
 DLL_EXPORT void CreateXyVectors();

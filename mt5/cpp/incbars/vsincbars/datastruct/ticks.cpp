@@ -41,6 +41,54 @@ int64_t ReadTicks(std::vector<MqlTick> *mqlticks,
     return nticks;
 }
 
+void SaveTicks(BufferMqlTicks* ticks, std::string filename){
+    std::fstream fh;
+    std::streampos begin, end;
+
+    fh.open(filename,
+        std::fstream::out | std::fstream::binary);
+
+    for (auto tick = ticks->begin(); tick != ticks->end(); tick++) {
+        fh.write((char*) (&(*tick)), sizeof(MqlTick));
+    }
+
+    fh.close();
+}
+
+// check if the ticks are all included in 
+// the ticks on the specified filename
+// seek file if needed
+bool isInFile(BufferMqlTicks* ticks, std::string filename){
+    std::vector<MqlTick> fticks;
+    ReadTicks(&fticks, filename);
+
+    // start iterator of ticks -> point to first tick on file
+    auto cftick = fticks.begin();
+
+    // seek to the start positon for the ticks if needed 
+    for (; cftick != fticks.end(); cftick++)
+        if (cftick->time_msc == ticks->at(0).time_msc) break;
+
+#ifdef META5DEBUG
+    debugfile << "isInFile seeked file start at: " << std::distance(fticks.begin(), cftick) << std::endl;
+#endif      
+
+    auto creftick = ticks->begin();
+    bool result = true;
+    // compare
+    for(; cftick != fticks.end() && creftick != ticks->end(); cftick++, creftick++)
+        if (memcmp(&(*cftick), &(*creftick), sizeof(MqlTick) != 0)) { // there is no == for POD structs
+            result = false;
+            break;
+        }
+
+#ifdef META5DEBUG
+    debugfile << "isInFile end of comparison: " << std::distance(ticks->begin(), creftick) << std::endl;
+    debugfile << "isInFile total ticks compared: " << std::distance(ticks->begin(), creftick) << std::endl;    
+#endif      
+
+    return result;
+}
 
 // Fix array of ticks so if last ask, bid or last is 0
 // they get filled with previous non-zero value as should be

@@ -56,8 +56,11 @@ BOOL __stdcall DllMain( HMODULE hModule,
 	        py::finalize_interpreter();
 	        debugfile << "finalized interpreter" << std::endl;
          }        
-        //if(!calledbyPython)
-        //    // print number of ticks processed if on backtest
+        if (!calledbyPython) {
+            // print number of ticks processed 
+            auto pticks = GetTicks();
+            debugfile << "number of ticks added on buffer: " << pticks->size() << std::endl;
+        }
         break;
     }
     return TRUE;

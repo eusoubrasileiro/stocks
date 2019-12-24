@@ -2,7 +2,6 @@
 
 
 #include "buffers.h"
-#include "dll.h"
 #include <string>
 #include <iostream>
 #include <time.h>
@@ -95,3 +94,8 @@ public:
   int64_t Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); // will be called somehow by mt5
 
 };
+
+
+void SaveTicks(BufferMqlTicks* ticks, std::string filename);
+
+bool isInFile(BufferMqlTicks* ticks, std::string filename);

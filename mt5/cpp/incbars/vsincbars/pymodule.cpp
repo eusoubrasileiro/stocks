@@ -47,7 +47,7 @@ PYBIND11_MODULE(incbars, m) {
         py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
         py::arg("moneybarsize"), // R$ to form 1 money bar
         // ticks control
-        py::arg("isbacktest"), py::arg("chsymbol"), py::arg("chsymboln"), py::arg("mt5_timenow"),
+        py::arg("isbacktest"), py::arg("cs_symbol"), py::arg("mt5_timenow"),
         py::arg("mt5_debug"));
 
     // signature with py::array_t for AddTicks

@@ -19,6 +19,7 @@
 #include <windows.h>
 #include <iostream>
 
+#include "eincbands.h"
 #include "callpython.h"
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"

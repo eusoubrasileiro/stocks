@@ -89,6 +89,9 @@ DLL_EXPORT void CreateXyVectors();
 // API Python - only for gtests
 DLL_EXPORT int64_t pyAddTicks(py::array_t<MqlTick> ticks);
 
+// returns -1/0/1 Sell/Nothing/Buy 
+DLL_EXPORT int isSellBuy();
+
 #ifdef EXPORT
 
 py::array_t<MoneyBar> pyGetMoneyBars();
@@ -96,7 +99,7 @@ py::array_t<MoneyBar> pyGetMoneyBars();
 // index offset correction between uid and current buffer indexes
 inline void updateBufferUidOffset();
 
-void verifyEntry();
+
 // verify a signal in any band
 // on the last m_added bars
 // get the latest signal
@@ -110,13 +113,13 @@ int lastRawSignals();
 
 void CreateXyVectors();
 int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, XyPair& xy);
-bool FillOutXFeatures(XyPair &xypair);
+bool FillInXFeatures(XyPair &xypair);
 
 std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors();
 int pyGetXdim();
 
 // sklearn model
-//bool PythonTrainModel();
-//int  PythonPredict(XyPair& xypair);
+bool PythonTrainModel();
+int  PythonPredict(XyPair xypair);
 
 #endif

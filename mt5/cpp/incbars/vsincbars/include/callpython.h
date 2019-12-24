@@ -16,3 +16,21 @@ void LoadPythonCode();
 
 
 extern py::module pycode; // python module to be loaded
+
+class sklearnModel
+{
+public:
+    std::vector<char> pymodel;
+    // size of python model in bytes after created
+    int  pymodel_size;
+    bool isready; // is ready to be used
+
+    sklearnModel(void) {
+        // dont know the size of a sklearn model
+        // serialized so put something big here 5MB
+        isready = false;
+        pymodel_size = 0; // real size
+        pymodel.resize((1024 * 1024 * 5));
+    }
+
+};

@@ -76,8 +76,9 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
     auto creftick = ticks->begin();
     bool result = true;
     // compare
-    for(; cftick != fticks.end() && creftick != ticks->end(); cftick++, creftick++)
-        if (memcmp(&(*cftick), &(*creftick), sizeof(MqlTick) != 0)) { // there is no == for POD structs
+    for (; cftick != fticks.end() && creftick != ticks->end(); cftick++, creftick++)
+        // memory comparisoin since there is no == for POD structs
+        if (memcmp(&(*cftick), &(*creftick), sizeof(MqlTick) != 0)) { 
             result = false;
             break;
         }
@@ -85,6 +86,7 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
 #ifdef META5DEBUG
     debugfile << "isInFile end of comparison: " << std::distance(ticks->begin(), creftick) << std::endl;
     debugfile << "isInFile total ticks compared: " << std::distance(ticks->begin(), creftick) << std::endl;    
+    debugfile << "isInFile : " << result << std::endl;
 #endif      
 
     return result;

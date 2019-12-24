@@ -72,7 +72,7 @@ int OnInit(){
 }
 
 
-void OnTimer() {
+void OnTick() {
     cExpert.CheckTicks();
 }
 
@@ -80,13 +80,8 @@ void OnTimer() {
 //| Expert deinitialization function                                 |
 void OnDeinit(const int reason){
     EventKillTimer();
-    cExpert.Deinit();
+    cExpert.Deinit();    
 }
-
-//| Expert tick function
-//void OnTick(){
-//cExpert.CheckTicks();
-//}
 
 //| Trade function                                                   |
 void OnTrade(){

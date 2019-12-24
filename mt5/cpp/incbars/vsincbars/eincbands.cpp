@@ -35,8 +35,7 @@ std::shared_ptr<CFracDiffIndicator> m_fd_mbarp; // frac diff on money bar prices
 // store buy|sell|hold signals for each bband - raw
 std::vector<CBandSignal> m_rbandsgs;
 
-std::vector<int> m_last_raw_signal; // last raw signal in all m_nbands
-int m_last_raw_signal_index; // related to m_bars buffer on refresh()
+BSignal m_last_signal; // last raw signal in all m_nbands
 
 // storage of signals
 // save only signal ocurrences
@@ -82,7 +81,7 @@ int    m_incmax;// max number of increases on a position
 
 // python sklearn model trainning
 //bool m_recursive;
-//sklearnModel m_model;
+sklearnModel m_model;
 unsigned int m_model_refresh; // how frequent to update the model
 // (in number of new training samples)
 // helpers to count training samples
@@ -113,8 +112,6 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     //m_model = new sklearnModel;
     m_xypair_count = 0;
     m_model_last_training = 0;
-    m_last_raw_signal_index = -1;
-
 
     // reset everythin first
     m_ticks.reset(new BufferMqlTicks());
@@ -122,7 +119,6 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     m_fd_mbarp.reset(new CFracDiffIndicator());
     m_xypairs.clear();    
     m_rbandsgs.clear();
-    m_last_raw_signal.clear();
     m_bsignals.clear();
 
     m_ticks->Init(std::string(cs_symbol),
@@ -163,7 +159,6 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     //m_model_refresh = model_refresh;
 
     m_rbandsgs.resize(m_nbands); // one for each band
-    m_last_raw_signal.resize(m_nbands); // resize and fill in (but we dont care will be overwritten)
 
     m_bsignals_lastuid = 0;
 
@@ -299,8 +294,10 @@ bool CppRefresh()
     return (ncalculated > 0);
 }
 
+// returns -1/0/1 Sell/Nothing/Buy 
+int isSellBuy() {
 
-void verifyEntry() {
+    auto result = 0;
 
     // has an entry signal in any band? on the lastest
     // raw signals added bars
@@ -345,6 +342,8 @@ void verifyEntry() {
         //    }
         //}
     }
+
+    return result;
 }
 
 
@@ -356,34 +355,14 @@ void verifyEntry() {
 // all in the same direction
 // otherwise returns -1
 // only call when there's at least one signal
-// stored in the buffer of raw signal bands
+// stored in the list of raw signal bands m_bsignals
 int lastRawSignals() {
     int direction = 0;
-    m_last_raw_signal_index = -1;
-    // m_last_raw_signal_index is index based
-    // on circular buffers index alligned on all
-    for (int j = 0; j < m_nbands; j++) {
-        for (int i = NewDataIdx(); i < BufferTotal(); i++) {
-            m_last_raw_signal[j] = m_rbandsgs[j][i];
-            if (m_last_raw_signal[j] != 0) {
-                if (direction == 0) {
-                    direction = m_last_raw_signal[j];
-                    m_last_raw_signal_index = i;
-                }
-                else
-                    // two signals with oposite directions on last added bars
-                    // lets keep it simple now - lets ignore them
-                    if (m_last_raw_signal[j] != direction) {
-                        m_last_raw_signal_index = -1;
-                        return -1;
-                    }
-                    else
-                        // same direction only update index to get last
-                        m_last_raw_signal_index = i;
-            }
-        }
-    }
-    return m_last_raw_signal_index;
+    // m_bsignals_lastuid -- can be used to store last raw signals processed by entry check
+    // or something else...
+    //for()
+    // m_bsignals.rbegin()
+    return -1;
 }
 
 // start is the start
@@ -446,7 +425,7 @@ void CreateXyVectors(){
         else
         if (res == 1) {
             m_bsignals.erase(current); // done with this
-            if(FillOutXFeatures(xy)) // remove old signal or cannot create
+            if(FillInXFeatures(xy)) // remove old signal or cannot create
                 m_xypairs.add(xy);
         }
         else
@@ -603,7 +582,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
 
 
 
-bool FillOutXFeatures(XyPair &xypair)
+bool FillInXFeatures(XyPair &xypair)
 {
 
     // find xypair.time current position on all buffers (have same size)
@@ -679,6 +658,49 @@ bool FillOutXFeatures(XyPair &xypair)
 }
 
 
+std::pair<std::vector<double>, std::vector<int>> GetXyvectors() {
+    // pybind11 automatically casts/converts std:: types
+    // vectors got to a list
+    // but you can use cast to convert to a numpy array
+    // needs "pybind11/stl.h"
+    std::vector<double> X;
+    std::vector<int> Y;  // if use push_back dont need set size
+    X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
+
+    size_t idx = 0;
+    for (auto item = m_xypairs.begin(); item != m_xypairs.end(); item++) {
+        std::copy((*item).X.begin(),
+            (*item).X.end(),
+            X.begin() +
+            std::distance(m_xypairs.begin(), item) * m_xtrain_dim);
+        Y.push_back((*item).y);
+    }
+
+    return std::make_pair(X, Y);
+}
+
+
+bool PythonTrainModel() {
+    // create input params for Python function
+    auto Xy = GetXyvectors();
+    auto X = Xy.first.data();
+    auto y = Xy.second.data();
+
+    m_model.pymodel_size = pyTrainModel(X, y, m_ntraining, m_xtrain_dim,
+        m_model.pymodel.data(), m_model.pymodel.capacity());
+    m_model.isready = (m_model.pymodel_size > 0);
+
+    return (m_model.pymodel_size > 0);
+}
+
+int PythonPredict(XyPair xypair){
+    if (!m_model.isready)
+        return -1;
+    int y_pred = pyPredictwModel(xypair.X.data(), m_xtrain_dim,
+        m_model.pymodel.data(), m_model.pymodel.capacity());
+
+    return y_pred;
+}
 
 
 ////////////////////////////////////////////////
@@ -737,3 +759,5 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
 int pyGetXdim() {
     return m_xtrain_dim;
 }
+
+

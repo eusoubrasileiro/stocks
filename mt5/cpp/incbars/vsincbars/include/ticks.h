@@ -36,7 +36,7 @@ void fixArrayTicks(MqlTick* ticks, size_t nticks);
 
 // return index on ring buffer / std::vector for
 // for first tick with time_ms bigger or equal than or -1 not finding
-size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time);
+size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, time_t time);
 
 
 // Messed ticks from Meta5 will also come to C++
@@ -90,7 +90,7 @@ public:
 
   int nNew(); // number of new ticks added
 
-  void Init(std::string symbol, bool isbacktest, int64_t timenow);
+  void Init(std::string symbol, bool isbacktest, time_t timenow);
 
   int64_t Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); // will be called somehow by mt5
 

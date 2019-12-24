@@ -100,13 +100,9 @@ bool BufferMqlTicks::addFromFileTicks(){
   }
 #endif
 
-  if(m_nnew==0){ // number of trash ticks created by Metatrader
-    m_trash_count++;
-    return false;
-  }
+  if(m_nnew==0){ // trash ticks created by Metatrader
+      m_trash_count += m_mt5ncopied;
 
-  if(m_trash_count > 0){
-      m_trash_count = 0;
 #ifdef META5DEBUG
       std::tm ctime;
       time_t timet = m_scheck_bg_time/1000;
@@ -118,9 +114,12 @@ bool BufferMqlTicks::addFromFileTicks(){
       strftime(buffer, 32, "%a, %d.%m.%Y %H:%M:%S", &ctime);
 
       // can be a in a log file certainly!!! if verbose set
-      debugfile << "Ignored metatrader 5 created unreal ticks : " << m_trash_count 
+      debugfile << "Ignored metatrader 5 created unreal ticks aprox. : " << m_trash_count 
           << " at " << buffer << std::endl;
 #endif      
+      m_trash_count = 0;
+
+      return false;
   }
   return true;
 }
@@ -210,18 +209,14 @@ int BufferMqlTicks::nNew(){ // you may add more data than the buffer
     return (m_nnew > BUFFERSIZE) ? BUFFERSIZE : m_nnew;
 }
 
-void BufferMqlTicks::Init(std::string symbol, bool isbacktest, int64_t timenow){
+void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
     m_isbacktest = isbacktest;
     m_symbol = symbol;
     m_nnew = 0;
 
     // time_t same as int64_t unixtime stamp
-    // real time operations get current time now
-    if (!isbacktest) {
-        // get raw time than convert to struct tm and them get 
-        // first 1 hour of day 1:00 am 
-        time(&timenow);
-    } 
+    // get raw time than convert to struct tm and them get 
+    // first 1 hour of day 1:00 am 
     // time now in ms will work 'coz next tick.ms value will be bigger
     // and will take its place
     tm tm_time;
@@ -256,6 +251,7 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
     m_mt5ticks = mt5_pmqlticks;
     m_mt5ncopied = mt5_ncopied;
+    m_nnew = 0;
 
     if (mt5_ncopied < 1) // no data
         return m_scheck_bg_time;
@@ -307,7 +303,7 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
 // we will use this comparator
 // compare a MqlTick's to a time_ms to see if it comes before it or not
-inline bool cmpTickSmallTimeMs(const MqlTick& a, int64_t time) {
+inline bool cmpTickSmallTimeMs(const MqlTick& a, time_t time) {
     return a.time_msc < time;
 }
 
@@ -322,7 +318,7 @@ inline bool cmpTickSmallTimeMs(const MqlTick& a, int64_t time) {
 
 // return index on ring buffer for
 // for first tick with time_ms bigger or equal than or -1 not finding
-size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, int64_t time)
+size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, time_t time)
 {
     auto iter = std::lower_bound(ticks.begin(), ticks.end(), time, cmpTickSmallTimeMs);
     return (iter == ticks.end()) ? -1 : iter - ticks.begin();

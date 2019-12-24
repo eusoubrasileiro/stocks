@@ -19,7 +19,17 @@
 #include <windows.h>
 #include <iostream>
 
-BOOL __stdcall DllMain(HMODULE hModule,
+#include "callpython.h"
+#include "pybind11/embed.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/numpy.h"
+
+namespace py = pybind11;
+
+inline const std::string BoolToString(bool b) { return b ? "true" : "false"; }
+inline const std::string PtrToString(LPVOID b) { return b ? "not-null" : "null"; }
+
+BOOL DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved);
 

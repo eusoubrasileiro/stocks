@@ -34,6 +34,7 @@
 #include "pybind11/functional.h"
 #include "ticks.h"
 #include "cwindicators.h"
+#include "callpython.h"
 
 namespace py = pybind11;
 
@@ -71,8 +72,10 @@ DLL_EXPORT bool CppRefresh(void);
 // begin of new bar is also begin of new data on all buffers
 DLL_EXPORT size_t BufferSize(); // size of all buffers
 DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
-DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after AddTicks > 0
+DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after CppOnTicks & NewData == true
 DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
+
+DLL_EXPORT bool CppNewData(); // are there any new bars after call of OnTicks
 
 DLL_EXPORT BufferMqlTicks *GetTicks(); // get m_ticks variable
 

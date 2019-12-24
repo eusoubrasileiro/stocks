@@ -1,6 +1,5 @@
 #define BUILDING_DLL
 #include "eincbands.h"
-#include "embpython.h"
 
 // I dont want to use a *.def file to export functions from a namespace
 // so I am not using namespaces {namespace eincbands}
@@ -18,7 +17,8 @@ std::shared_ptr<BufferMqlTicks> m_ticks; // buffer of ticks w. control to downlo
 
 // All Buffer-Derived classes bellow have indexes alligned
 std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
-std::vector<double> m_mlast; // moneybar.last values of last added money bars
+bool m_newbars;
+
 double m_moneybar_size; // R$ to form 1 money bar
 // offset correction between uid and current buffer indexes
 uint64_t m_bfoffset = 0;
@@ -209,9 +209,12 @@ int64_t CppOnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
     int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
 
-    if (m_ticks->nNew() != 0){
-        m_bars->AddTicks(m_ticks->begin() + (m_ticks->size() - m_ticks->nNew()),
-                                        m_ticks->end());
+    m_newbars = false; 
+
+    if (m_ticks->nNew() > 0){
+        if (m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(),
+            m_ticks->end()) > 0)
+            m_newbars = true;
     }
 
     return cmpbegin_time; 
@@ -229,6 +232,7 @@ size_t BufferSize() { return m_bars->capacity(); }
 size_t BufferTotal() { return m_bars->size(); }
 // start index on all buffers of new bars after AddTicks > 0
 size_t NewDataIdx() { return m_bars->BeginNewBarsIdx();  }
+bool CppNewData() { return m_newbars; }
 
 // start index of valid data on all buffers (indicators) any time
 size_t ValidDataIdx() {

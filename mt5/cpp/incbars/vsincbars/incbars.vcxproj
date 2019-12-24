@@ -328,9 +328,9 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\callpython.h" />
     <ClInclude Include="include\dll.h" />
     <ClInclude Include="include\eincbands.h" />
-    <ClInclude Include="include\embpython.h" />
     <ClInclude Include="include\bars.h" />
     <ClInclude Include="include\buffers.h" />
     <ClInclude Include="include\cwindicators.h" />
@@ -339,12 +339,13 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buffers.cpp" />
+    <ClCompile Include="callpython.cpp" />
     <ClCompile Include="datastruct\bars.cpp" />
     <ClCompile Include="datastruct\ticks.cpp" />
+    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="indicators\csindicators.cpp" />
     <ClCompile Include="indicators\ctindicators.cpp" />
     <ClCompile Include="eincbands.cpp" />
-    <ClCompile Include="embpython.cpp" />
     <ClCompile Include="pymodule.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

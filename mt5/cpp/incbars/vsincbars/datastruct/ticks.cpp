@@ -259,7 +259,7 @@ int BufferMqlTicks::nNew(){ // you may add more data than the buffer
     return (m_nnew > BUFFERSIZE) ? BUFFERSIZE : m_nnew;
 }
 
-void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
+void BufferMqlTicks::Init(std::string symbol, bool isbacktest, unixtime timenow){
     m_isbacktest = isbacktest;
     m_symbol = symbol;
     m_nnew = 0;
@@ -297,7 +297,7 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, time_t timenow){
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
 // passing m_copied_ticks as *pmt5_mqlticks
 // will compare with ticks 
-int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
+unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
     m_mt5ticks = mt5_pmqlticks;
     m_mt5ncopied = mt5_ncopied;
@@ -353,7 +353,7 @@ int64_t BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
 // we will use this comparator
 // compare a MqlTick's to a time_ms to see if it comes before it or not
-inline bool cmpTickSmallTimeMs(const MqlTick& a, time_t time) {
+inline bool cmpTickSmallTimeMs(const MqlTick& a, unixtime_ms time) {
     return a.time_msc < time;
 }
 
@@ -368,7 +368,7 @@ inline bool cmpTickSmallTimeMs(const MqlTick& a, time_t time) {
 
 // return index on ring buffer for
 // for first tick with time_ms bigger or equal than or -1 not finding
-size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, time_t time)
+size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, unixtime_ms time)
 {
     auto iter = std::lower_bound(ticks.begin(), ticks.end(), time, cmpTickSmallTimeMs);
     return (iter == ticks.end()) ? -1 : iter - ticks.begin();

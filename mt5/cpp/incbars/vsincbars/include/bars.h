@@ -6,6 +6,10 @@
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
 
+typedef  int64_t unixtime;
+typedef  int64_t unixtime_ms;
+
+
 // Money Bar solves many problems of analysis of stocks data
 // - stationarity first
 // - tick with no volume
@@ -17,8 +21,8 @@ struct MoneyBar
     double       avgprice;  // volume weighted price from all ticks on this bar
     int          nticks;  // number ticks to form this bar
     tm time; // start time of this bar ... datetime tm struct 
-    int64_t    smsc; // start time of this bar - first tick time - timestamp ms
-    int64_t    emsc; // end time of this bar - last tick time - timestamp ms   
+    unixtime_ms    smsc; // start time of this bar - first tick time - timestamp ms
+    unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms   
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars

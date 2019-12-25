@@ -288,28 +288,63 @@ bool CppRefresh()
         for (; i < BufferTotal(); i++)
             for (int j = 0; j < m_nbands; j++)
                 if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-                    m_bsignals.push_back({ m_bars->uidtimes[i], j, (int)m_rbandsgs[j][i] });
+                    m_bsignals.push_back({ m_bars->at(i).emsc, m_bars->at(i).uid, j, (int)m_rbandsgs[j][i] });
     }
 
     return (ncalculated > 0);
 }
 
+// 8 seconds barrier
+// verify an entry signal in any band
+// on the last m_added bars
+// get the latest signal
+// return index on buffer of existent entry signal
+// only if more than one signal
+// all in the same direction
+// otherwise returns -1
+// only call when there's at least one signal
+// stored in the list of raw signal bands m_bsignals
+inline BSignal *lastSignals(unixtime now){
+    unixtime_ms nowms = now * 1000;
+
+    if(m_bsignals.size() == 0)
+        return NULL;
+
+    auto bsign = m_bsignals.rbegin(); // start by the last
+    auto last_time = bsign->time;    
+    // if last tick time is more recent than unixtime
+    // use it
+    nowms = (last_time > nowms)? last_time : nowms;
+    // calculate delay limite to enter 
+    auto time_limit = nowms - 8 * 1000; // define it
+    if (last_time < time_limit) // last signal is already too old
+        return NULL;
+    int direction = bsign->sign; // all signs must be equal this 
+    for (; bsign != m_bsignals.rend() && bsign->time >= time_limit; ++bsign)
+        if (bsign->sign != direction)
+            return NULL;
+    --bsign; 
+#ifdef META5DEBUG
+    debugfile << "lastBSignals total signals used: " << std::distance(m_bsignals.rbegin(), bsign) << std::endl;
+#endif
+
+    return &(*m_bsignals.rbegin()); // last signal
+}
+
 // returns -1/0/1 Sell/Nothing/Buy 
-int isSellBuy() {
+int isSellBuy(unixtime now) {
 
     auto result = 0;
-
+    auto last = lastSignals(now);
     // has an entry signal in any band? on the lastest
     // raw signals added bars
-    if (lastRawSignals() != -1)
+    if (last != NULL)
     {
         int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
-        // only when needed
-        //LabelClasses();
-        //CreateXFeatureVectors(m_xypairs);
+        CreateXyVectors(); 
         // add number of xypairs added (cannot decrease)
-        m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
+        // m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
         // update/train model if needed/possible
         //if (m_xypairs.Count() >= m_ntraining) {
         //    // first time training
@@ -347,23 +382,6 @@ int isSellBuy() {
 }
 
 
-// verify an entry signal in any band
-// on the last m_added bars
-// get the latest signal
-// return index on buffer of existent entry signal
-// only if more than one signal
-// all in the same direction
-// otherwise returns -1
-// only call when there's at least one signal
-// stored in the list of raw signal bands m_bsignals
-int lastRawSignals() {
-    int direction = 0;
-    // m_bsignals_lastuid -- can be used to store last raw signals processed by entry check
-    // or something else...
-    //for()
-    // m_bsignals.rbegin()
-    return -1;
-}
 
 // start is the start
 // next n signals with same sign <buffer index, band number>
@@ -408,16 +426,16 @@ inline void updateBufferUidOffset(){
 // that are different than 0
 // those that went sucess receive 1
 // those that went bad receive 0 hold
-void CreateXyVectors(){
+int CreateXyVectors(){
     // w. bags of signals saved
     // label every signal
     // Creating Xy pairs
     XyPair xy;
-    int res;
+    int count, res;
     auto current = m_bsignals.begin();
 
     updateBufferUidOffset();
-
+    count = 0;
     while(current != m_bsignals.end()){
         res = LabelSignal(current, m_bsignals.end(), xy);
         if (res == -2) // not enough data for labelling - stop everything
@@ -425,8 +443,10 @@ void CreateXyVectors(){
         else
         if (res == 1) {
             m_bsignals.erase(current); // done with this
-            if(FillInXFeatures(xy)) // remove old signal or cannot create
+            if (FillInXFeatures(xy)) { // remove old signal or cannot create
                 m_xypairs.add(xy);
+                count++;
+            }
         }
         else
         if (res == -3) { // outside the operational window
@@ -434,6 +454,7 @@ void CreateXyVectors(){
         }
         current++;
     }
+    return count; // number of xy pairs ready for training
 }
 
 int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, 
@@ -459,6 +480,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     entryprice = m_bars->at(start_bfidx).avgprice;
 
     // save this buy or sell
+    xy.time = current->time;
     xy.band = current->band;
     xy.sign = current->sign;
     xy.twhen = current->twhen;
@@ -466,7 +488,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     xy.y = 1; // start beliving
     // for this position
     // start time - where buy/sell really takes place
-    int64_t start_time = m_bars->at(start_bfidx).emsc;
+    auto start_time = m_bars->at(start_bfidx).emsc;
     // current day
     tm time = m_bars->at(start_bfidx).time;
     day = time.tm_yday; // day-of-year identifier for crossing-day
@@ -481,7 +503,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
 
     int secs_toend_day = (m_end_hour - chour) * 3600;
     // time in ms for operations end of day
-    int64_t end_day = m_bars->at(start_bfidx).smsc + secs_toend_day * 1000;
+    unixtime_ms end_day = m_bars->at(start_bfidx).smsc + secs_toend_day * 1000;
 
     // after getting the start_bfidx we search for the nextn
     // buffer index of next signal
@@ -709,7 +731,7 @@ int PythonPredict(XyPair xypair){
 
 
 // or by Python
-int64_t pyAddTicks(py::array_t<MqlTick> ticks)
+unixtime_ms pyAddTicks(py::array_t<MqlTick> ticks)
 {
     // make a copy to be able to use fixticks (non const)
     std::vector<MqlTick> nonconst_ticks(ticks.data(), ticks.data()+ticks.size());

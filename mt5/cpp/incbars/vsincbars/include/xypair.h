@@ -3,12 +3,14 @@
 
 #pragma pack(push, 2)
 struct BSignal { // bollinger band signal
+    unixtime_ms time;
     uint64_t twhen; // when that happend - 'time' idx
     int   band; // which band
     int   sign = 0; // what sign
 };
 struct LbSignal // pybind11 requires POD so cannot derive from BSignal
 {
+    unixtime_ms time;
     uint64_t twhen; // when that happend - 'time' idx
     int   band; // which band
     int   sign = 0; // what sign

@@ -12,6 +12,13 @@
 
 #define NOMINMAX
 
+#ifdef META5DEBUG
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+extern std::ofstream debugfile;
+#else
+#define debugfile std::cout
+#endif
+
 #ifdef BUILDING_DLL
 #define EXPORT
 #define DLL_EXPORT extern "C" __declspec(dllexport)
@@ -87,10 +94,10 @@ DLL_EXPORT bool isInsideFile(char *cs_filename);
 DLL_EXPORT void CreateXyVectors();
 
 // API Python - only for gtests
-DLL_EXPORT int64_t pyAddTicks(py::array_t<MqlTick> ticks);
+DLL_EXPORT unixtime_ms pyAddTicks(py::array_t<MqlTick> ticks);
 
 // returns -1/0/1 Sell/Nothing/Buy 
-DLL_EXPORT int isSellBuy();
+DLL_EXPORT int isSellBuy(unixtime now);
 
 #ifdef EXPORT
 
@@ -111,7 +118,7 @@ inline void updateBufferUidOffset();
 // stored in the buffer of raw signal bands
 int lastRawSignals();
 
-void CreateXyVectors();
+int CreateXyVectors();
 int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, XyPair& xy);
 bool FillInXFeatures(XyPair &xypair);
 

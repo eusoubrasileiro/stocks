@@ -539,12 +539,11 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
             return 1;
         }
         // third barrier - time
-        // 1.expire-time or 2.day-end
-        // or 3.crossed-to a new day (should never happen)
+        // 1.expire-time or 2.day-end        
         if (m_bars->at(i).emsc - start_time > m_expire_time ||
             m_bars->at(i).emsc > end_day) { // operations end of day
-            if (profit >= 0.5 * m_targetprofit) // a minimal profit to be still valid
-                xy.y = 1;
+            if (profit >= 0.5*m_targetprofit ) // a minimal profit to be still valid
+                xy.y = 1; // min. model class acc. must be calculated for worst scenario *this
             else
                 xy.y = 0; // expired position
             xy.tdone = m_bars->uidtimes[i];

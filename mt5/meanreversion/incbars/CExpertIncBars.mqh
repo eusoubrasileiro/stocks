@@ -21,7 +21,7 @@ protected:
     // on the same direction
     // number of maximum 'positions'
     int m_max_positions; // maximum number of 'positions'
-    int m_last_positions; // last number of 'positions'
+    int m_count_positions; // last number of 'positions'
     double m_last_volume; // last volume + (buy) or - (sell)
     double m_volume; // current volume of open or not positions
 

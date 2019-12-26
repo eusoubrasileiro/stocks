@@ -8,11 +8,11 @@
 
 //Inputs
 //number of bollinger bands
-input int                      Expert_NBands          = 3;
+input int                      Expert_NBands          = 6;
 // reference window for bbands
-input int                      Expert_Window          = 21;
+input int                      Expert_Window          = 10;
 // "memory" of patterns for training sklearn model
-input int                      Expert_Batch_Size      = 5;
+input int                      Expert_Batch_Size      = 10;
 // minimum number of samples for training
 input int                      Expert_NTraining       = 100;
 // orderSize in $$$
@@ -20,8 +20,8 @@ input double                   Expert_OrderSize       = 25e3;
 // stop loss for each order $$$
 input double                   Expert_StopLoss        = 100;
 // target profit per order $$$
-input double                   Expert_TargetProfit    = 15;
-input int                      Expert_MaxPositions    = 3; // max open positions Expert_OrderSize
+input double                   Expert_TargetProfit    = 50;
+input int                      Expert_MaxPositions    = 1; // max open positions Expert_OrderSize
 
 const bool                     Expert_EveryTick       = true;
 const int                      Expert_MagicNumber     = 2525;
@@ -38,7 +38,8 @@ int OnInit(){
 
     // Use the timer to get missing ticks every 1 second
     // will be more than enough this is not HFT! remember that!
-    EventSetTimer(30); // in seconds
+    EventSetTimer(1); // in seconds
+    // EventSetMillisecondTimer(1); // 1 ms timer overkill?
 
     //--- Initializing expert
     if(!cExpert.Init(Symbol(), PERIOD_M1, Expert_EveryTick, Expert_MagicNumber))
@@ -71,7 +72,12 @@ int OnInit(){
     return(INIT_SUCCEEDED);
 }
 
-
+// Better Refresh rate with both?
+// does it matter? -- did not change anything 
+// on ticks sent - delay even of almost 5 seconds
+//void OnTimer(){
+//    cExpert.CheckTicks();
+//}
 void OnTick() {
     cExpert.CheckTicks();
 }

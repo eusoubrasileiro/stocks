@@ -40,7 +40,7 @@ const double             Expert_Increases = 3;
 
 
 CExpertIncBars::CExpertIncBars(void){
-   m_last_positions = 0; // number of 'positions' openend
+   m_count_positions = 0; // number of 'positions' openend
    m_last_volume = 0;
    m_volume = 0;
 }
@@ -149,7 +149,7 @@ void CExpertIncBars::CheckTicks(void)
 void CExpertIncBars::BuySell(int sign){
     double amount, sl, tp;
     
-    if(sign == 0)
+    if(sign == 0 || m_count_positions > m_max_positions)
         return;
         
     m_symbol.Refresh();
@@ -177,23 +177,23 @@ void CExpertIncBars::BuySell(int sign){
 //////
 bool CExpertIncBars::TradeEventPositionVolumeChanged(void){
     if(m_volume > m_last_volume) // one more 'position'
-        m_last_positions++;
+        m_count_positions++;
     else
     if(m_volume < m_last_volume) // one less 'position'
-        m_last_positions--;
+        m_count_positions--;
 
     m_last_volume = m_volume;
     return true;
 }
 
 bool CExpertIncBars::TradeEventPositionOpened(void){
-    m_last_positions=1;
+    m_count_positions=1;
     m_last_volume = m_volume;
     return true;
 }
 
 bool CExpertIncBars::TradeEventPositionClosed(void){
-    m_last_positions=0;
+    m_count_positions=0;
     m_volume=0;
     m_last_volume=0;
     return true;
@@ -207,7 +207,7 @@ void CExpertIncBars::DealAdd(ulong  deal){
     Print("Failed to select deal ticket: ", deal);
   double profit = HistoryDealGetDouble(deal, DEAL_PROFIT);
 
-  if(profit >= 0.7*m_targetprofit)
+  if(profit >= 0.5*m_targetprofit)
     m_model_accrate = m_model_accrate*m_model_npos + 1;
   else
     m_model_accrate = m_model_accrate*m_model_npos + 0;
@@ -216,7 +216,7 @@ void CExpertIncBars::DealAdd(ulong  deal){
   m_model_npos++;
   m_model_accrate /= m_model_npos;
 
-  if(m_model_accrate <= 0.8){
+  if(m_model_accrate <= 0.85){
     invalidateModel(); // must train a new model
     Print("Acc bellow threshold! ", m_model_accrate); 
     Print("We will train a new model!");

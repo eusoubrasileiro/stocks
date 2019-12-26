@@ -22,7 +22,9 @@ void TicksToFile(uchar &filename[]);
 
 bool isInsideFile(uchar &filename[]);
 
-//uchar &symbol[]
+void invalidateModel(); // set to train a new model
+
+int isSellBuy(datetime now);
 
 #import
 
@@ -57,7 +59,11 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
      double ordersize, double stoploss, double targetprofit,
      int max_positions)
 {
+    m_targetprofit = targetprofit;
+    m_stoploss = stoploss;
+    m_ordersize = ordersize;
     m_max_positions = max_positions;
+
     // Ticks download control
     ArrayResize(m_copied_ticks, Expert_Max_Tick_Copy);
     m_ncopied = 0;
@@ -66,7 +72,7 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
     // time now is in seconds unix timestamp
     m_cmpbegin_time = TimeCurrent();
 
-    setDayTradeParams(Expert_Expire, Expert_Day_End);
+    setDayTradeParams(Expert_Expire, Expert_Day_Start, Expert_Day_End);
 
     uchar csymbol[100];
     string symbolname = m_symbol.Name();
@@ -84,6 +90,12 @@ void CExpertIncBars::Initialize(int nbands, int bbwindow,
         0); // debug level 0 or 1 (a lot of messages (every OnTick))
 
     m_cmpbegin_time*=1000; // to ms next CopyTicksRange call
+
+    // money = AccountInfoDouble(ACCOUNT_BALANCE); // start money
+
+    // python model control
+    m_model_npos = 0;
+    m_model_accrate = 0;
 }
 
 // will be called every < 1 second
@@ -122,7 +134,9 @@ void CExpertIncBars::CheckTicks(void)
   m_cmpbegin_time = CppOnTicks(m_copied_ticks, m_ncopied);
 
   if(CppNewData()) // new bars?
-    CppRefresh();
+    if(CppRefresh()){
+        BuySell(isSellBuy(TimeCurrent()));
+    }
 
   // check to see if we should close any position
   if(SelectPosition()){ // if any open position
@@ -134,8 +148,13 @@ void CExpertIncBars::CheckTicks(void)
 
 void CExpertIncBars::BuySell(int sign){
     double amount, sl, tp;
+    
+    if(sign == 0)
+        return;
+        
     m_symbol.Refresh();
     m_symbol.RefreshRates();
+    
     if(sign == 1){
         amount = roundVolume(m_ordersize/m_symbol.Ask());
         sl = m_symbol.NormalizePrice((double) ((amount*m_symbol.Ask())-m_stoploss)/amount);
@@ -178,4 +197,32 @@ bool CExpertIncBars::TradeEventPositionClosed(void){
     m_volume=0;
     m_last_volume=0;
     return true;
+}
+
+// controling when invalidate the model
+// by model flow
+void CExpertIncBars::DealAdd(ulong  deal){
+  HistorySelect(0, TimeCurrent());
+  if(!HistoryDealSelect(deal))
+    Print("Failed to select deal ticket: ", deal);
+  double profit = HistoryDealGetDouble(deal, DEAL_PROFIT);
+
+  if(profit >= 0.7*m_targetprofit)
+    m_model_accrate = m_model_accrate*m_model_npos + 1;
+  else
+    m_model_accrate = m_model_accrate*m_model_npos + 0;
+
+  // recalculate current accuracy of the model
+  m_model_npos++;
+  m_model_accrate /= m_model_npos;
+
+  if(m_model_accrate <= 0.8){
+    invalidateModel(); // must train a new model
+    Print("Acc bellow threshold! ", m_model_accrate); 
+    Print("We will train a new model!");
+    // new model start
+    m_model_npos = 0;
+    m_model_accrate = 0;
+  }
+
 }

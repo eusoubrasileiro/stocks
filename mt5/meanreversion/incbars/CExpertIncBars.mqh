@@ -9,12 +9,7 @@ protected:
     // Base Data Ticks gathered with CopyTicksRange
     MqlTick m_copied_ticks[]; // fixed size number of ticks copied every x seconds
     int m_ncopied; // last count of ticks copied on buffer
-    long m_cmpbegin_time; // unix timestamp in ms begin of next copy    
-
-    // upper and down and middle
-    int m_nbands; // number of bands
-    int m_bbwindow; // reference size of bollinger band indicator others
-    double m_bbwindow_inc;   // are multiples of m_bbwindow_inc
+    long m_cmpbegin_time; // unix timestamp in ms begin of next copy
 
     // execution of positions and orders
     // profit or stop loss calculation for training
@@ -29,6 +24,11 @@ protected:
     int m_last_positions; // last number of 'positions'
     double m_last_volume; // last volume + (buy) or - (sell)
     double m_volume; // current volume of open or not positions
+
+    // py model re-training control
+    //double m_money; // actual money balance
+    int m_model_npos; // number of positions executed by this model
+    double m_model_accrate; // actual sucess rate of currente python model
 
   public:
 
@@ -50,11 +50,13 @@ protected:
   // OnTick is not called again if the first OnTick
   // has not being processed yet
   void CheckTicks(void);
-
+  void DealAdd(ulong  deal);
+  
   protected:
   void BuySell(int sign);
   // events
   bool TradeEventPositionOpened();
   bool TradeEventPositionClosed();
   bool TradeEventPositionVolumeChanged();
+
 };

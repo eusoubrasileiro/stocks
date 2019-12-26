@@ -14,7 +14,6 @@ int pyPredictwModel(double X[], int xtrain_dim,
 
 void LoadPythonCode();
 
-
 extern py::module pycode; // python module to be loaded
 
 class sklearnModel

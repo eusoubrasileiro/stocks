@@ -62,8 +62,8 @@ int OnInit(){
        return(-6);
 
     if(!cExpert.InitIndicators())
-       return(-5);       
-      
+       return(-5);
+
     cExpert.Initialize(Expert_NBands, Expert_Window, Expert_Batch_Size,
                        Expert_NTraining, Expert_OrderSize,
                        Expert_StopLoss, Expert_TargetProfit, Expert_MaxPositions);
@@ -80,7 +80,7 @@ void OnTick() {
 //| Expert deinitialization function                                 |
 void OnDeinit(const int reason){
     EventKillTimer();
-    cExpert.Deinit();    
+    cExpert.Deinit();
 }
 
 //| Trade function                                                   |
@@ -88,10 +88,11 @@ void OnTrade(){
     cExpert.OnTrade();
 }
 
-//| TradeTransaction function                                       |
+// TradeTransaction function
+void OnTradeTransaction(const MqlTradeTransaction &trans,
+   const MqlTradeRequest &request,
+   const MqlTradeResult &result){
+     if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
+      cExpert.DealAdd(trans.deal); // pass the deal ticket
 
-//void OnTradeTransaction(const MqlTradeTransaction &trans,
-//    const MqlTradeRequest &request,
-//    const MqlTradeResult &result){
-//
-//}
+}

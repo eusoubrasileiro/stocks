@@ -1,9 +1,10 @@
 #pragma once
 
 
-#define             Expert_Fracdif           0.6         // fraction for fractional difference
-#define             Expert_Fracdif_Window    512         // window size fraction fracdif
-#define             Expert_Delay             8000        // delay to perform an order sucessfully after evaluating an entry (ms)
+#define             Expert_Fracdif                             0.6         // fraction for fractional difference
+#define             Expert_Fracdif_Window                      512         // window size fraction fracdif
+#define             Expert_Delay                              8000        // delay to perform an order sucessfully after evaluating an entry (ms)
+#define             Expert_Acceptable_Entry_Delay             5000        // must be smaller than above
 
 // the grace of x64 arch
 // for MQL5 or even C++ call - thankfully __stdcall is useless in x64 arch
@@ -57,7 +58,6 @@ DLL_EXPORT void CppExpertInit(int nbands, int bbwindow, double devs, int batch_s
     short mt5debug=0); // metatrader debugging level
 
 
-
 // called by mt5 after 
 // m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
@@ -91,13 +91,15 @@ DLL_EXPORT void TicksToFile(char *cs_filename);
 DLL_EXPORT bool isInsideFile(char *cs_filename);
 
 // classes and features
-DLL_EXPORT void CreateXyVectors();
+DLL_EXPORT int CreateXyVectors();
 
 // API Python - only for gtests
 DLL_EXPORT unixtime_ms pyAddTicks(py::array_t<MqlTick> ticks);
 
 // returns -1/0/1 Sell/Nothing/Buy 
 DLL_EXPORT int isSellBuy(unixtime now);
+
+DLL_EXPORT void invalidateModel();
 
 #ifdef EXPORT
 
@@ -106,20 +108,8 @@ py::array_t<MoneyBar> pyGetMoneyBars();
 // index offset correction between uid and current buffer indexes
 inline void updateBufferUidOffset();
 
-
-// verify a signal in any band
-// on the last m_added bars
-// get the latest signal
-// return index on buffer of existent entry signal
-// only if more than one signal
-// all in the same direction
-// otherwise returns -1
-// only call when there's at least one signal
-// stored in the buffer of raw signal bands
-int lastRawSignals();
-
-int CreateXyVectors();
 int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, XyPair& xy);
+
 bool FillInXFeatures(XyPair &xypair);
 
 std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors();

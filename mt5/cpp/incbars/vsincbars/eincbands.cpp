@@ -294,7 +294,6 @@ bool CppRefresh()
     return (ncalculated > 0);
 }
 
-// 8 seconds barrier
 // verify an entry signal in any band
 // on the last m_added bars
 // get the latest signal
@@ -304,11 +303,11 @@ bool CppRefresh()
 // otherwise returns -1
 // only call when there's at least one signal
 // stored in the list of raw signal bands m_bsignals
-inline BSignal *lastSignals(unixtime now){
+inline bool lastSignals(unixtime now){
     unixtime_ms nowms = now * 1000;
 
     if(m_bsignals.size() == 0)
-        return NULL;
+        return false;
 
     auto bsign = m_bsignals.rbegin(); // start by the last
     auto last_time = bsign->time;    
@@ -316,69 +315,59 @@ inline BSignal *lastSignals(unixtime now){
     // use it
     nowms = (last_time > nowms)? last_time : nowms;
     // calculate delay limite to enter 
-    auto time_limit = nowms - 8 * 1000; // define it
+    auto time_limit = nowms - Expert_Acceptable_Entry_Delay; 
     if (last_time < time_limit) // last signal is already too old
-        return NULL;
+        return false;
     int direction = bsign->sign; // all signs must be equal this 
     for (; bsign != m_bsignals.rend() && bsign->time >= time_limit; ++bsign)
         if (bsign->sign != direction)
-            return NULL;
+            return false;
     --bsign; 
 #ifdef META5DEBUG
-    debugfile << "lastBSignals total signals used: " << std::distance(m_bsignals.rbegin(), bsign) << std::endl;
+    debugfile << "lastBSignals total signals analysed: " << std::distance(m_bsignals.rbegin(), bsign) + 1 << std::endl;
+    debugfile << "lastBSignals delay (ms): " << nowms - m_bsignals.rbegin()->time << std::endl;
 #endif
-
-    return &(*m_bsignals.rbegin()); // last signal
+    // in the end is using only the last signal
+    return true; // last signal
 }
 
 // returns -1/0/1 Sell/Nothing/Buy 
 int isSellBuy(unixtime now) {
 
     auto result = 0;
-    auto last = lastSignals(now);
+    
     // has an entry signal in any band? on the lastest
     // raw signals added bars
-    if (last != NULL)
+    if (lastSignals(now))
     {
+        auto last = *m_bsignals.rbegin(); // last band signal
         int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
         CreateXyVectors(); 
-        // add number of xypairs added (cannot decrease)
-        // m_xypair_count += (m_xypairs.size() - m_xypair_count_old);
+
         // update/train model if needed/possible
-        //if (m_xypairs.Count() >= m_ntraining) {
-        //    // first time training
-        //    if (!m_model.isready) {
-        //        // time to train the model for the first time
-        //        m_model.isready = PythonTrainModel();
-        //    }
-        //    //else // time to update the model?
-        //    //if((m_xypair_count - m_model_last_training) >= m_model_refresh){
-        //    // if diference in training samples to the last training is bigger than
-        //    // refresh criteria - time to train again
-        //    //  m_model.isready = PythonTrainModel();
-        //    //}
-        //    // record when last training happened
-        //    m_model_last_training = m_xypair_count;
-        //}
-        //// Call Python if model is already trainned
-        //if (m_model.isready) {
-        //    // x forecast vector
-        //    XyPair Xforecast = new XyPair;
-        //    Xforecast.time = m_times[m_last_raw_signal_index];
-        //    CreateXFeatureVector(Xforecast);
-        //    int y_pred = PythonPredict(Xforecast);
-        //    BuySell(y_pred);
-        //    if (m_recursive && (y_pred == 0 || y_pred == 1 || y_pred == -1)) {
-        //        // modify the band raw signals by the ones predicted
-        //        for (int i = 0; i < m_nbands; i++)
-        //            // change from -1 to 1 or to 0
-        //            m_rbandsgs[i].m_data[m_rbandsgs[i].Count() - 1] = y_pred;
-        //    }
-        //}
+        if(m_xypairs.size() >= m_ntraining && !m_model.isready)
+            m_model.isready = PythonTrainModel();        
+
+        // Call Python if model is already trainned/valid
+        if(m_model.isready) {
+           // x forecast vector
+           XyPair X;
+           X.band = last.band;
+           X.sign = last.sign;           
+           X.twhen = last.twhen;           
+           FillInXFeatures(X);
+           result = PythonPredict(X); // returns 0 or 1
+           result = last.sign * result; // turn in -1 or 1
+        }
     }
 
     return result;
+}
+
+
+void invalidateModel() {
+    m_model.isready = false;
 }
 
 
@@ -552,14 +541,21 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
         // third barrier - time
         // 1.expire-time or 2.day-end
         // or 3.crossed-to a new day (should never happen)
-        if(m_bars->at(i).emsc - start_time > m_expire_time ||
-            m_bars->at(i).emsc > end_day || // operations end of day
-            m_bars->at(i).time.tm_yday != day) { // crossed to a new day
-            xy.y = 0; // expired position
+        if (m_bars->at(i).emsc - start_time > m_expire_time ||
+            m_bars->at(i).emsc > end_day) { // operations end of day
+            if (profit >= 0.5 * m_targetprofit) // a minimal profit to be still valid
+                xy.y = 1;
+            else
+                xy.y = 0; // expired position
             xy.tdone = m_bars->uidtimes[i];
-            // could include a minimal profit to be still valid
+            // could include 
             return 1;
         }
+        //else // should never happen - crossed to a new day 
+        //    if (m_bars->at(i).time.tm_yday != day)  // i dont want this on my model
+        //        return -3; // remove this 
+        // same as     if (chour > m_end_hour || chour < m_start_hour)
+
         // increase position if
         // 1. can increase position - maxinc restriction
         // 2. is time for that

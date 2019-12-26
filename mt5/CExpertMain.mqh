@@ -8,13 +8,15 @@ class CExpertMain : public CExpert
 {
   int m_positionExpireTime; // to close a position by time (expire time)
   double m_expertDayEndHour; // Operational window maximum HOUR OF DAY (in hours)
-
+  double m_expertDayStartHour;
   public:
 
   void setDayTradeParams(double positionExpireHours=1.5, // default close  positions by time 1.5H
+                              double dayStartHour=10.25,
                               double dayEndHour=16.57){  // default day end 16:37 hs                              
       m_positionExpireTime = (int) (positionExpireHours*3600); // hours to seconds
       m_expertDayEndHour = dayEndHour;
+      m_expertDayStartHour = dayStartHour;
   }
 
   // round price value to tick size of symbol replaced by m_symbol.NormalizePrice
@@ -45,7 +47,7 @@ class CExpertMain : public CExpert
   bool isInsideDay(){
     // check inside daytrade allowed period
     datetime now = TimeCurrent();
-    if(now >= dayEnd(now))
+    if(now >= dayEnd(now) || now < dayStart(now) )
         return false;
     return true;
   }
@@ -58,5 +60,13 @@ class CExpertMain : public CExpert
       //puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
       return GetDayZeroHour(timenow)+int(m_expertDayEndHour*3600);
   }
+
+  datetime dayStart(datetime timenow){
+      // set end of THIS day for operations, based on _expertDayEndHour
+      // http://www.b3.com.br/en_us/solutions/platforms/
+      //puma-trading-system/for-members-and-traders/trading-hours/derivatives/indices/
+      return GetDayZeroHour(timenow)+int(m_expertDayStartHour*3600);
+  }
+
 
 };

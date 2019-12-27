@@ -451,6 +451,23 @@ int CreateXyVectors(){
     return count; // number of xy pairs ready for training
 }
 
+
+// ignore a signal if it is after
+// the operational window
+// to avoid contaminating model
+
+// decimal hour for tm time
+#define CHOUR(TIME) ( ((double)TIME.tm_sec / 3600.) + ((double)TIME.tm_min / 60.) + (double)TIME.tm_hour )
+
+inline bool isInsideDay(int bfidx) {
+    tm time = m_bars->at(bfidx).time;
+    // current hour decimal
+    double chour = CHOUR(time);
+    if (chour > m_end_hour || chour < m_start_hour)
+        return false;
+    return true;
+}
+
 int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, 
                 XyPair& xy){
     // targetprofit - profit to close open position
@@ -462,6 +479,11 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     double quantity = 0; // number of contracts or stocks shares
 
     size_t bfidx = current->twhen - m_bfoffset; // actual buffer index
+    day = m_bars->at(bfidx).time.tm_yday; // day-of-year for identify crossing of days
+    
+    // original time signal inside day
+    if (!isInsideDay(bfidx))
+        return -3;
 
     // get 'real' price of execution of this signal
     // first bar considering the operational time delay
@@ -471,7 +493,9 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     if (start_bfidx == -1) // cannot start labelling
         return -2; //  did not find bar, not enough data in future
 
-    entryprice = m_bars->at(start_bfidx).avgprice;
+    // check if is inside and in the same day
+    if (!isInsideDay(start_bfidx) || m_bars->at(start_bfidx).time.tm_yday != day)
+        return -3;
 
     // save this buy or sell
     xy.time = current->time;
@@ -480,25 +504,18 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     xy.twhen = current->twhen;
     xy.ninc = 0; // no increases yet
     xy.y = 1; // start beliving
+
     // for this position
     // start time - where buy/sell really takes place
     auto start_time = m_bars->at(start_bfidx).emsc;
-    // current day
-    tm time = m_bars->at(start_bfidx).time;
-    day = time.tm_yday; // day-of-year identifier for crossing-day
-
-    // ignore a signal if it is after
-    // the operational window
-    // to avoid contaminating model
-    // current hour decimal
-    double chour = (time.tm_sec / 3600. + time.tm_min / 60.) + time.tm_hour;
-    if (chour > m_end_hour || chour < m_start_hour)
-        return -3;
-
-    int secs_toend_day = (m_end_hour - chour) * 3600;
+    entryprice = m_bars->at(start_bfidx).avgprice;
+    quantity = roundVolume(m_ordersize / entryprice);
+    
+    // controlling expiring position
+    int secs_toend_day = (m_end_hour - CHOUR(m_bars->at(start_bfidx).time)) * 3600;
     // time in ms for operations end of day
     unixtime_ms end_day = m_bars->at(start_bfidx).smsc + secs_toend_day * 1000;
-
+    
     // after getting the start_bfidx we search for the nextn
     // buffer index of next signal
     // 1. with same sign
@@ -511,7 +528,6 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     // if signal comes from a superior band -- higher number
     int last_band = current->band;
 
-    quantity = roundVolume(m_ordersize / entryprice);
     // starting jump forward to where the buy/sell really takes place
     for (int i=start_bfidx; i<BufferTotal(); i++) { // from past to present
 
@@ -544,9 +560,14 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
             return 1;
         }
         // third barrier - time
-        // 1.expire-time or 2.day-end        
+        // 1.expire-time or 2.day-end    
+        // 3. crossed to a new day - remove it
         if (m_bars->at(i).emsc - start_time > m_expire_time ||
             m_bars->at(i).emsc > end_day) { // operations end of day
+            // it's happening - crossed to a new day 
+            // not same as     if (chour > m_end_hour || chour < m_start_hour)
+            if (m_bars->at(i).time.tm_yday != day)  // i dont want this on my model
+                return -3; // remove this            
             if (profit >= 0.5*m_targetprofit ) // a minimal profit to be still valid
                 xy.y = 1; // min. model class acc. must be calculated for worst scenario *this
             else
@@ -554,11 +575,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
             xy.tdone = m_bars->uidtimes[i];
             // could include 
             return 1;
-        }
-        //else // should never happen - crossed to a new day 
-        //    if (m_bars->at(i).time.tm_yday != day)  // i dont want this on my model
-        //        return -3; // remove this 
-        // same as     if (chour > m_end_hour || chour < m_start_hour)
+        }       
 
         // increase position if
         // 1. can increase position - maxinc restriction

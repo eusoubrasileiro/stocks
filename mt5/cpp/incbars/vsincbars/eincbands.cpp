@@ -138,16 +138,21 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     m_batch_size = batch_size;
     m_ntraining = ntraining; // minimum number of X, y training pairs
     // total of signal features
-    // m_nbands band signals (1 - 2 bits coded) 
-    // indicar features is 3
-    // 1 - fracdiff on prices - stationary
-    // 2 - time to form a bar in seconds - stationary adfuller test
-    // 3 - number of ticks to form a bar  - stationary adfuller test
-    m_nsignal_features = 1 + 3;
-    // one additional feature - last value
-    // +1 - band number - disambiguation -
+    // 1 - m_nbands band signals positive (1 byte OR coded)
+    // 2 - m_nbands band signals negative (1 byte OR coded)
+    // indicator features is 3
+    // 3 - fracdiff on prices - stationary
+    // 4 - time to form a bar in seconds - stationary adfuller test
+    // 5 - number of ticks to form a bar  - stationary adfuller test
+    m_nsignal_features = 2 + 3 + 2;
+    // cross features
+    // 6 - diff of times to form this bar with the previous    
+    // 7 - diff of ticks to form this bar with the previous
+    // one additional feature - last value 
+    // 8 - band number - disambiguation -
     //     equal X's might need to be classified differently
     //     due comming from a different band
+ 
     m_xtrain_dim = m_nsignal_features * m_batch_size + 1;
 
     // group of samples and signal vectors to train the model
@@ -618,9 +623,10 @@ bool FillInXFeatures(XyPair &xypair)
     // not enough : bands raw signal, features in time to form a batch
     // cannot create a X feature vector and will never will
     // remove it
-    if (batch_start_idx < 0 || 
+    // - 1 due diff cross features
+    if (batch_start_idx-1 < 0 || 
         // batch_start using invalid data , cannot use it
-        batch_start_idx < ValidDataIdx()) 
+        batch_start_idx-1 < ValidDataIdx()) 
         return false;
 
     xypair.X.resize(m_xtrain_dim);
@@ -635,27 +641,40 @@ bool FillInXFeatures(XyPair &xypair)
         //for (int i = 0; i < m_nbands; i++, xifeature++) {
         //    xypair.X[xifeature] = m_rbandsgs[i][timeidx];
         // }
-        // from m_nbands features (one per band) to 1 single
-        // removing one hot for every band making OR class
-        // using - 2 bits to store each class
+        // from m_nbands features (one per band) to 2 feature classes
+        // removing one hot for every band making OR 2 classes
+        // using - 1 bit to store each class
         //https://towardsdatascience.com/
         //one-hot-encoding-is-making-your-tree-based-
         //worse-heres-why-d64b282b5769 
-        // since each class might be go from 0 to 2[00, 01, 10] 
-        // 3 classes almost 4 bits
-        // suppose[0, 1, -1] == [1, 2, 0] ==> (0 + 1) << 0 + (1 + 1) << 2 + (-1 + 1) << 4
-        xypair.X[xifeature] = 0;
+        // positive signs on bands - class 1
+        // negative signs on bands - class 2
+        // since each class might be go from 0 to 1 
+        // suppose [0, 1, -1] 3 bands
+        // for positive class == [1, 2, 0] ==> int((0 + 1)//2) << 0 + int(1 + 1)//2 << 1 + (-1 + 1) << 2
+        //                   binary              ==>       0 << 0 + 1 << 1 + 0 << 2 = 010
+        // for negative class == [-1, 0, -2] ==> int(-(0 - 1)//2) << 0 + int(-(1 - 1)//2) << 1 + int(-(-1 - 1)//2) << 2)
+        //                   binary              ==>       0 << 0 + 0 << 1 + 1 << 2 = 100
+        xypair.X[(xifeature+0)] = 0;
+        xypair.X[(xifeature+1)] = 0;
         for (int i=0; i<m_nbands; i++) {
-            xypair.X[xifeature] += ((int)(m_rbandsgs[i][timeidx]+1))<<(i*2);
+            xypair.X[xifeature+0] += ((int) ( (int)(  (m_rbandsgs[i][timeidx]+1) ) / 2) ) << i; // positive signals
+            xypair.X[xifeature+1] += ((int) ( (int)( -(m_rbandsgs[i][timeidx]-1) ) / 2) ) << i; // negative signals
         }
-        xifeature++;
+        xifeature+=2;
         // fracdif feature
         xypair.X[xifeature++] = m_fd_mbarp->at(timeidx);
         // time to form a bar in seconds
-        xypair.X[xifeature++] = (m_bars->at(timeidx).emsc- m_bars->at(timeidx).smsc)/1000.;
+        double dt = (m_bars->at(timeidx).emsc - m_bars->at(timeidx).smsc) / 1000.;
+        xypair.X[xifeature++] = dt;
         // number of ticks to form a bar
-        xypair.X[xifeature++] = m_bars->at(timeidx).nticks;
-
+        double nticks = m_bars->at(timeidx).nticks;
+        xypair.X[xifeature++] = nticks;
+        // cross features
+        // 6 - diff of times to form this bar with the previous    
+        // 7 - diff of ticks to form this bar with the previous
+        xypair.X[xifeature++] = dt - (m_bars->at(timeidx-1).emsc - m_bars->at(timeidx-1).smsc) / 1000.;
+        xypair.X[xifeature++] = nticks - m_bars->at(timeidx-1).nticks;
         // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)
         // data is reliable since I also need to interpolate it
         // also ask prices are 'fake' appearances

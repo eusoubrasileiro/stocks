@@ -14,7 +14,9 @@ MoneyBarBuffer::MoneyBarBuffer() {
     m_point_value = 0;
     m_bar.bidh = m_bar.bidl = 0; // not sure this is needed
     m_bar.askh = m_bar.askl = 0;
-    m_bar.smsc = m_bar.emsc = 0;  // first dtp calc. needs this
+    m_bar.smsc = m_bar.emsc = 0;  
+    m_bar.time.tm_yday = -1;  // first dtp calc. needs this
+    // so first dtp gets zeroed as if crossing to a new day
 }
 
 // return only new ... data added
@@ -47,24 +49,25 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
     if (tick.volume > 0) { // there was a deal
         // control to not have bars with ticks of different days
         gmtime_s(&ctime, &tick.time);
-        if (m_bar.nticks == 0) {// entry time for this bar
-            m_bar.time = ctime;
-            m_bar.smsc = tick.time_msc;
-            // time difference in seconds to previous bar
-            m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);
-            m_bar.bidh = m_bar.bidl = tick.bid;
-            m_bar.askh = m_bar.askl = tick.ask;
-        }
-        else // just crossed to a new day
-        if(ctime.tm_yday != m_bar.time.tm_yday){
+        // crossed to a new day (comparing with previous)
+        if (ctime.tm_yday != m_bar.time.tm_yday) {
             // clean up (ignore) previous data
             // for starting a new bar
             m_bar.nticks = 0;
-            m_bar.time = ctime;
+            m_bar.time = ctime; 
             m_bar.smsc = tick.time_msc;
             m_bar.dtp = 0; // no previous bar
             m_count_money = 0;
             m_pvs = m_vs = 0;
+            m_bar.bidh = m_bar.bidl = tick.bid;
+            m_bar.askh = m_bar.askl = tick.ask;
+        }
+        else // same day
+        if (m_bar.nticks == 0) { // new bar
+            m_bar.time = ctime; // entry time for this bar
+            m_bar.smsc = tick.time_msc;
+            // time difference in seconds to previous bar
+            m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;
         }

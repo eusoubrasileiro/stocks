@@ -32,7 +32,7 @@ PYBIND11_MODULE(incbars, m) {
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
     PYBIND11_NUMPY_DTYPE(MoneyBar, avgprice, nticks, time, smsc, emsc, uid, dtp, askh, askl, bidh, bidl);
-    PYBIND11_NUMPY_DTYPE(LbSignal, twhen, band, sign, y, ninc, tdone);
+    PYBIND11_NUMPY_DTYPE(LbSignal, twhen, band, sign, y, ninc, tdone, ret);
 
     // cannot instanciate this as global, will start before the interpreter -> then boom $*(@&(
     ppymbars.reset(new py::array_t<MoneyBar>(BUFFERSIZE));

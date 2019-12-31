@@ -94,8 +94,8 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     double ordersize, double stoploss, double targetprofit, int incmax,
     double lotsmin, double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    // ticks control, 
-    bool isbacktest, 
+    // ticks control,
+    bool isbacktest,
     char *cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
     int64_t mt5_timenow,
     short mt5debug)
@@ -117,13 +117,13 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     m_ticks.reset(new BufferMqlTicks());
     m_bars.reset(new MoneyBarBuffer());
     m_fd_mbarp.reset(new CFracDiffIndicator());
-    m_xypairs.clear();    
+    m_xypairs.clear();
     m_rbandsgs.clear();
     m_bsignals.clear();
 
     m_ticks->Init(std::string(cs_symbol),
         isbacktest, mt5_timenow);
-        
+
     m_bars->Init(tickvalue,
         ticksize, m_moneybar_size);
 
@@ -146,13 +146,13 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     // 5 - number of ticks to form a bar  - stationary adfuller test
     m_nsignal_features = 2 + 3 + 2;
     // cross features
-    // 6 - diff of times to form this bar with the previous    
+    // 6 - diff of times to form this bar with the previous
     // 7 - diff of ticks to form this bar with the previous
-    // one additional feature - last value 
+    // one additional feature - last value
     // 8 - band number - disambiguation -
     //     equal X's might need to be classified differently
     //     due comming from a different band
- 
+
     m_xtrain_dim = m_nsignal_features * m_batch_size + 1;
 
     // group of samples and signal vectors to train the model
@@ -211,7 +211,7 @@ int64_t CppOnTicks(MqlTick *mt5_pticks, int mt5_nticks){
 
     int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
 
-    m_newbars = false; 
+    m_newbars = false;
 
     if (m_ticks->nNew() > 0){
         if (m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(),
@@ -219,7 +219,7 @@ int64_t CppOnTicks(MqlTick *mt5_pticks, int mt5_nticks){
             m_newbars = true;
     }
 
-    return cmpbegin_time; 
+    return cmpbegin_time;
 }
 
 
@@ -248,7 +248,7 @@ size_t ValidDataIdx() {
 }
 
 BufferMqlTicks* GetTicks() // get m_ticks variable
-{ 
+{
     return &(*m_ticks);
 }
 
@@ -315,19 +315,19 @@ inline bool lastSignals(unixtime now){
         return false;
 
     auto bsign = m_bsignals.rbegin(); // start by the last
-    auto last_time = bsign->time;    
+    auto last_time = bsign->time;
     // if last tick time is more recent than unixtime
     // use it
     nowms = (last_time > nowms)? last_time : nowms;
-    // calculate delay limite to enter 
-    auto time_limit = nowms - Expert_Acceptable_Entry_Delay; 
+    // calculate delay limite to enter
+    auto time_limit = nowms - Expert_Acceptable_Entry_Delay;
     if (last_time < time_limit) // last signal is already too old
         return false;
-    int direction = bsign->sign; // all signs must be equal this 
+    int direction = bsign->sign; // all signs must be equal this
     for (; bsign != m_bsignals.rend() && bsign->time >= time_limit; ++bsign)
         if (bsign->sign != direction)
             return false;
-    --bsign; 
+    --bsign;
 #ifdef META5DEBUG
     debugfile << "lastBSignals total signals analysed: " << std::distance(m_bsignals.rbegin(), bsign) + 1 << std::endl;
     debugfile << "lastBSignals delay (ms): " << nowms - m_bsignals.rbegin()->time << std::endl;
@@ -336,11 +336,11 @@ inline bool lastSignals(unixtime now){
     return true; // last signal
 }
 
-// returns -1/0/1 Sell/Nothing/Buy 
+// returns -1/0/1 Sell/Nothing/Buy
 int isSellBuy(unixtime now) {
 
     auto result = 0;
-    
+
     // has an entry signal in any band? on the lastest
     // raw signals added bars
     if (lastSignals(now))
@@ -348,19 +348,19 @@ int isSellBuy(unixtime now) {
         auto last = *m_bsignals.rbegin(); // last band signal
         int m_xypair_count_old = m_xypairs.size();
         // only when a new entry signal recalc classes
-        CreateXyVectors(); 
+        CreateXyVectors();
 
         // update/train model if needed/possible
         if(m_xypairs.size() >= m_ntraining && !m_model.isready)
-            m_model.isready = PythonTrainModel();        
+            m_model.isready = PythonTrainModel();
 
         // Call Python if model is already trainned/valid
         if(m_model.isready) {
            // x forecast vector
            XyPair X;
            X.band = last.band;
-           X.sign = last.sign;           
-           X.twhen = last.twhen;           
+           X.sign = last.sign;
+           X.twhen = last.twhen;
            FillInXFeatures(X);
            result = PythonPredict(X); // returns 0 or 1
            result = last.sign * result; // turn in -1 or 1
@@ -468,7 +468,7 @@ inline bool isInsideDay(int bfidx) {
     return true;
 }
 
-int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end, 
+int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterator end,
                 XyPair& xy){
     // targetprofit - profit to close open position
     // amount - tick value * quantity bought in R$
@@ -480,7 +480,7 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
 
     size_t bfidx = current->twhen - m_bfoffset; // actual buffer index
     day = m_bars->at(bfidx).time.tm_yday; // day-of-year for identify crossing of days
-    
+
     // original time signal inside day
     if (!isInsideDay(bfidx))
         return -3;
@@ -510,12 +510,12 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
     auto start_time = m_bars->at(start_bfidx).emsc;
     entryprice = m_bars->at(start_bfidx).avgprice;
     quantity = roundVolume(m_ordersize / entryprice);
-    
+
     // controlling expiring position
     int secs_toend_day = (m_end_hour - CHOUR(m_bars->at(start_bfidx).time)) * 3600;
     // time in ms for operations end of day
     unixtime_ms end_day = m_bars->at(start_bfidx).smsc + secs_toend_day * 1000;
-    
+
     // after getting the start_bfidx we search for the nextn
     // buffer index of next signal
     // 1. with same sign
@@ -539,17 +539,18 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
         // and high-low bid from ticks to stop_loss
         if (current->sign > 0) { // long
             profit = (m_bars->at(i).avgprice - entryprice) * quantity;// # avg. current profit
-            //  stop-loss profit - people buy at bid -  (low worst scenario)
+            //  stop-loss profit - people buy at bid -  (low real scenario for trigger)
             slprofit = (m_bars->at(i).bidl - entryprice) * quantity;
         }
         else { // short
             profit = (entryprice - m_bars->at(i).avgprice) * quantity;// # avg. current profif
-            //  stop-loss profit - people buy at bid - (high worst scenario)
+            //  stop-loss profit - people buy at bid - (high real scenario for trigger)
             slprofit = (entryprice - m_bars->at(i).bidh) * quantity;
         }
         // first barrier
         if (profit >= m_targetprofit) { // done classifying this signal
             xy.tdone = m_bars->uidtimes[i];
+            xy.ret = profit;
             return 1;
         }
         // second barrier
@@ -557,25 +558,27 @@ int LabelSignal(std::list<BSignal>::iterator current, std::list<BSignal>::iterat
         if (slprofit <= (-m_stoploss)) { // re-classify as hold
             xy.y = 0; // not a good deal, was better not to entry
             xy.tdone = m_bars->uidtimes[i];
+            xy.ret = slprofit;
             return 1;
         }
         // third barrier - time
-        // 1.expire-time or 2.day-end    
+        // 1.expire-time or 2.day-end
         // 3. crossed to a new day - remove it
         if (m_bars->at(i).emsc - start_time > m_expire_time ||
             m_bars->at(i).emsc > end_day) { // operations end of day
-            // it's happening - crossed to a new day 
+            // it's happening - crossed to a new day
             // not same as     if (chour > m_end_hour || chour < m_start_hour)
             if (m_bars->at(i).time.tm_yday != day)  // i dont want this on my model
-                return -3; // remove this            
+                return -3; // remove this
             if (profit >= 0.5*m_targetprofit ) // a minimal profit to be still valid
                 xy.y = 1; // min. model class acc. must be calculated for worst scenario *this
             else
                 xy.y = 0; // expired position
+            xy.ret = profit;
             xy.tdone = m_bars->uidtimes[i];
-            // could include 
+            // could include
             return 1;
-        }       
+        }
 
         // increase position if
         // 1. can increase position - maxinc restriction
@@ -631,7 +634,7 @@ bool FillInXFeatures(XyPair &xypair)
 
     // cannot assembly X feature train with such an old signal
     //  not in buffer anymore - such should be removed ...
-    if ( bfidxsg < 0 ) 
+    if ( bfidxsg < 0 )
         return false;
 
     // I want to include the signal the originates this xypair
@@ -641,9 +644,9 @@ bool FillInXFeatures(XyPair &xypair)
     // cannot create a X feature vector and will never will
     // remove it
     // - 1 due diff cross features
-    if (batch_start_idx-1 < 0 || 
+    if (batch_start_idx-1 < 0 ||
         // batch_start using invalid data , cannot use it
-        batch_start_idx-1 < ValidDataIdx()) 
+        batch_start_idx-1 < ValidDataIdx())
         return false;
 
     xypair.X.resize(m_xtrain_dim);
@@ -663,10 +666,10 @@ bool FillInXFeatures(XyPair &xypair)
         // using - 1 bit to store each class
         //https://towardsdatascience.com/
         //one-hot-encoding-is-making-your-tree-based-
-        //worse-heres-why-d64b282b5769 
+        //worse-heres-why-d64b282b5769
         // positive signs on bands - class 1
         // negative signs on bands - class 2
-        // since each class might be go from 0 to 1 
+        // since each class might be go from 0 to 1
         // suppose [0, 1, -1] 3 bands
         // for positive class == [1, 2, 0] ==> int((0 + 1)//2) << 0 + int(1 + 1)//2 << 1 + (-1 + 1) << 2
         //                   binary              ==>       0 << 0 + 1 << 1 + 0 << 2 = 010
@@ -688,7 +691,7 @@ bool FillInXFeatures(XyPair &xypair)
         double nticks = m_bars->at(timeidx).nticks;
         xypair.X[xifeature++] = nticks;
         // cross features
-        // 6 - diff of times to form this bar with the previous    
+        // 6 - diff of times to form this bar with the previous
         // 7 - diff of ticks to form this bar with the previous
         xypair.X[xifeature++] = dt - (m_bars->at(timeidx-1).emsc - m_bars->at(timeidx-1).smsc) / 1000.;
         xypair.X[xifeature++] = nticks - m_bars->at(timeidx-1).nticks;
@@ -788,15 +791,15 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
     std::vector<int> Y;  // if use push_back dont need set size
     py::array_t<LbSignal> lbsignals; // all info from every Xy pair
     X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy
-    
+
     lbsignals.resize({ m_xypairs.size() });
     LbSignal* pbuf = (LbSignal*)lbsignals.request().ptr;
 
     size_t idx = 0;
     for (auto item=m_xypairs.begin(); item != m_xypairs.end(); item++) {
-        std::copy((*item).X.begin(), 
+        std::copy((*item).X.begin(),
                   (*item).X.end(),
-                   X.begin() + 
+                   X.begin() +
                    std::distance(m_xypairs.begin(), item) * m_xtrain_dim);
         Y.push_back((*item).y);
         pbuf[idx++] = (LbSignal)(*item);
@@ -812,5 +815,3 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
 int pyGetXdim() {
     return m_xtrain_dim;
 }
-
-

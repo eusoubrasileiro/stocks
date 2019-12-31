@@ -17,6 +17,8 @@ struct LbSignal // pybind11 requires POD so cannot derive from BSignal
     int y = 0; // y label value
     int ninc = 0; // number of increases in position
     uint64_t tdone; // when that happend - 'time' idx of labelling
+    // sample weight simpler 0 is bad 1 is good - 1 have higher weight?
+    double ret; // return or profit in $$
 };
 #pragma pack(pop)
 
@@ -25,5 +27,3 @@ struct XyPair : LbSignal
 {
     std::vector<double> X;
 };
-
-

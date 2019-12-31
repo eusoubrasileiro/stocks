@@ -20,9 +20,9 @@ struct MoneyBar
     // preço médio
     double       avgprice;  // volume weighted price from all ticks on this bar
     int          nticks;  // number ticks to form this bar
-    tm time; // start time of this bar ... datetime tm struct 
+    tm time; // start time of this bar ... datetime tm struct
     unixtime_ms    smsc; // start time of this bar - first tick time - timestamp ms
-    unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms   
+    unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars
@@ -30,7 +30,9 @@ struct MoneyBar
     double askh;
     double askl; // high and lowest value ask during this bar
     double bidh;
-    double bidl; // high and lowest value bid during this bar    
+    double bidl; // high and lowest value bid during this bar
+    // last high  - to calculate volatility in this bar
+    // last low
 };
 #pragma pack(pop)
 
@@ -56,7 +58,7 @@ protected:
     tm ctime;
 
 public:
-    size_t m_nnew; // number of bars nnew on last call    
+    size_t m_nnew; // number of bars nnew on last call
     double new_avgprices[BUFFERSIZE];
     buffer<uint64_t> uidtimes;
 
@@ -65,7 +67,7 @@ public:
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
     // return number created
-    size_t AddTick(MqlTick tick);    
+    size_t AddTick(MqlTick tick);
     // add ticks for metatrader support
     size_t AddTicks(boost::circular_buffer<MqlTick>::iterator start,
         boost::circular_buffer<MqlTick>::iterator end);

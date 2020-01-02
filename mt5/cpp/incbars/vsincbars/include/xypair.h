@@ -1,6 +1,8 @@
 #pragma once
 #include "time.h"
 
+// Traininig samples
+
 #pragma pack(push, 2)
 struct BSignal { // bollinger band signal
     unixtime_ms time;
@@ -19,6 +21,8 @@ struct LbSignal // pybind11 requires POD so cannot derive from BSignal
     uint64_t tdone; // when that happend - 'time' idx of labelling
     // sample weight simpler 0 is bad 1 is good - 1 have higher weight?
     double ret; // return or profit in $$
+    // information span 
+    uint64_t inf_start, inf_end;
 };
 #pragma pack(pop)
 

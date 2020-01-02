@@ -45,6 +45,7 @@ int64_t m_bsignals_lastuid;
 
 // features and training vectors
 // array of buffers for each signal feature
+std::vector<std::string> m_features;
 int m_nsignal_features;
 int m_batch_size;
 int m_ntraining;
@@ -147,7 +148,10 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     // 3 - fracdiff on prices - stationary
     // 4 - time to form a bar in seconds - stationary adfuller test
     // 5 - number of ticks to form a bar  - stationary adfuller test
-    m_nsignal_features = 2 + 3 + 2;
+    // fracdiff not being used for now ... lets go simpler first
+    // fracdiff makes a huge information dependence with the past
+    m_features = {"psignal", "nsignal", "timebar", "nticks", "dtimebar", "dnticks", "bnumber"};
+    m_nsignal_features = 2 + 2 + 2;
     // cross features
     // 6 - diff of times to form this bar with the previous
     // 7 - diff of ticks to form this bar with the previous
@@ -182,13 +186,13 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
 
     // CreateOtherFeatureIndicators();
     // only fracdiff on prices
-    m_fd_mbarp->Init(Expert_Fracdif_Window, Expert_Fracdif);
+    // m_fd_mbarp->Init(Expert_Fracdif_Window, Expert_Fracdif);
 
     // minimum number of bars to calculated one feature of all
     // indicators
     m_min_bars  = 2; // diff feature like dtp or diff times etc.
-    m_min_bars = ((Expert_Fracdif_Window > m_min_bars)?  // FracDiff
-            Expert_Fracdif_Window : m_min_bars);
+   // m_min_bars = ((Expert_Fracdif_Window > m_min_bars)?  // FracDiff
+    //        Expert_Fracdif_Window : m_min_bars);
     // biggest window b bands = m_bbwindow*inc - number of samples needed
     auto maxbbwindow = (m_bbwindow*inc);
     m_min_bars = ((maxbbwindow > m_min_bars)?
@@ -258,7 +262,7 @@ int MinPrevBars() {
 // start index of valid data on all buffers (indicators) any time
 size_t ValidDataIdx() {
     size_t valid_start = 0;
-    valid_start = m_fd_mbarp->valididx();
+    //valid_start = m_fd_mbarp->valididx();
     for (int j = 0; j < m_nbands; j++){
         size_t tmp_start = m_rbandsgs[j].valididx();
         valid_start = (tmp_start > valid_start) ? tmp_start : valid_start;
@@ -292,7 +296,7 @@ bool CppRefresh()
 
     // features indicators
     // fracdif on bar prices order of && matter
-     m_fd_mbarp->Refresh(m_bars->new_avgprices, m_bars->m_nnew);
+    // m_fd_mbarp->Refresh(m_bars->new_avgprices, m_bars->m_nnew);
 
     // update signals based on all bollinger bands
     for (int j = 0; j < m_nbands; j++)
@@ -679,11 +683,6 @@ bool FillInXFeatures(XyPair &xypair)
     // easier to copy to X also to create cross-features
     // using a constant on the second dimension is possible
     for (int timeidx = batch_start_idx; timeidx < bfidxsg; timeidx++) {
-        // from past to present [bufi-batch_size:bufi+1)
-        // features from band signals
-        //for (int i = 0; i < m_nbands; i++, xifeature++) {
-        //    xypair.X[xifeature] = m_rbandsgs[i][timeidx];
-        // }
         // from m_nbands features (one per band) to 2 feature classes
         // removing one hot for every band making OR 2 classes
         // using - 1 bit to store each class
@@ -706,7 +705,7 @@ bool FillInXFeatures(XyPair &xypair)
         }
         xifeature+=2;
         // fracdif feature
-        xypair.X[xifeature++] = m_fd_mbarp->at(timeidx);
+        // xypair.X[xifeature++] = m_fd_mbarp->at(timeidx);
         // time to form a bar in seconds
         double dt = (m_bars->at(timeidx).emsc - m_bars->at(timeidx).smsc) / 1000.;
         xypair.X[xifeature++] = dt;
@@ -714,8 +713,8 @@ bool FillInXFeatures(XyPair &xypair)
         double nticks = m_bars->at(timeidx).nticks;
         xypair.X[xifeature++] = nticks;
         // cross features
-        // 6 - diff of times to form this bar with the previous
-        // 7 - diff of ticks to form this bar with the previous
+        // 5 - diff of times to form this bar with the previous
+        // 6 - diff of ticks to form this bar with the previous
         xypair.X[xifeature++] = dt - (m_bars->at(timeidx-1).emsc - m_bars->at(timeidx-1).smsc) / 1000.;
         xypair.X[xifeature++] = nticks - m_bars->at(timeidx-1).nticks;
         // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)
@@ -732,6 +731,10 @@ bool FillInXFeatures(XyPair &xypair)
     // last feature
     // disambiguation - band number
     xypair.X[xifeature++] = xypair.band;
+    // information span for this training sample
+    // to avoid information leakage when cross-validate model
+    xypair.inf_start = xypair.twhen - ((uint64_t) m_batch_size - 1) - ((uint64_t) m_min_bars - 1);
+    xypair.inf_end = xypair.tdone;
 
     return true; // suceeded
 }
@@ -832,6 +835,12 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
     pyX.resize({ (int) m_xypairs.size(), m_xtrain_dim });
 
     return std::make_tuple(pyX, py::cast(Y), lbsignals);
+}
+
+// name for EACH column feature on X vector
+// TODO:
+std::vector<std::string> pyFeatures() {
+    return m_features;
 }
 
 

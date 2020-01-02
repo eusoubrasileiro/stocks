@@ -82,12 +82,15 @@ int    m_incmax;// max number of increases on a position
 // python sklearn model trainning
 //bool m_recursive;
 sklearnModel m_model;
-unsigned int m_model_refresh; // how frequent to update the model
 // (in number of new training samples)
 // helpers to count training samples
 unsigned long m_xypair_count; // counter to help train/re-train model
 unsigned long m_model_last_training; // referenced on m_xypair_count's
 double m_devs;
+
+// minimum number of bars needed to form all indicators
+int m_min_bars;
+int m_nprev_bars; // number of bars on previous Refresh call
 
 void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int ntraining,
     double start_hour, double end_hour, double expire_hour,
@@ -180,6 +183,17 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     // CreateOtherFeatureIndicators();
     // only fracdiff on prices
     m_fd_mbarp->Init(Expert_Fracdif_Window, Expert_Fracdif);
+
+    // minimum number of bars to calculated one feature of all
+    // indicators
+    m_min_bars  = 2; // diff feature like dtp or diff times etc.
+    m_min_bars = ((Expert_Fracdif_Window > m_min_bars)?  // FracDiff
+            Expert_Fracdif_Window : m_min_bars);
+    // biggest window b bands = m_bbwindow*inc - number of samples needed
+    auto maxbbwindow = (m_bbwindow*inc);
+    m_min_bars = ((maxbbwindow > m_min_bars)?
+                      maxbbwindow : m_min_bars);
+    m_nprev_bars = 0;
 }
 
 
@@ -235,6 +249,11 @@ size_t BufferTotal() { return m_bars->size(); }
 // start index on all buffers of new bars after AddTicks > 0
 size_t NewDataIdx() { return m_bars->BeginNewBarsIdx();  }
 bool CppNewData() { return m_newbars; }
+// number of previous bars needed to form one X filled vector 
+// need to calculate range of information used for each Xy training sample
+int MinBars() {
+    return m_min_bars - 1;
+}
 
 // start index of valid data on all buffers (indicators) any time
 size_t ValidDataIdx() {
@@ -266,37 +285,38 @@ bool isInsideFile(char* cs_filename) {
 // start index and count of new bars that just arrived
 bool CppRefresh()
 {
-    int ncalculated = 0;
-
     // arrays of new data update them
     m_bars->RefreshArrays();
-    // all bellow must be called to maintain alligment of buffers
+    // all bellow indicators must be called to maintain alligment of buffers
     // by creating empty samples
 
     // features indicators
     // fracdif on bar prices order of && matter
-    // first is what you want to do and second what you want to try
-    ncalculated = m_fd_mbarp->Refresh(m_bars->new_avgprices, m_bars->m_nnew);
+     m_fd_mbarp->Refresh(m_bars->new_avgprices, m_bars->m_nnew);
 
     // update signals based on all bollinger bands
-    for (int j = 0; j < m_nbands; j++) {
+    for (int j = 0; j < m_nbands; j++)
         int tmp_calc = m_rbandsgs[j].Refresh(m_bars->new_avgprices, m_bars->m_nnew);
-        // get only the intersection - smallest region
-        // where samples were calculated on all indicators
-        ncalculated = (tmp_calc < ncalculated) ? tmp_calc : ncalculated;
+
+    if(BufferTotal() < m_min_bars){ // to calculate at least one output on all indicators
+      m_nprev_bars = BufferTotal(); // number of (now) previous bars
+      return false;
     }
 
-    if (ncalculated > 0) {
-        // valid samples calculated
-        // store only signal ocurrences
-        int i = BufferTotal()-ncalculated;
-        for (; i < BufferTotal(); i++)
-            for (int j = 0; j < m_nbands; j++)
-                if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
-                    m_bsignals.push_back({ m_bars->at(i).emsc, m_bars->at(i).uid, j, (int)m_rbandsgs[j][i] });
-    }
+    auto ncalculated = m_bars->m_nnew; // after buffer fully loaded
+    if(m_nprev_bars < m_min_bars) // will be fully loaded from now on
+      ncalculated = m_bars->m_nnew - (m_min_bars-m_nprev_bars);
 
-    return (ncalculated > 0);
+    // valid samples calculated
+    // store only signal ocurrences
+    int i = BufferTotal()-ncalculated;
+    for (; i < BufferTotal(); i++)
+        for (int j = 0; j < m_nbands; j++)
+            if (m_rbandsgs[j][i] != 0)  // need to know which uid/time for each sample added
+                m_bsignals.push_back({ m_bars->at(i).emsc, m_bars->at(i).uid, j, (int)m_rbandsgs[j][i] });
+
+    m_nprev_bars = BufferTotal(); // number of (now) previous bars
+    return true;
 }
 
 // verify an entry signal in any band
@@ -644,6 +664,9 @@ bool FillInXFeatures(XyPair &xypair)
     // cannot create a X feature vector and will never will
     // remove it
     // - 1 due diff cross features
+    // shouldnt be here - should be in refresh!?
+    // TODO: implement as an indicator or change refresh of feature indicators
+    // to another place like here - only when FillInXFeatures needs it
     if (batch_start_idx-1 < 0 ||
         // batch_start using invalid data , cannot use it
         batch_start_idx-1 < ValidDataIdx())
@@ -815,3 +838,4 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
 int pyGetXdim() {
     return m_xtrain_dim;
 }
+

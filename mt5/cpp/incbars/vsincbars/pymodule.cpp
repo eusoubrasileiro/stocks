@@ -68,7 +68,9 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("getxyvectors", &pyGetXyvectors, "get X feature vectors, y class labels and uid index for money bars");
 
-    m.def("getxdim", &pyGetXdim, "get x feature vector dimension");
+    m.def("xdim", &pyGetXdim, "get x feature vector dimension");
+
+    m.def("minbarsxvector", &MinBars, "number of previous bars needed to form one X vector");
  
     //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter 
 }

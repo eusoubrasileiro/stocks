@@ -28,8 +28,8 @@ extern std::ofstream debugfile;
 #include "bars.h"
 #include "xypair.h"
 
-#else // Google Tests only 
-#define IMPORT 
+#else // Google Tests only
+#define IMPORT
 #define DLL_EXPORT extern "C" __declspec(dllimport)
 
 #endif
@@ -58,7 +58,7 @@ DLL_EXPORT void CppExpertInit(int nbands, int bbwindow, double devs, int batch_s
     short mt5debug=0); // metatrader debugging level
 
 
-// called by mt5 after 
+// called by mt5 after
 // m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
 // passing m_copied_ticks as *mt5_pticks
@@ -81,7 +81,7 @@ DLL_EXPORT size_t BufferSize(); // size of all buffers
 DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after CppOnTicks & NewData == true
 DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
-DLL_EXPORT int MinBars(); // number of previous bars needed to form one X filled vector 
+DLL_EXPORT int MinPrevBars(); // number of previous bars needed to form one X filled vector 
 
 DLL_EXPORT bool CppNewData(); // are there any new bars after call of OnTicks
 
@@ -97,7 +97,7 @@ DLL_EXPORT int CreateXyVectors();
 // API Python - only for gtests
 DLL_EXPORT unixtime_ms pyAddTicks(py::array_t<MqlTick> ticks);
 
-// returns -1/0/1 Sell/Nothing/Buy 
+// returns -1/0/1 Sell/Nothing/Buy
 DLL_EXPORT int isSellBuy(unixtime now);
 
 DLL_EXPORT void invalidateModel();

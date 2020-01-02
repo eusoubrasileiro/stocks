@@ -249,9 +249,9 @@ size_t BufferTotal() { return m_bars->size(); }
 // start index on all buffers of new bars after AddTicks > 0
 size_t NewDataIdx() { return m_bars->BeginNewBarsIdx();  }
 bool CppNewData() { return m_newbars; }
-// number of previous bars needed to form one X filled vector 
+// number of previous bars needed to form one X filled vector
 // need to calculate range of information used for each Xy training sample
-int MinBars() {
+int MinPrevBars() {
     return m_min_bars - 1;
 }
 
@@ -838,4 +838,3 @@ std::tuple<py::array, py::array, py::array_t<LbSignal>> pyGetXyvectors(){
 int pyGetXdim() {
     return m_xtrain_dim;
 }
-

@@ -12,7 +12,7 @@
 
 // The DLL will only build if DEBUG preprocessor is not set.
 // pybind11 only works in release mode
-// and another code in the project should also be in release 
+// and another code in the project should also be in release
 
 #pragma once
 
@@ -42,26 +42,26 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("initialize", &CppExpertInit, "Initialize Increase Bands Expert",
         py::arg("nbands"), py::arg("bbwindow"), py::arg("stddevs"), py::arg("batch_size"), py::arg("ntraining"),
-        py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"), 
+        py::arg("start_hour"), py::arg("end_hour"), py::arg("expire_hour"),
         py::arg("ordersize"), py::arg("stoploss"), py::arg("targetprofit"), py::arg("incmax"),
-        py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"), 
+        py::arg("min_lots"), py::arg("ticksize"), py::arg("tickvalue"),
         py::arg("moneybarsize"), // R$ to form 1 money bar
         // ticks control
         py::arg("isbacktest"), py::arg("cs_symbol"), py::arg("mt5_timenow"),
         py::arg("mt5_debug"));
 
     // signature with py::array_t for AddTicks
-    m.def("addticks", &pyAddTicks, "send ticks to the expert", 
+    m.def("addticks", &pyAddTicks, "send ticks to the expert",
         py::arg("nprecords_mqltick"));
 
     m.def("refresh", &CppRefresh, "update everything with newbars, after addticks > 0");
 
     m.def("buffersize", &BufferSize, "size of all buffers");
-    
+
     m.def("buffertotal", &BufferTotal, "count of bars or all buffers data");
 
     m.def("newdataidx", &NewDataIdx, "start index on buffers of new bars after AddTicks > 0");
-  
+
     m.def("moneybars", &pyGetMoneyBars, "get MoneyBar buffer as is");
 
     m.def("createxyvectors", &CreateXyVectors, "label b.signals and fill out X & y pair vectors");
@@ -70,8 +70,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("xdim", &pyGetXdim, "get x feature vector dimension");
 
-    m.def("minbarsxvector", &MinBars, "number of previous bars needed to form one X vector");
- 
-    //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter 
-}
+    m.def("minbarsxvector", &MinPrevBars, "number of previous bars needed to form one X vector");
 
+    //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter
+}

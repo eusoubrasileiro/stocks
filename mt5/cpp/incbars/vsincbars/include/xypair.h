@@ -23,6 +23,8 @@ struct LbSignal // pybind11 requires POD so cannot derive from BSignal
     double ret; // return or profit in $$
     // information span 
     uint64_t inf_start, inf_end;
+   // int nconc; // number of concurrent labels within the time-span of this sample
+   // uint64_t tnext; // time to next training sample
 };
 #pragma pack(pop)
 

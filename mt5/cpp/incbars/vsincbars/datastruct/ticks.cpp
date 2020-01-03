@@ -12,25 +12,25 @@ std::ofstream debugfile("incbandslog.txt");
 short mt5_debug_level; // metatrader debugging messages level 0 - few, 1 - a lot
 
 
-int64_t ReadTicks(std::vector<MqlTick> *mqlticks, 
+int64_t ReadTicks(std::vector<MqlTick> *mqlticks,
         std::string filename, size_t nticks=-1){
 
     std::fstream fh;
     std::streampos begin, end;
 
-    fh.open(filename,   
+    fh.open(filename,
         std::fstream::in | std::fstream::binary);
     // calculate number of ticks on file
     begin = fh.tellg();
     fh.seekg(0, std::ios::end);
     end = fh.tellg();
-    
+
     if (nticks == -1)
         nticks = (end - begin) / sizeof(MqlTick);
     else { // in case number of ticks to read is specified
         fh.seekg(sizeof(MqlTick)*nticks, std::ios::beg);
-        end = fh.tellg();        
-    }    
+        end = fh.tellg();
+    }
 
     mqlticks->resize(nticks);
 
@@ -55,7 +55,7 @@ void SaveTicks(BufferMqlTicks* ticks, std::string filename){
     fh.close();
 }
 
-// check if the ticks are all included in 
+// check if the ticks are all included in
 // the ticks on the specified filename
 // seek file if needed
 bool isInFile(BufferMqlTicks* ticks, std::string filename){
@@ -65,29 +65,29 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
     // start iterator of ticks -> point to first tick on file
     auto cftick = fticks.begin();
 
-    // seek to the start positon for the ticks if needed 
+    // seek to the start positon for the ticks if needed
     for (; cftick != fticks.end(); cftick++)
         if (cftick->time_msc == ticks->at(0).time_msc) break;
 
 #ifdef META5DEBUG
     debugfile << "isInFile seeked file start at: " << std::distance(fticks.begin(), cftick) << std::endl;
-#endif      
+#endif
 
     auto creftick = ticks->begin();
     bool result = true;
     // compare
     for (; cftick != fticks.end() && creftick != ticks->end(); cftick++, creftick++)
         // memory comparisoin since there is no == for POD structs
-        if (memcmp(&(*cftick), &(*creftick), sizeof(MqlTick) != 0)) { 
+        if(memcmp(&(*cftick), &(*creftick), sizeof(MqlTick))!=0) {
             result = false;
             break;
         }
 
 #ifdef META5DEBUG
     debugfile << "isInFile end of comparison: " << std::distance(ticks->begin(), creftick) << std::endl;
-    debugfile << "isInFile total ticks compared: " << std::distance(ticks->begin(), creftick) << std::endl;    
+    debugfile << "isInFile total ticks compared: " << std::distance(ticks->begin(), creftick) << std::endl;
     debugfile << "isInFile : " << result << std::endl;
-#endif      
+#endif
 
     return result;
 }
@@ -126,21 +126,21 @@ void fixArrayTicks(std::vector<MqlTick> ticks) {
 bool BufferMqlTicks::addFromFileTicks(){
 
   auto start_cftick = std::vector<MqlTick>::iterator(m_cftick);
-  // for every tick sent by metatrader 
+  // for every tick sent by metatrader
   // only add the tick if its time (time_msc)
   // matchs the current tick position on file
   // then that's a real tick
   // ignore all the rest
   for(int i=0; i<m_nnew && m_cftick != m_fticks.end(); i++)
-    if(m_mt5ticks[i].time_msc == m_cftick->time_msc) 
-        m_cftick++;    
-  
+    if(m_mt5ticks[i].time_msc == m_cftick->time_msc)
+        m_cftick++;
+
   // testing needs boundaries of data chuncks
   //m_bound_ticks[ib_tick++] = std::distance(m_fticks.begin(), m_cftick);
 
   /////// add correct ticks from file
   addrange(start_cftick, m_cftick);
-  
+
   m_nnew = std::distance(start_cftick, m_cftick);
 
 #ifdef META5DEBUG
@@ -159,14 +159,14 @@ bool BufferMqlTicks::addFromFileTicks(){
       gmtime_s(&ctime, &timet);
 
       char buffer[32];
-    
+
       // Format: Mo, 15.06.2009 20:20:00
       strftime(buffer, 32, "%a, %d.%m.%Y %H:%M:%S", &ctime);
 
       // can be a in a log file certainly!!! if verbose set
-      debugfile << "Ignored metatrader 5 created unreal ticks aprox. : " << m_trash_count 
+      debugfile << "Ignored metatrader 5 created unreal ticks aprox. : " << m_trash_count
           << " at " << buffer << std::endl;
-#endif      
+#endif
       m_trash_count = 0;
 
       return false;
@@ -181,16 +181,16 @@ void BufferMqlTicks::loadCorrectTicks(std::string symbol)
     // if ticks on this file are not compatible with
     // your tick history. Problems will come
     // advised to use a custom symbol to avoid that
-    
-    std::string cticks_file = std::string(std::getenv("USERPROFILE")) + 
+
+    std::string cticks_file = std::string(std::getenv("USERPROFILE")) +
         std::string("\\Projects\\stocks\\data\\") +
-        symbol + std::string("_mqltick.bin");    
+        symbol + std::string("_mqltick.bin");
     ReadTicks(&m_fticks, cticks_file);
 
     // start iterator of ticks -> point to first tick on file
-    m_cftick = m_fticks.begin(); 
+    m_cftick = m_fticks.begin();
 
-    // seek to the start positon for the current back test    
+    // seek to the start positon for the current back test
     for(; m_cftick!=m_fticks.end(); m_cftick++)
         if(m_cftick->time_msc >= m_scheck_bg_time) break;
 
@@ -240,7 +240,7 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
     }
 
     #ifdef META5DEBUG
-    if (mt5_debug_level == 1) {        
+    if (mt5_debug_level == 1) {
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  mt5 begin idx : " << mt5i << std::endl;
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  nnew : " << m_nnew << std::endl;
     }
@@ -265,8 +265,8 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, unixtime timenow)
     m_nnew = 0;
 
     // time_t same as int64_t unixtime stamp
-    // get raw time than convert to struct tm and them get 
-    // first 1 hour of day 1:00 am 
+    // get raw time than convert to struct tm and them get
+    // first 1 hour of day 1:00 am
     // time now in ms will work 'coz next tick.ms value will be bigger
     // and will take its place
     tm tm_time;
@@ -274,7 +274,7 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, unixtime timenow)
     // begin of day at 1:00 am
     m_scheck_bg_time = timenow - (tm_time.tm_hour*3600+tm_time.tm_min*60+tm_time.tm_sec) + 3600;
     m_scheck_bg_time *= 1000;// turn in ms
-    m_scheck_bg_idx = 0;    
+    m_scheck_bg_idx = 0;
 
 #ifdef META5DEBUG
     debugfile << "BufferMqlTicks symbol: " << m_symbol << std::endl;
@@ -286,17 +286,17 @@ void BufferMqlTicks::Init(std::string symbol, bool isbacktest, unixtime timenow)
         loadCorrectTicks(symbol);
         // array of boundary of chuncks of ticks
         // m_bound_ticks.resize(m_fticks.size());
-        // ib_tick = 0;    // first boundary will come 
+        // ib_tick = 0;    // first boundary will come
         m_trash_count = 0;
     }
 }
 
 // int64_t same as long for Mql5
-// will be called by Metatrader 5 after 
+// will be called by Metatrader 5 after
 // m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
 // passing m_copied_ticks as *pmt5_mqlticks
-// will compare with ticks 
+// will compare with ticks
 unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
     m_mt5ticks = mt5_pmqlticks;
@@ -318,7 +318,7 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
     // if on back-test
     // dont use ticks from metatrader, only times!
     if(m_isbacktest){
-        addFromFileTicks(); // get correct ticks and add 
+        addFromFileTicks(); // get correct ticks and add
     }
     else{ // real time operation
         addrange(m_mt5ticks, m_nnew);
@@ -373,5 +373,3 @@ size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, unixtime_ms time)
     auto iter = std::lower_bound(ticks.begin(), ticks.end(), time, cmpTickSmallTimeMs);
     return (iter == ticks.end()) ? -1 : iter - ticks.begin();
 }
-
-

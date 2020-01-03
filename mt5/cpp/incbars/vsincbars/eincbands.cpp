@@ -740,11 +740,14 @@ bool FillInXFeatures(XyPair &xypair)
 }
 
 
+void FillInSampleWeights() {
+    for (auto item = m_xypairs.begin(); item != m_xypairs.end(); item++) {
+
+    }
+}
+
+
 std::pair<std::vector<double>, std::vector<int>> GetXyvectors() {
-    // pybind11 automatically casts/converts std:: types
-    // vectors got to a list
-    // but you can use cast to convert to a numpy array
-    // needs "pybind11/stl.h"
     std::vector<double> X;
     std::vector<int> Y;  // if use push_back dont need set size
     X.resize((m_xypairs.size() * m_xtrain_dim)); // neeeded to std::copy

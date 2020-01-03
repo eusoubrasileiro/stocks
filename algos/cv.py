@@ -1,6 +1,7 @@
 """tools for cross-validate a classification model sklearn mainly"""
 import numpy as np
 import pandas as pd
+from numba import jit
 
 def indexSequentialFolds(length, size, verbose=True):
     """
@@ -194,86 +195,65 @@ class sKFold(object):
 # PurgedKFold
 # removing information from training samples (leaking prevention)
 
-
-#`lbsigns['twhen']` and `lbsigns['tdone']`
-# are start and end index of bars needed to form that specific Xy pair
-# works like this t1 = pd.Series(lbsigns.tdone, index=lbsigns.twhen)
-def getTrainTimes(t1,testTimes):
-    """
-    Given testTimes, find the times of the training observations.
-    —t1.index: Time when the observation started.
-    —t1.value: Time when the observation ended.
-    —testTimes: Times of testing observations.
-    """
-    trn=t1.copy(deep=True)
-    for i,j in testTimes.iteritems():
-        df0=trn[(i<=trn.index)&(trn.index<=j)].index # train starts within test
-        df1=trn[(i<=trn)&(trn<=j)].index # train ends within test
-        df2=trn[(trn.index<=i)&(j<=trn)].index # train envelops test
-        trn=trn.drop(df0.union(df1).union(df2))
-    return trn
-
 from sklearn.model_selection._split import _BaseKFold
 
+@jit(nopython=True)
+def purgedTrainIdxs(foldxyinfo, inf_start, inf_end):
+    """Return indexes inside foldxyinfo where
+    there is no overlap with inf_start and inf_end"""
+    indexes = np.zeros(foldxyinfo.shape[0], dtype=np.int32)
+    j = 0
+    for i in range(foldxyinfo.shape[0]):
+        if ((foldxyinfo[i, 0] < inf_start and foldxyinfo[i, 1] < inf_start) or # before start
+           (foldxyinfo[i, 0] > inf_end and foldxyinfo[i, 1] > inf_end)): #after end
+            indexes[j] = i
+            j = j + 1
+    return indexes[:j]
 
-# works like this
-# dfX = pd.DataFrame(X, index=t1.index)
-# dfy = pd.DataFrame(y, index=t1.index)
-# pkfold = cv.PurgedKFold(t1=t1)
-# for idxt, idxs in pkfold.split(dfX):
-#     print(len(idxt), len(idxs))
 class PurgedKFold(_BaseKFold):
     """
     Extend KFold class to work with labels that span intervals
     The train is purged of observations overlapping test-label intervals
     Test set is assumed contiguous (shuffle=False), w/o training samples in between
     """
-    def __init__(self,n_splits=3,t1=None,pctEmbargo=0.):
-        if not isinstance(t1,pd.Series):
-            raise ValueError('Label Through Dates must be a pd.Series')
+    def __init__(self,n_splits=3, embargo=10): # embargo in seconds
         super(PurgedKFold,self).__init__(n_splits,shufﬂe=False,random_state=None)
-        self.t1=t1
-        self.pctEmbargo=pctEmbargo
 
-    def split(self,X,y=None,groups=None):
-        if (X.index==self.t1.index).sum()!=len(self.t1):
-            raise ValueError('X and ThruDateValues must have the same index')
+    def split(self,X,y=None,groups=None,sxyinfo=None):
         indices=np.arange(X.shape[0])
-        mbrg=int(X.shape[0]*self.pctEmbargo)
         test_starts=[(i[0],i[-1]+1) for i in \
         np.array_split(np.arange(X.shape[0]),self.n_splits)]
-        for i,j in test_starts:
-            t0=self.t1.index[i] # start of test set
-            test_indices=indices[i:j]
-            maxT1Idx=self.t1.index.searchsorted(self.t1[test_indices].max())
-            train_indices=self.t1.index.searchsorted(self.t1[self.t1<=t0].index)
-            if maxT1Idx<X.shape[0]: # right train (with embargo)
-                train_indices=np.concatenate((train_indices,indices[maxT1Idx+mbrg:]))
-            yield train_indices,test_indices
+        for idxs, idxe in test_starts: # score start and end index
+            score_span = (sxyinfo[idxs, 0], np.max(sxyinfo[idxs:idxe, 1]))
+            test_indices=indices[idxs:idxe]
+            train_indices = purgedTrainIdxs(sxyinfo, *score_span)
+            yield train_indices, test_indices
 
 from sklearn.metrics import log_loss, accuracy_score, confusion_matrix
 
-# I dont care I cant see any usage for sample_weight
-def cvScore(clf,X,y,sample_weight=None,scoring='neg_log_loss',t1=None,cv=None,cvGen=None,
-pctEmbargo=None):
-    if scoring not in ['neg_log_loss','accuracy']:
-        raise Exception('wrong scoring method.')
+# not using sample weight (YET)
+def cvScore(clf,X,y,sinfo=None,sample_weight=None,scoring='neg_log_loss',cv=None,cvGen=None):
     if cvGen is None:
-        cvGen=PurgedKFold(n_splits=cv,t1=t1,pctEmbargo=pctEmbargo) # purged
+        cvGen=PurgedKFold(n_splits=cv) # purged
     score=[]
-    for train,test in cvGen.split(X=X):
-        ﬁt=clf.ﬁt(X=X.iloc[train,:],y=y.iloc[train].values.ravel())
+    for train,test in cvGen.split(X, sxyinfo=sinfo):
+        if train.size == 0: # might certainly happen
+            continue
+        np1, n0 = np.sum(y[train] ==  +1), np.sum(y[train] ==  0)
+        if n0 < 1 or np1 < 1:
+            continue
+        ﬁt=clf.ﬁt(X=X[train],y=y[train])
         #,sample_weight=sample_weight.iloc[train].values)
-        prob=ﬁt.predict_proba(X.iloc[test,:])
-        score_=-log_loss(y.iloc[test].values.ravel(),prob,
+        prob=ﬁt.predict_proba(X[test])
+        score_=-log_loss(y[test],prob,
         labels=clf.classes_)
         #sample_weight=sample_weight.iloc[test].values,labels=clf.classes_)
-        pred=ﬁt.predict(X.iloc[test,:])
-        cm = confusion_matrix(y.iloc[test].values.ravel(), pred)
+        pred=ﬁt.predict(X[test])
+        cm = confusion_matrix(y[test], pred)
         if cm.shape[0] < 2: # case only 1 class on both vectors
-            acc =  1 if (np.unique(y.iloc[test].values.ravel()) == np.unique(pred)) else 0
+            acc =  1 if (np.unique(y[test]) == np.unique(pred)) else 0
         else:
             acc = cm[0, 0]/(cm[0, 0]+cm[1, 0]) # for class 0 what matters
-        score_ = [score_, acc, len(X.iloc[train,:]), len(X.iloc[test,:])]
+        score_ = [score_, acc, len(X[train]), len(X[test]), n0/(np1+n0), cm[0][0]]
         score.append(score_)
     return np.array(score)

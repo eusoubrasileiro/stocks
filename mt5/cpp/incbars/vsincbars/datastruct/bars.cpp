@@ -14,9 +14,10 @@ MoneyBarBuffer::MoneyBarBuffer() {
     m_point_value = 0;
     m_bar.bidh = m_bar.bidl = 0; // not sure this is needed
     m_bar.askh = m_bar.askl = 0;
-    m_bar.smsc = m_bar.emsc = 0;  
+    m_bar.smsc = m_bar.emsc = 0;
     m_bar.time.tm_yday = -1;  // first dtp calc. needs this
     // so first dtp gets zeroed as if crossing to a new day
+    m_bar.netvol = 0;
 }
 
 // return only new ... data added
@@ -54,13 +55,14 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             // clean up (ignore) previous data
             // for starting a new bar
             m_bar.nticks = 0;
-            m_bar.time = ctime; 
+            m_bar.time = ctime;
             m_bar.smsc = tick.time_msc;
             m_bar.dtp = 0; // no previous bar
             m_count_money = 0;
             m_pvs = m_vs = 0;
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;
+            m_bar.netvol = 0;
         }
         else // same day
         if (m_bar.nticks == 0) { // new bar
@@ -70,8 +72,10 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);
             m_bar.bidh = m_bar.bidl = tick.bid;
             m_bar.askh = m_bar.askl = tick.ask;
+            m_bar.netvol = 0;
         }
         m_bar.nticks++;
+        m_bar.netvol += tick.flags*(tick.volume_real * tick.last * m_point_value); // buy-sell volume 
         m_count_money += tick.volume_real * tick.last * m_point_value;
         while (m_count_money >= m_moneybarsize) { // may need to create many bars for one tick
             // in this case nticks == 0 for the second one and so forth
@@ -84,6 +88,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             uidtimes.add(m_bar.uid);
             add(m_bar);
             m_pvs = m_vs = 0;
+            //m_bar.netvol = 0; -- all will have same vbuysell
             m_bar.nticks = 0;
             m_bar.dtp = 0;
             // case when multiple bars created from same tick
@@ -99,7 +104,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
 }
 
 // add ticks for metatrader support
-size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start, 
+size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start,
     boost::circular_buffer<MqlTick>::iterator end) {
     size_t nnew = 0;
     for (auto element = start; element != end; element++)

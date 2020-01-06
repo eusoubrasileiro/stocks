@@ -145,18 +145,19 @@ void CppExpertInit(int nbands, int bbwindow, double devs, int batch_size, int nt
     // 1 - m_nbands band signals positive (1 byte OR coded)
     // 2 - m_nbands band signals negative (1 byte OR coded)
     // indicator features is 3
-    // 3 - fracdiff on prices - stationary
+    // out for while : 3 - fracdiff on prices - stationary
     // 4 - time to form a bar in seconds - stationary adfuller test
     // 5 - number of ticks to form a bar  - stationary adfuller test
+    // 6 - volume bought - volume sold (net volume negotiated)
     // fracdiff not being used for now ... lets go simpler first
     // fracdiff makes a huge information dependence with the past
-    m_features = {"psignal", "nsignal", "timebar", "nticks", "dtimebar", "dnticks", "bnumber"};
-    m_nsignal_features = 2 + 2 + 2;
+    m_features = {"psignal", "nsignal", "timebar", "nticks", "netvol", "dtimebar", "dnticks", "bnumber"};
+    m_nsignal_features = 2 + 3 + 2;
     // cross features
-    // 6 - diff of times to form this bar with the previous
-    // 7 - diff of ticks to form this bar with the previous
+    // 7 - diff of times to form this bar with the previous
+    // 8 - diff of ticks to form this bar with the previous
     // one additional feature - last value
-    // 8 - band number - disambiguation -
+    // 9 - band number - disambiguation -
     //     equal X's might need to be classified differently
     //     due comming from a different band
 
@@ -712,9 +713,11 @@ bool FillInXFeatures(XyPair &xypair)
         // number of ticks to form a bar
         double nticks = m_bars->at(timeidx).nticks;
         xypair.X[xifeature++] = nticks;
+        // net-volume
+        xypair.X[xifeature++] = m_bars->at(timeidx).netvol;
         // cross features
-        // 5 - diff of times to form this bar with the previous
-        // 6 - diff of ticks to form this bar with the previous
+        // 7 - diff of times to form this bar with the previous
+        // 8 - diff of ticks to form this bar with the previous
         xypair.X[xifeature++] = dt - (m_bars->at(timeidx-1).emsc - m_bars->at(timeidx-1).smsc) / 1000.;
         xypair.X[xifeature++] = nticks - m_bars->at(timeidx-1).nticks;
         // could use -- askh-askl or bidh-bidl? but there are many outliers (analysis on python)

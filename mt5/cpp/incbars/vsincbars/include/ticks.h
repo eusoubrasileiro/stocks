@@ -23,13 +23,15 @@ struct MqlTick
 }; // sizeof is 60 bytes to avoid auto alignment to 64 by compiler #pragma pack(2) above is needed
 #pragma pack(pop)
 
-// 2      TICK_FLAG_BID �  tick has changed a Bid price
-// 4      TICK_FLAG_ASK  � a tick has changed an Ask price
-// 8      TICK_FLAG_LAST � a tick has changed the last deal price
-// 16     TICK_FLAG_VOLUME � a tick has changed a volume
-// 32     TICK_FLAG_BUY � a tick is a result of a buy deal
-// 64     TICK_FLAG_SELL � a tick is a result of a sell deal
-
+//#define TICK_FLAG_BID 2      // �  tick has changed a Bid price
+//#define TICK_FLAG_ASK 4      // � a tick has changed an Ask price
+//#define TICK_FLAG_LAST 8     // � a tick has changed the last deal price
+//#define TICK_FLAG_VOLUME 16  // � a tick has changed a volume
+//#define TICK_FLAG_BUY 32     // � a tick is a result of a buy deal
+//#define TICK_FLAG_SELL 64    // � a tick is a result of a sell deal
+// redifinition for my own use
+#define TICK_FLAG_BUY 1     // � a tick is a result of a buy deal
+#define TICK_FLAG_SELL -1    // � a tick is a result of a sell deal
 
 int64_t ReadTicks(std::vector<MqlTick> *mqlticks, 
     std::string filename, size_t nticks);

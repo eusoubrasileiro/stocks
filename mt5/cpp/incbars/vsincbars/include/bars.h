@@ -31,6 +31,7 @@ struct MoneyBar
     double askl; // high and lowest value ask during this bar
     double bidh;
     double bidl; // high and lowest value bid during this bar
+    double netvol; // number of buy ticks * volume bought + number of sell ticks * volume sold (sell/buy) power (net-volume)
     // last high  - to calculate volatility in this bar
     // last low
 };

@@ -96,10 +96,9 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
 // they get filled with previous non-zero value as should be
 // volume i dont care because it will only be usefull in change if flag >= 16
 void fixArrayTicks(MqlTick *ticks, size_t nticks) {
-    double       bid = 0;           // Current Bid price
-    double       ask = 0;           // Current Ask price
-    double       last = 0;          // Price of the last deal (Last)
-    double       volume = 0;
+    double       bid = 0;           // (Last) Bid price
+    double       ask = 0;           // (Last) Ask price
+    double       last = 0;          // (Last) Price of the last deal 
     for (int i = 0; i < nticks; i++) { // cannot be done in parallel?
         if (ticks[i].bid == 0)
             ticks[i].bid = bid;
@@ -113,6 +112,12 @@ void fixArrayTicks(MqlTick *ticks, size_t nticks) {
             ticks[i].last = last;
         else
             last = ticks[i].last; // save this for use next
+        // TICK BUY or TICK SELL == most time not set
+        // very predictive power information
+        if (ticks[i].last != ticks[i].ask)
+            ticks[i].flags = TICK_FLAG_SELL;
+        else
+            ticks[i].flags = TICK_FLAG_BUY;
     }
 }
 

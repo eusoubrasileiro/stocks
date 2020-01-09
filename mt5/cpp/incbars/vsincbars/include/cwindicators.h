@@ -274,3 +274,29 @@ public:
         buffer<int>::addempty(count);
     }
 };
+
+//
+// Windowed Augmented Dickey-Fuller test or SADF (supremum) ADF
+// SADF
+// 
+
+#include <..\urt\include\URT.hpp>
+
+class CSADFIndicator : public CWindowIndicatorDouble
+{
+protected:
+    std::shared_ptr<urt::ADF<double>> m_adfuller;
+    urt::Vector<double> m_urtdata;
+    std::string m_lagmethod;
+    int m_minw, m_maxw;
+
+public:
+
+    CSADFIndicator();
+
+    void Init(int minwindow, int maxwindow, std::string lagmethod = "AIC");
+
+    void Calculate(double indata[], int size, double outdata[]);
+
+};
+

@@ -40,7 +40,9 @@
     <ClCompile Include="urt\src\UnitRoot.cpp">
       <Filter>urt\source</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <Filter>pch</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\dll.h" />
@@ -104,7 +106,9 @@
     <ClInclude Include="include\xypair.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="stdafx.h">
+      <Filter>pch</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="urt">
@@ -127,6 +131,9 @@
     </Filter>
     <Filter Include="python">
       <UniqueIdentifier>{4f886974-f59c-4881-8a5f-44064c7470e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pch">
+      <UniqueIdentifier>{98fdfdea-9c04-496e-ab62-21adb8f919e4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

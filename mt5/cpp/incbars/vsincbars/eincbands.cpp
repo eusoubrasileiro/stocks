@@ -853,3 +853,10 @@ std::vector<std::string> pyFeatures() {
 int pyGetXdim() {
     return m_xtrain_dim;
 }
+
+
+double adfuller(std::vector<double> data, std::string lagmethod){
+    auto vdata = urt::Vector<double>(data.data(), data.size());
+    auto m_adfuller = urt::ADF<double>(vdata, lagmethod);    
+    return m_adfuller.statistic();
+}

@@ -103,7 +103,7 @@ void CSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
             // expadining backward each window calculation bigger than previous
             m_urtdata = urt::Vector<double>(indata[size - j], j);
             m_adfuller.reset(new urt::ADF<double>(m_urtdata, m_lagmethod));
-            auto stat = m_adfuller->get_stat();
+            auto stat = m_adfuller->statistic();
             maxadf = (stat > maxadf) ? stat : maxadf; // getting the supremum
         }
         outdata[i] = maxadf;

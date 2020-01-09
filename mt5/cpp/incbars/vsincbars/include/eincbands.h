@@ -105,10 +105,9 @@ DLL_EXPORT void invalidateModel();
 #ifdef EXPORT
 
 // serial correlation analysis - unit root test and indicator
-std::vector<double> adfuller(std::vector<double> data, std::string lagmethod);
+double adfuller(std::vector<double> data, std::string lagmethod);
 
 std::vector<double> sadfuller(std::vector<double> data, int minw, int maxw, std::string lagmethod);
-
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

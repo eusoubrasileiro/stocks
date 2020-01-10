@@ -75,6 +75,8 @@ class UnitRoot
    // constructor for running test with lag length optmization
    UnitRoot(const Vector<T>& data, const std::string& method, const std::string& trend, bool regression = false);
 
+   // by Andre
+   void reset_data(const Vector<T>& data);
    // set pointer to the original data
    void set_data();
    // set number of lags
@@ -157,6 +159,17 @@ class UnitRoot
 };
 
 //=================================================================================================
+    template <typename T>
+    void UnitRoot<T>::reset_data(const Vector<T>& data) {
+        this->data = data;
+        // setting pointer to data      
+        set_data();
+#ifdef USE_ARMA
+        nobs = data.n_rows;
+#elif defined(USE_BLAZE) || defined(USE_EIGEN) 
+        nobs = data.size();
+#endif      
+    }
 
 }
 

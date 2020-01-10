@@ -20,8 +20,20 @@ class ADF : public UnitRoot<T>
    ADF(const Vector<T>& data, int lags, const std::string& trend = "c", bool regression = false);
    // parameter constructor for computing ADF test with lag length optimization
    ADF(const Vector<T>& data, const std::string& method, const std::string& trend = "c", bool regression = false);
+   
    // compute test statistic
    const T& statistic() override;
+
+   //=================================================================================================
+   // Andre xx/xx/2020
+
+   void setupstatistic();
+
+   // compute test statistic on a new data - only after setupstatistic() call
+   const T& runstatistic(const Vector<T>& data);
+
+   //=================================================================================================
+
    // compute test p-value
    const T& pvalue() override;
    // output test results

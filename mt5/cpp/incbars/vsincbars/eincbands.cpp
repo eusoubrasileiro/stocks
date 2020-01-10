@@ -855,8 +855,18 @@ int pyGetXdim() {
 }
 
 
-double adfuller(std::vector<double> data, std::string lagmethod){
+double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression){
     auto vdata = urt::Vector<double>(data.data(), data.size());
-    auto m_adfuller = urt::ADF<double>(vdata, lagmethod);    
+    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);    
     return m_adfuller.statistic();
+}
+
+double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression){
+    auto vdata = urt::Vector<double>(data.data(), data.size());
+    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);
+    return m_adfuller.statistic();
+}
+
+double pysetadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression) {
+
 }

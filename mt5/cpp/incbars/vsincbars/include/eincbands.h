@@ -105,9 +105,11 @@ DLL_EXPORT void invalidateModel();
 #ifdef EXPORT
 
 // serial correlation analysis - unit root test and indicator
-double adfuller(std::vector<double> data, std::string lagmethod);
+double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression);
 
-std::vector<double> sadfuller(std::vector<double> data, int minw, int maxw, std::string lagmethod);
+double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression);
+
+std::vector<double> sadfuller(std::vector<double> data, int minw, int maxw, std::string lagmethod="AIC");
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

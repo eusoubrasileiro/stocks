@@ -78,5 +78,32 @@ namespace urt {
 
     //=================================================================================================
 
+    // Andre xx/xx/2020
+   //*************************************************************************************************
+
+    template <typename T>
+    void ADF<T>::setupstatistic() {
+        // setting type of lags (if a default type of lags value has been chosen)
+        ur::set_lags_type();
+        // setting optimization method
+        ur::set_method();
+        // setting number of lags
+        ur::set_lags();
+        // setting regression trend
+        ur::set_trend();
+    }
+
+    // compute test statistic
+    template <typename T>
+    const T& ADF<T>::runstatistic(const Vector<T>& data)
+    {
+        // copying data 
+        UnitRoot<T>::reset_data(data);
+
+        // computing ADF test
+        ur::compute_adf();
+
+        return ur::stat;
+    }
 
 }

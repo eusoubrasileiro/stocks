@@ -72,7 +72,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("minbarsxvector", &MinPrevBars, "number of previous bars needed to form one X vector");
 
-    m.def("adfuller", &adfuller, "augmented dickey fuller test - return statistic");
+    m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
 
     //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter
 }

@@ -79,7 +79,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\AppData\Local\Programs\Python\Python37\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -112,7 +112,7 @@
       </ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\AppData\Local\Programs\Python\Python37\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat />
       <SupportJustMyCode />

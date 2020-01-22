@@ -3,6 +3,7 @@
 
 import torch as th
 from matplotlib import pyplot as plt
+import util
 
 def torch_adf(data, p=30, verbose=False):
     """batched version usefull for data of equal size
@@ -51,9 +52,9 @@ def torch_adf(data, p=30, verbose=False):
     return tstat.to('cpu').data.numpy()
 
 #using float32
-def torch_sadftb(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
-    """batched version size=max-minw (sadf max number points)
-    sent at once to GPU"""
+def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
+    """sadf for one t, the given indata from maxw until minw
+    batched version all adfs are sent at once to GPU"""
     th.set_grad_enabled(False)
     n = indata.size
     nobs = n-p-1 # data used for regression
@@ -95,8 +96,124 @@ def torch_sadftb(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
 
     return th.max(tstats).item()
 
+def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
+    """fastest version
+    - assembly rows of OLS problem using entire input data
+    - send batchs of 1GB adfs tests to GPU until entire
+    sadf is calculated, last batch might (should be smaller)
+    """
+    th.set_grad_enabled(False)
+    n = indata.size
+    nobs = n-p-1 # data used for regression
+    X = th.zeros((n-p-1, 3+p), device=dev, dtype=th.float32)
+    if verbose:
+        print(p, n)
+    y = th.tensor(indata, device=dev, dtype=th.float32)
+    diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float32).view(1, 1, 2)
+    y = y.view(1, 1, -1)
+    dy = th.conv1d(y, diffilter).view(-1)
+    y = y.view(-1)
+    z = dy[p:].clone()
+    y.shape, y.shape, X.shape, z.shape
+    if verbose:
+        print(len(z), nobs, p, n, X.shape)
+    # X matrix
+    X[:, 0] = 1 # drift
+    X[:, 1] = th.arange(p+1, n) # deterministic trend
+    X[:, 2] = y[p:-1]# regression data (nobs)
+    # fill in columns, max lagged serial correlations
+    for i in range(1, p+1):
+        X[:, 2+i] = dy[p-i:-i]
+    if verbose:
+        print(len(z), nobs, p, n, X.shape)
+    # 1 sadf point requires at least GB (only matrix storage)
+    adfs_count = maxw-minw # number of adfs for one sadf t
+    nadf = maxw # data used is (maximum - first adf)
+    nobsadf = nadf-p-1 # number of observations (maximum - first adf)
+    xsize = (nobsadf*(3+p))*4 # 4 bytes float32
+    sadft_GB = xsize*adfs_count/(1024**3) # storage for 1 sadf point
+    nsadft = n-maxw # number of sadf t's to calculate the entire SADF
+
+    batch_size = 1 # number of sadft points to calculate at once
+    if sadft_GB < 1.0: # each batch will have at least 1GB in OLS matrixes
+        batch_size = int(1/sadft_GB)
+
+    nbatchs = nsadft//batch_size # number of batchs to sent to GPU
+    lst_batch_size = nsadft - nbatchs*batch_size # last batch of adfs (integer %)
+
+    if verbose:
+        print('adfs_count ', adfs_count)
+        print('sadft_GB ', sadft_GB)
+        print('batch_size ', batch_size)
+        print('nbatchs ', nbatchs)
+
+    # master X for a sadft (biggest adf OLS X matrix)
+    Xm = th.zeros((nobsadf, 3+p), device=dev, dtype=th.float32)
+    # master Z for a sadft (biggest adf OLS independent term)
+    zm = th.zeros(nobsadf, device=dev, dtype=th.float32)
+
+    # batch matrix, vector and observations for multiple adfs
+    Xbt = th.zeros(batch_size, adfs_count, nobsadf, (3+p), device=dev, dtype=th.float32)
+    zbt = th.zeros(batch_size, adfs_count, nobsadf, device=dev, dtype=th.float32)
+    nobt = th.zeros(batch_size, adfs_count, device=dev, dtype=th.float32)
+
+    sadf = th.zeros(nsadft, device=dev, dtype=th.float32)
+
+    t = 0 # start line for master main X OLS matrix/ z vector
+    for i in util.progressbar(range(nbatchs)):
+
+        for j in range(batch_size): # assembly batch_size sadf'ts matrixes
+            Xm[:] = X[t:t+nobsadf] # master X for this sadft - biggest adf OLS X matrix
+            zm[:]  = z[t:t+nobsadf] # master Z for this sadft (biggest adf OLS independent term)
+
+            Xbt[j, :, :, :] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p))
+            zbt[j, :, :] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
+
+            # sadf loop until minw, every matrix is smaller than the previous
+            # zeroing i lines, observations are becomming less also
+            for k in range(adfs_count): # each is smaller than previous
+                Xbt[j, k, :k, :] = 0
+                zbt[j, k, :k] = 0
+                nobt[j, k] = float(nobsadf-k-(p+3))
+
+            t = t + 1
+
+        adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
+                             zbt.view(batch_size*adfs_count, nobsadf),
+                             nobt.view(batch_size*adfs_count))
+
+        sadf[(t-batch_size):t] = th.max(adfstats.view(batch_size, adfs_count), -1)[0]
+
+    # last fraction of a batch
+    for j in range(lst_batch_size): # assembly batch_size sadf'ts matrixes
+        Xm[:] = X[t:t+nobsadf] # master X for this sadft - biggest adf OLS X matrix
+        zm[:]  = z[t:t+nobsadf] # master Z for this sadft (biggest adf OLS independent term)
+
+        Xbt[j, :, :, :] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p))
+        zbt[j, :, :] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
+
+        # sadf loop until minw, every matrix is smaller than the previous
+        # zeroing i lines, observations are becomming less also
+        for k in range(adfs_count): # each is smaller than previous
+            Xbt[j, k, :k, :] = 0
+            zbt[j, k, :k] = 0
+            nobt[j, k] = float(nobsadf-k-(p+3))
+
+        t = t + 1
+
+    adfstats = torch_bmadf(Xbt[:lst_batch_size,:, :, :].view(
+                                lst_batch_size*adfs_count, nobsadf, (3+p)),
+                         zbt[:lst_batch_size,:, :].view(
+                                lst_batch_size*adfs_count, nobsadf),
+                         nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count))
+
+    sadf[(t-lst_batch_size):t] = th.max(adfstats.view(lst_batch_size, adfs_count), -1)[0]
+
+    return sadf.to('cpu').data.numpy()
+
+
 def torch_bmadf(Xbt, zbt, nobt):
-    """given the ordinary least squares problem with
+    """given the ADF test ordinary least squares problem with
     matrix, vector already assembled and number of observations
         Xbt : batch of X matrixes
         zbt : batch of z (independent vector)

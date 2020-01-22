@@ -96,7 +96,8 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
 
     return th.max(tstats).item()
 
-def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
+def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
+        gpumem_GB=3.0, verbose=False):
     """fastest version
     - assembly rows of OLS problem using entire input data
     - send batchs of 1GB adfs tests to GPU until entire
@@ -135,8 +136,8 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     nsadft = n-maxw # number of sadf t's to calculate the entire SADF
 
     batch_size = 1 # number of sadft points to calculate at once
-    if sadft_GB < 1.0: # each batch will have at least 1GB in OLS matrixes
-        batch_size = int(1/sadft_GB)
+    if sadft_GB < gpumem_GB: # each batch will have at least 1GB in OLS matrixes
+        batch_size = int(gpumem_GB/sadft_GB)
 
     nbatchs = nsadft//batch_size # number of batchs to sent to GPU
     lst_batch_size = nsadft - nbatchs*batch_size # last batch of adfs (integer %)
@@ -148,14 +149,19 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
         print('nbatchs ', nbatchs)
 
     # master X for a sadft (biggest adf OLS X matrix)
-    Xm = th.zeros((nobsadf, 3+p), device=dev, dtype=th.float32)
+    Xm = th.zeros((nobsadf, 3+p), device=th.device('cpu'), dtype=th.float32)
     # master Z for a sadft (biggest adf OLS independent term)
-    zm = th.zeros(nobsadf, device=dev, dtype=th.float32)
+    zm = th.zeros(nobsadf, device=th.device('cpu'), dtype=th.float32)
 
     # batch matrix, vector and observations for multiple adfs
-    Xbt = th.zeros(batch_size, adfs_count, nobsadf, (3+p), device=dev, dtype=th.float32)
-    zbt = th.zeros(batch_size, adfs_count, nobsadf, device=dev, dtype=th.float32)
-    nobt = th.zeros(batch_size, adfs_count, device=dev, dtype=th.float32)
+    Xbt = th.zeros(batch_size, adfs_count, nobsadf, (3+p), device=th.device('cpu'), dtype=th.float32)
+    zbt = th.zeros(batch_size, adfs_count, nobsadf, device=th.device('cpu'), dtype=th.float32)
+    nobt = th.zeros(batch_size, adfs_count, device=th.device('cpu'), dtype=th.float32)
+    # CUDA
+    Xbt_ = th.zeros(batch_size*adfs_count, nobsadf, (3+p),  device=dev, dtype=th.float32)
+    zbt_ = th.zeros(batch_size*adfs_count, nobsadf, 1, device=dev, dtype=th.float32)
+    nobt_ = th.zeros(batch_size*adfs_count,  device=dev, dtype=th.float32)
+
 
     sadf = th.zeros(nsadft, device=dev, dtype=th.float32)
 
@@ -177,10 +183,23 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
                 nobt[j, k] = float(nobsadf-k-(p+3))
 
             t = t + 1
+        # TO CUDA
+        Xbt_[:] = Xbt.view(batch_size*adfs_count, nobsadf, (3+p))[:]
+        zbt_[:] = zbt.view(batch_size*adfs_count, nobsadf, 1)[:]
+        nobt_[:] = nobt.view(batch_size*adfs_count)[:]
+        # remove unsqueeze by 1 add on view
+        #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
+        Xt = Xbt_.transpose(dim0=1, dim1=-1)
+        Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
+        Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
+        er = zbt_ - th.bmm(Xbt_, Bhat)
+        Bhat = Bhat.squeeze()
+        s2 = (er*er).sum(1).squeeze()/nobt_
+        adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
 
-        adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
-                             zbt.view(batch_size*adfs_count, nobsadf),
-                             nobt.view(batch_size*adfs_count))
+        # adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
+        #                      zbt.view(batch_size*adfs_count, nobsadf),
+        #                      nobt.view(batch_size*adfs_count))
 
         sadf[(t-batch_size):t] = th.max(adfstats.view(batch_size, adfs_count), -1)[0]
 
@@ -200,12 +219,28 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
             nobt[j, k] = float(nobsadf-k-(p+3))
 
         t = t + 1
+        # TO CUDA
+        Xbt_[:lst_batch_size*adfs_count] = Xbt[:lst_batch_size,:, :, :].view(
+                                     lst_batch_size*adfs_count, nobsadf, (3+p))[:]
+        zbt_[:lst_batch_size*adfs_count] = zbt[:lst_batch_size,:, :].view(
+                                     lst_batch_size*adfs_count, nobsadf, 1)[:]
+        nobt_[:lst_batch_size*adfs_count] = nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count)[:]
+        Xbt_ = Xbt_[:lst_batch_size*adfs_count]
+        zbt_ = zbt_[:lst_batch_size*adfs_count]
+        nobt_ = nobt_[:lst_batch_size*adfs_count]
+        Xt = Xbt_.transpose(dim0=1, dim1=-1)
+        Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
+        Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
+        er = zbt_ - th.bmm(Xbt_, Bhat)
+        Bhat = Bhat.squeeze()
+        s2 = (er*er).sum(1).squeeze()/nobt_
+        adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
 
-    adfstats = torch_bmadf(Xbt[:lst_batch_size,:, :, :].view(
-                                lst_batch_size*adfs_count, nobsadf, (3+p)),
-                         zbt[:lst_batch_size,:, :].view(
-                                lst_batch_size*adfs_count, nobsadf),
-                         nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count))
+    # adfstats = torch_bmadf(Xbt[:lst_batch_size,:, :, :].view(
+    #                             lst_batch_size*adfs_count, nobsadf, (3+p)),
+    #                      zbt[:lst_batch_size,:, :].view(
+    #                             lst_batch_size*adfs_count, nobsadf),
+    #                      nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count))
 
     sadf[(t-lst_batch_size):t] = th.max(adfstats.view(lst_batch_size, adfs_count), -1)[0]
 

@@ -138,6 +138,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     batch_size = 1 # number of sadft points to calculate at once
     if sadft_GB < gpumem_GB: # each batch will have at least 1GB in OLS matrixes
         batch_size = int(gpumem_GB/sadft_GB)
+        batch_size = nsadft if batch_size > nsadft else batch_size
 
     nbatchs = nsadft//batch_size # number of batchs to sent to GPU
     lst_batch_size = nsadft - nbatchs*batch_size # last batch of adfs (integer %)
@@ -146,7 +147,9 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         print('adfs_count ', adfs_count)
         print('sadft_GB ', sadft_GB)
         print('batch_size ', batch_size)
+        print('nsadft ', nsadft)
         print('nbatchs ', nbatchs)
+        print('lst_batch_size ', lst_batch_size)
 
     # master X for a sadft (biggest adf OLS X matrix)
     Xm = th.zeros((nobsadf, 3+p), device=th.device('cpu'), dtype=th.float32)

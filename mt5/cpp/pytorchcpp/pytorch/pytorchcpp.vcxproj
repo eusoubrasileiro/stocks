@@ -101,8 +101,7 @@
       <ConformanceMode>
       </ConformanceMode>
       <AdditionalIncludeDirectories>$(USERPROFILE)\Projects\libtorch\include\torch\csrc\api\include;$(USERPROFILE)\Projects\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>
-      </LanguageStandard>
+      <LanguageStandard>stdcpp14</LanguageStandard>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <CallingConvention>StdCall</CallingConvention>
       <AdditionalOptions>

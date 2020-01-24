@@ -45,9 +45,8 @@
       <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>
       </ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>
-      </LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(USERPROFILE)\Projects\libtorch\include\torch\csrc\api\include;$(USERPROFILE)\Projects\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp14</LanguageStandard>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <CallingConvention>
       </CallingConvention>
@@ -64,8 +63,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>pytorchcpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir);$(USERPROFILE)\Projects\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>c10.lib;torch.lib;pytorchcpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner />
     </Link>
   </ItemDefinitionGroup>

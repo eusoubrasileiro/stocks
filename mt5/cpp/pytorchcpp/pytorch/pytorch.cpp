@@ -75,12 +75,13 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE; // succesful
 }
 
-#define GIGABytes 1073741824
+#define GIGABytes 1073741824.0
 
 // supremum augmented dickey fuller test SADF
 // expands backward many adfs for each point
 // using minw window size and maxw as maximum backward size
-void sadf(float signal[], int n, int maxw, int minw, int p, float gpumem_gb=2.0, bool verbose=false){
+void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, bool verbose=false){
+    th::NoGradGuard guard; // same as with torch.no_grad(): block
   // fastest version
   //     - assembly rows of OLS problem using entire input data
   //     - send batchs of 1GB adfs tests to GPU until entire
@@ -90,7 +91,8 @@ void sadf(float signal[], int n, int maxw, int minw, int p, float gpumem_gb=2.0,
     auto X = th::zeros({n-p-1, 3+p}, dtype_option);
     auto y = th::from_blob(signal, {n}, dtype_option);
        
-    auto diffilter = th::ones({-1, 1}, dtype_option).view({ 1, 1, 2 }); // first difference filter    
+    auto diffilter = th::ones({2}, dtype_option).view({ 1, 1, 2 }); // first difference filter    
+    diffilter[0][0][0] = -1;
     auto dy = th::conv1d(y.view({ 1, 1, -1 }), diffilter).view({ -1 });
     y = y.view({ -1 });
     auto z = dy.slice(0, 0, p).clone();
@@ -145,31 +147,53 @@ void sadf(float signal[], int n, int maxw, int minw, int p, float gpumem_gb=2.0,
     // master Z for a sadft (biggest adf OLS independent term)
     auto zm = th::zeros({ nobsadf }, dtype_option.device(deviceCPU));
 
-    // batch matrix, vector and observations for multiple adfs
+    // batch matrix, vector and observations for multiple adfs - assembly allways on CPU - faster
     auto Xbt = th::zeros({ batch_size, adfs_count, nobsadf, (3 + p) }, dtype_option.device(deviceCPU));
     auto zbt = th::zeros({ batch_size, adfs_count, nobsadf }, dtype_option.device(deviceCPU));
     auto nobt = th::zeros({ batch_size, adfs_count }, dtype_option.device(deviceCPU));
 
-    // CUDA (if existent)
+    //acessors
+    auto aXbt = Xbt.accessor<float, 4>();
+    auto azbt = zbt.accessor<float, 3>();
+    auto anobt = nobt.accessor<float, 2>();
+
+    // CUDA (if existent) - same as above to batch operation
     auto Xbtc = th::zeros({ batch_size*adfs_count, nobsadf, (3 + p) }, dtype_option.device(device));
     auto zbtc = th::zeros({ batch_size*adfs_count, nobsadf }, dtype_option.device(device));
     auto nobtc = th::zeros({ batch_size*adfs_count }, dtype_option.device(device));
 
-    // result
+    // result (allways on CPU - faster)
     auto sadf = th::zeros({ nsadft }, dtype_option.device(deviceCPU));
+
+    auto tline = 0; // start line for master main X OLS matrix/ z vector
+    for (int i = 0; i < nbatchs; i++) {
+
+        for (int j = 0; j < batch_size; j++) { // assembly batch_size sadf'ts matrixes
+            Xm = X.slice(0, tline, tline + nobsadf); //  master X for this sadft - biggest adf OLS X matrix
+            zm = z.slice(0, tline, tline + nobsadf); // master Z for this sadft (biggest adf OLS independent term)
+
+            //Xbt[j, :, : , : ] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3 + p))
+            //zbt[j, :, : ] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
+            
+            //Xbt[j] = Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) });            
+            //zbt[j] = zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }); - breaks
+            Xbt.narrow(0, 0, 1) = Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) });
+            zbt.narrow(0, 0, 1) = zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }); // doesnt break but dont know if works
+            for (int k = 0; k < adfs_count; k++) { //each is smaller than previous
+                //                 Xbt[j, k, :k, :] = 0
+                //                 zbt[j, k, :k] = 0
+                anobt[j][k] = float(nobsadf - k - (p + 3));                
+                Xbt.fill_(0);
+                // sadf loop until minw, every matrix is smaller than the previous
+                // zeroing i lines, observations are becomming less also
+                // Xbt[j][k].(0, th::arange(k), 0);
+                // zbt[j][k].index_fill_(0, th::arange(k), 0);                 // breaks
+            }
+        }
+    }
 
 }
 
-//     t = 0 # start line for master main X OLS matrix/ z vector
-//     for i in util.progressbar(range(nbatchs)):
-//
-//         for j in range(batch_size): # assembly batch_size sadf'ts matrixes
-//             Xm[:] = X[t:t+nobsadf] # master X for this sadft - biggest adf OLS X matrix
-//             zm[:]  = z[t:t+nobsadf] # master Z for this sadft (biggest adf OLS independent term)
-//
-//             Xbt[j, :, :, :] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p))
-//             zbt[j, :, :] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
-//
 //             # sadf loop until minw, every matrix is smaller than the previous
 //             # zeroing i lines, observations are becomming less also
 //             for k in range(adfs_count): # each is smaller than previous

@@ -91,11 +91,11 @@ void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, 
     auto X = th::zeros({n-p-1, 3+p}, dtype_option);
     auto y = th::from_blob(signal, {n}, dtype_option);
        
-    auto diffilter = th::ones({2}, dtype_option).view({ 1, 1, 2 }); // first difference filter    
-    diffilter[0][0][0] = -1;
+    auto diffilter = th::tensor({-1, 1}, dtype_option).view({ 1, 1, 2 }); // first difference filter   
+//    diffilter[0][0][0] = -1;
     auto dy = th::conv1d(y.view({ 1, 1, -1 }), diffilter).view({ -1 });
     y = y.view({ -1 });
-    auto z = dy.slice(0, 0, p).clone();
+    auto z = dy.slice(0, p).clone();
 
     //dtype_option.device(th::kCUDA);
     //dtype_option.device(th::kCPU);
@@ -169,27 +169,30 @@ void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, 
     for (int i = 0; i < nbatchs; i++) {
 
         for (int j = 0; j < batch_size; j++) { // assembly batch_size sadf'ts matrixes
-            Xm = X.slice(0, tline, tline + nobsadf); //  master X for this sadft - biggest adf OLS X matrix
-            zm = z.slice(0, tline, tline + nobsadf); // master Z for this sadft (biggest adf OLS independent term)
+            Xm.copy_(X.narrow(0, tline, nobsadf)); //  master X for this sadft - biggest adf OLS X matrix
+            zm.copy_(z.narrow(0, tline, nobsadf)); // master Z for this sadft (biggest adf OLS independent term)
 
+            auto Xbts = Xbt.select(0, j);
+            auto zbts = zbt.select(0, j);
+                                                     
             //Xbt[j, :, : , : ] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3 + p))
             //zbt[j, :, : ] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
-            
-            //Xbt[j] = Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) });            
-            //zbt[j] = zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }); - breaks
-            Xbt.narrow(0, 0, 1) = Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) });
-            zbt.narrow(0, 0, 1) = zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }); // doesnt break but dont know if works
+            Xbts.copy_(Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) }));
+            zbts.copy_(zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }));
+
             for (int k = 0; k < adfs_count; k++) { //each is smaller than previous
                 //                 Xbt[j, k, :k, :] = 0
                 //                 zbt[j, k, :k] = 0
-                anobt[j][k] = float(nobsadf - k - (p + 3));                
-                Xbt.fill_(0);
+                //nobt[j][k] = float(nobsadf - k - (p + 3));                
                 // sadf loop until minw, every matrix is smaller than the previous
                 // zeroing i lines, observations are becomming less also
-                // Xbt[j][k].(0, th::arange(k), 0);
-                // zbt[j][k].index_fill_(0, th::arange(k), 0);                 // breaks
+                Xbts.select(0, k).narrow(0, 0, k).fill_(0);
+                zbts.select(0, k).narrow(0, 0, k).fill_(0);
+                anobt[j][k] = float(nobsadf - k - (p + 3));
             }
         }
+
+
     }
 
 }

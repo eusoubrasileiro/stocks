@@ -74,5 +74,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
 
+    m.def("thsadf", &thsadf, "supremum augmented dickey fuller test torch GPU");
+
     //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter
 }

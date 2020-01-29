@@ -95,7 +95,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         return 0;
     }
 
-    if (minw > maxw) {
+    if (minw > maxw){
         if (verbose) std::cout << "error minw > maxw " << std::endl;
         return 0;
     }
@@ -104,8 +104,8 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     auto nobs = n-p-1; // data used for regression
     auto X = th::zeros({n-p-1, 3+p}, dtype_option);
     auto y = th::from_blob(signal, {n}, dtype_option);
-       
-    auto diffilter = th::tensor({-1, 1}, dtype_option).view({ 1, 1, 2 }); // first difference filter   
+
+    auto diffilter = th::tensor({-1, 1}, dtype_option).view({ 1, 1, 2 }); // first difference filter
 //    diffilter[0][0][0] = -1;
     auto dy = th::conv1d(y.view({ 1, 1, -1 }), diffilter).view({ -1 });
     y = y.view({ -1 });
@@ -124,7 +124,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         aX[i][1] = p + 1 + i; // deterministic trend
         aX[i][2] = ay[p+i];  // regression data(nobs)
     }
-    // fill in other columns, start at third 
+    // fill in other columns, start at third
     for (auto j = 0; j < nobs; j++)
         for (auto i = 1; i < p + 1; i++)
             aX[j][2 + i] = ady[p - i + j];
@@ -197,7 +197,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
             for (int k = 0; k < adfs_count; k++) { //each is smaller than previous
                 // Xbt[j, k, :k, :] = 0
                 // zbt[j, k, :k] = 0
-                // nobt[j][k] = float(nobsadf - k - (p + 3));                
+                // nobt[j][k] = float(nobsadf - k - (p + 3));
                 // sadf loop until minw, every matrix is smaller than the previous
                 // zeroing i lines, observations are becomming less also
                 Xbts.select(0, k).narrow(0, 0, k).fill_(0);
@@ -218,7 +218,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         auto s2 = (er*er).sum(1).squeeze().div(nobtc);
         auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2)*s2));
         sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(adfstats.view({ batch_size, adfs_count }).max(-1)));
-        
+
     }
     // last fraction of a batch (if exist)
     for (int j = 0; j < lst_batch_size; j++) { // assembly batch_size sadf'ts matrixes
@@ -254,7 +254,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         Bhat = Bhat.squeeze();
         auto s2 = (er * er).sum(1).squeeze().div(nobtc);
         auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2) * s2));
-        sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(adfstats.view({ lst_batch_size, adfs_count }).max(-1)));  
+        sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(adfstats.view({ lst_batch_size, adfs_count }).max(-1)));
     }
 
     sadf = sadf.to(deviceCPU);
@@ -263,4 +263,3 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
 
     return nsadft;
 }
-

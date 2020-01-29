@@ -1,5 +1,6 @@
 #define BUILDING_DLL
 #include "eincbands.h"
+#include <pytorchcpp.h>
 
 // I dont want to use a *.def file to export functions from a namespace
 // so I am not using namespaces {namespace eincbands}
@@ -867,6 +868,12 @@ double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string t
     return m_adfuller.statistic();
 }
 
-double pysetadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression) {
 
+py::array thsadf(py::array_t<float> data, int minw, int maxw, int p){
+    // make a copy to be able to use (non const)
+    std::vector<float> indata(data.data(), data.data() + data.size());
+    std::vector<float> out;
+    out.resize(indata.size() - maxw);
+    int ressize = sadf(indata.data(), out.data(), indata.size(), maxw, minw, p, 1.5, false);
+    return py::cast(out);
 }

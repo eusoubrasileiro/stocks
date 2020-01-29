@@ -81,7 +81,7 @@ DLL_EXPORT size_t BufferSize(); // size of all buffers
 DLL_EXPORT size_t BufferTotal(); // count of bars or all buffers data
 DLL_EXPORT size_t NewDataIdx(); // start index on all buffers of new bars after CppOnTicks & NewData == true
 DLL_EXPORT size_t ValidDataIdx(); // start index of valid data on all buffers (indicators) any time
-DLL_EXPORT int MinPrevBars(); // number of previous bars needed to form one X filled vector 
+DLL_EXPORT int MinPrevBars(); // number of previous bars needed to form one X filled vector
 
 DLL_EXPORT bool CppNewData(); // are there any new bars after call of OnTicks
 
@@ -109,7 +109,8 @@ double adfuller(std::vector<double> data, std::string lagmethod, std::string tre
 
 double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression);
 
-std::vector<double> sadfuller(std::vector<double> data, int minw, int maxw, std::string lagmethod="AIC");
+// Pytorch Cpp sadf in GPU
+py::array thsadf(py::array_t<float> data, int minw, int maxw, int p);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

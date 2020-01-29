@@ -103,6 +103,16 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     - send batchs of 1GB adfs tests to GPU until entire
     sadf is calculated, last batch might (should be smaller)
     """
+
+    if minw <= (2*p+4):
+        print("need more data for perform a OLS and calculate s2")
+        print("need minw > p+1+(p+3) => 2p+3+1 => 2p+4 : ", 2*p+4)
+        return
+
+    if minw > maxw:
+        print("error minw > maxw ")
+        return
+
     th.set_grad_enabled(False)
     n = indata.size
     nobs = n-p-1 # data used for regression
@@ -200,64 +210,61 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Xbt_.copy_(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)))
         zbt_.copy_(zbt.view(batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.view(batch_size*adfs_count))
-        # remove unsqueeze by 1 add on view
         #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-        Xt = Xbt_.transpose(dim0=1, dim1=-1)
-        Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
-        Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
+        Xt = Xbt_.transpose(1, -1)
+        Gi = Xt.bmm(Xbt_).inverse() # ( X^T . X ) ^-1
+        Bhat = Gi.bmm(Xt.bmm(zbt_))
         er = zbt_ - th.bmm(Xbt_, Bhat)
         Bhat = Bhat.squeeze()
-        s2 = (er*er).sum(1).squeeze()/nobt_
+        s2 = (er*er).sum(1).squeeze().div(nobt_)
         # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        adfstats = Bhat.select(-1, 2)/th.sqrt(s2*Gi.select(-2, 2).select(-1, 2))
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
 
         # adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
         #                      zbt.view(batch_size*adfs_count, nobsadf),
         #                      nobt.view(batch_size*adfs_count))
 
-        sadf[(t-batch_size):t] = th.max(adfstats.view(batch_size, adfs_count), -1)[0]
+        sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
 
     # last fraction of a batch
     for j in range(lst_batch_size): # assembly batch_size sadf'ts matrixes
-        Xm[:] = X[t:t+nobsadf] # master X for this sadft - biggest adf OLS X matrix
-        zm[:]  = z[t:t+nobsadf] # master Z for this sadft (biggest adf OLS independent term)
+        Xm.copy_(X.narrow(0, t, nobsadf)) # master X for this sadft - biggest adf OLS X matrix
+        zm.copy_(z.narrow(0, t, nobsadf)) # master Z for this sadft (biggest adf OLS independent term)
 
-        Xbt[j, :, :, :] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p))
-        zbt[j, :, :] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
+        Xbts = Xbt.select(0, j)
+        zbts = zbt.select(0, j)
+        nobts = nobt.select(0, j)
+        Xbts.copy_(Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p)))
+        zbts.copy_(zm.repeat(adfs_count, 1).view(adfs_count, nobsadf))
 
         # sadf loop until minw, every matrix is smaller than the previous
         # zeroing i lines, observations are becomming less also
         for k in range(adfs_count): # each is smaller than previous
-            Xbt[j, k, :k, :] = 0
-            zbt[j, k, :k] = 0
-            nobt[j, k] = float(nobsadf-k-(p+3))
+            Xbts.select(0, k).narrow(0, 0, k).fill_(0)
+            zbts.select(0, k).narrow(0, 0, k).fill_(0)
+            nobts.select(0, k).fill_(float(nobsadf-k-(p+3)))
 
         t = t + 1
-        # TO CUDA
-        Xbt_[:lst_batch_size*adfs_count] = Xbt[:lst_batch_size,:, :, :].view(
-                                     lst_batch_size*adfs_count, nobsadf, (3+p))[:]
-        zbt_[:lst_batch_size*adfs_count] = zbt[:lst_batch_size,:, :].view(
-                                     lst_batch_size*adfs_count, nobsadf, 1)[:]
-        nobt_[:lst_batch_size*adfs_count] = nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count)[:]
-        Xbt_ = Xbt_[:lst_batch_size*adfs_count]
-        zbt_ = zbt_[:lst_batch_size*adfs_count]
-        nobt_ = nobt_[:lst_batch_size*adfs_count]
-        Xt = Xbt_.transpose(dim0=1, dim1=-1)
-        Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
-        Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
-        er = zbt_ - th.bmm(Xbt_, Bhat)
-        Bhat = Bhat.squeeze()
-        s2 = (er*er).sum(1).squeeze()/nobt_
-        adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-
-    # adfstats = torch_bmadf(Xbt[:lst_batch_size,:, :, :].view(
-    #                             lst_batch_size*adfs_count, nobsadf, (3+p)),
-    #                      zbt[:lst_batch_size,:, :].view(
-    #                             lst_batch_size*adfs_count, nobsadf),
-    #                      nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count))
 
     if lst_batch_size > 0:
-        sadf[(t-lst_batch_size):t] = th.max(adfstats.view(lst_batch_size, adfs_count), -1)[0]
+        # TO CUDA
+        Xbt_ = Xbt_.narrow(0, 0, lst_batch_size*adfs_count)
+        zbt_ = zbt_.narrow(0, 0, lst_batch_size*adfs_count)
+        nobt_ = nobt_.narrow(0, 0, lst_batch_size*adfs_count)
+        Xbt_.copy_(Xbt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count, nobsadf, (3+p)))
+        zbt_.copy_(zbt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count, nobsadf, 1))
+        nobt_.copy_(nobt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count))
+
+        Xt = Xbt_.transpose(1, -1)
+        Gi = Xt.bmm(Xbt_).inverse() # ( X^T . X ) ^-1
+        Bhat = Gi.bmm(Xt.bmm(zbt_))
+        er = zbt_ - th.bmm(Xbt_, Bhat)
+        Bhat = Bhat.squeeze()
+        s2 = (er*er).sum(1).squeeze().div(nobt_)
+        # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
+
+        sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 
     return sadf.to('cpu').data.numpy()
 

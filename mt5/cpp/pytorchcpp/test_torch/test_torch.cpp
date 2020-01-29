@@ -62,14 +62,6 @@ void test_fracdif() {
 		printf(" %.5f", in[i]);
 }
 
-void test_torch() {
-    auto myints = th::zeros({ 7 });
-    auto myvector = th::ones({ 18 });
-
-    myvector.slice(0, 4, 7) = myints.slice(0, 0, 3);
-
-    std::cout << myvector << std::endl;
-}
 
 void test_sadf() {
     std::vector<float> data = { 56097., 55298., 56865., 56653., 57348., 57701., 57669., 58005.,
@@ -91,13 +83,16 @@ void test_sadf() {
        53805., 53837., 53109., 52652., 54355., 54693., 55780., 56077.,
        56379., 55394., 53706., 53569., 53421., 54331., 53402., 53909.,
        54583., 55347., 54195., 53034., 52639., 52608. };
-    sadf(data.data(), data.size(), 10, 5, 3, 1.0, false);
+    std::vector<float> out;
+    int maxw = 15;
+    int minw = 12;
+    int p = 3;
+    out.resize(data.size() - maxw);
+    sadf(data.data(), out.data(), data.size(), maxw, minw, p, 1.0, false);
 
 }
 
 
-// Simple Cross-Correlation only valid samples using Pytorch-Cpp
-// that's what conv1d does
 int main() {
 	//test_fracdif();
     //test_torch();

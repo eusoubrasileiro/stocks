@@ -80,12 +80,26 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 // supremum augmented dickey fuller test SADF
 // expands backward many adfs for each point
 // using minw window size and maxw as maximum backward size
-void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, bool verbose=false){
+int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpumem_gb=2.0, bool verbose=false){
     th::NoGradGuard guard; // same as with torch.no_grad(): block
   // fastest version
   //     - assembly rows of OLS problem using entire input data
   //     - send batchs of 1GB adfs tests to GPU until entire
   //     sadf is calculated, last batch might (should be smaller)
+
+    if (minw <= (2 * p + 4)) {
+        if (verbose) {
+            std::cout << "need more data for perform a OLS and calculate s2" << std::endl;
+            std::cout << "need minw > p+1+(p+3) => 2p+3+1 => 2p+4 : " << 2 * p + 4 << std::endl;
+        }
+        return 0;
+    }
+
+    if (minw > maxw) {
+        if (verbose) std::cout << "error minw > maxw " << std::endl;
+        return 0;
+    }
+
     auto dtype_option = dtype32_option;
     auto nobs = n-p-1; // data used for regression
     auto X = th::zeros({n-p-1, 3+p}, dtype_option);
@@ -159,11 +173,11 @@ void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, 
 
     // CUDA (if existent) - same as above to batch operation
     auto Xbtc = th::zeros({ batch_size*adfs_count, nobsadf, (3 + p) }, dtype_option.device(device));
-    auto zbtc = th::zeros({ batch_size*adfs_count, nobsadf }, dtype_option.device(device));
+    auto zbtc = th::zeros({ batch_size*adfs_count, nobsadf, 1}, dtype_option.device(device));
     auto nobtc = th::zeros({ batch_size*adfs_count }, dtype_option.device(device));
 
-    // result (allways on CPU - faster)
-    auto sadf = th::zeros({ nsadft }, dtype_option.device(deviceCPU));
+    // result
+    auto sadf = th::zeros({ nsadft }, dtype_option.device(device));
 
     auto tline = 0; // start line for master main X OLS matrix/ z vector
     for (int i = 0; i < nbatchs; i++) {
@@ -174,96 +188,79 @@ void sadf(float *signal, int n, int maxw, int minw, int p, float gpumem_gb=2.0, 
 
             auto Xbts = Xbt.select(0, j);
             auto zbts = zbt.select(0, j);
-                                                     
+
             //Xbt[j, :, : , : ] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3 + p))
             //zbt[j, :, : ] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
             Xbts.copy_(Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) }));
             zbts.copy_(zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }));
 
             for (int k = 0; k < adfs_count; k++) { //each is smaller than previous
-                //                 Xbt[j, k, :k, :] = 0
-                //                 zbt[j, k, :k] = 0
-                //nobt[j][k] = float(nobsadf - k - (p + 3));                
+                // Xbt[j, k, :k, :] = 0
+                // zbt[j, k, :k] = 0
+                // nobt[j][k] = float(nobsadf - k - (p + 3));                
                 // sadf loop until minw, every matrix is smaller than the previous
                 // zeroing i lines, observations are becomming less also
                 Xbts.select(0, k).narrow(0, 0, k).fill_(0);
                 zbts.select(0, k).narrow(0, 0, k).fill_(0);
                 anobt[j][k] = float(nobsadf - k - (p + 3));
             }
+            tline++;
         }
 
+        Xbtc.copy_(Xbt.view({ batch_size * adfs_count, nobsadf, (3 + p)}));
+        zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }));
+        nobtc.copy_(nobt.view({batch_size * adfs_count}));
+        auto Xt = Xbtc.transpose(1, -1);
+        auto Gi = Xt.bmm(Xbtc).inverse(); // (X ^ T.X) ^ -1
+        auto Bhat = Gi.bmm(Xt.bmm(zbtc));
+        auto er = zbtc - Xbtc.bmm(Bhat);
+        Bhat = Bhat.squeeze();
+        auto s2 = (er*er).sum(1).squeeze().div(nobtc);
+        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2)*s2));
+        sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(adfstats.view({ batch_size, adfs_count }).max(-1)));
+        
+    }
+    // last fraction of a batch (if exist)
+    for (int j = 0; j < lst_batch_size; j++) { // assembly batch_size sadf'ts matrixes
+        Xm.copy_(X.narrow(0, tline, nobsadf)); //  master X for this sadft - biggest adf OLS X matrix
+        zm.copy_(z.narrow(0, tline, nobsadf)); // master Z for this sadft (biggest adf OLS independent term)
 
+        auto Xbts = Xbt.select(0, j);
+        auto zbts = zbt.select(0, j);
+
+        Xbts.copy_(Xm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf, (3 + p) }));
+        zbts.copy_(zm.repeat({ adfs_count, 1 }).view({ adfs_count, nobsadf }));
+
+        for (int k = 0; k < adfs_count; k++) { //each is smaller than previous
+            Xbts.select(0, k).narrow(0, 0, k).fill_(0);
+            zbts.select(0, k).narrow(0, 0, k).fill_(0);
+            anobt[j][k] = float(nobsadf - k - (p + 3));
+        }
+        tline++;
     }
 
+    if (lst_batch_size > 0) {
+        //TO CUDA
+        Xbtc = Xbtc.narrow(0, 0, lst_batch_size * adfs_count);
+        zbtc = zbtc.narrow(0, 0, lst_batch_size * adfs_count);
+        nobtc = nobtc.narrow(0, 0, lst_batch_size * adfs_count);
+        Xbtc.copy_(Xbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, (3 + p) }));
+        zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }));
+        nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }));
+        auto Xt = Xbtc.transpose(1, -1);
+        auto Gi = Xt.bmm(Xbtc).inverse(); // (X ^ T.X) ^ -1
+        auto Bhat = Gi.bmm(Xt.bmm(zbtc));
+        auto er = zbtc - Xbtc.bmm(Bhat);
+        Bhat = Bhat.squeeze();
+        auto s2 = (er * er).sum(1).squeeze().div(nobtc);
+        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2) * s2));
+        sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(adfstats.view({ lst_batch_size, adfs_count }).max(-1)));  
+    }
+
+    sadf = sadf.to(deviceCPU);
+
+    memcpy(out, sadf.data_ptr<float>(), sizeof(float)*nsadft);
+
+    return nsadft;
 }
 
-//             # sadf loop until minw, every matrix is smaller than the previous
-//             # zeroing i lines, observations are becomming less also
-//             for k in range(adfs_count): # each is smaller than previous
-//                 Xbt[j, k, :k, :] = 0
-//                 zbt[j, k, :k] = 0
-//                 nobt[j, k] = float(nobsadf-k-(p+3))
-//
-//             t = t + 1
-//         # TO CUDA
-//         Xbt_[:] = Xbt.view(batch_size*adfs_count, nobsadf, (3+p))[:]
-//         zbt_[:] = zbt.view(batch_size*adfs_count, nobsadf, 1)[:]
-//         nobt_[:] = nobt.view(batch_size*adfs_count)[:]
-//         # remove unsqueeze by 1 add on view
-//         #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-//         Xt = Xbt_.transpose(dim0=1, dim1=-1)
-//         Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
-//         Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
-//         er = zbt_ - th.bmm(Xbt_, Bhat)
-//         Bhat = Bhat.squeeze()
-//         s2 = (er*er).sum(1).squeeze()/nobt_
-//         adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-//
-//         # adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
-//         #                      zbt.view(batch_size*adfs_count, nobsadf),
-//         #                      nobt.view(batch_size*adfs_count))
-//
-//         sadf[(t-batch_size):t] = th.max(adfstats.view(batch_size, adfs_count), -1)[0]
-//
-//     # last fraction of a batch
-//     for j in range(lst_batch_size): # assembly batch_size sadf'ts matrixes
-//         Xm[:] = X[t:t+nobsadf] # master X for this sadft - biggest adf OLS X matrix
-//         zm[:]  = z[t:t+nobsadf] # master Z for this sadft (biggest adf OLS independent term)
-//
-//         Xbt[j, :, :, :] = Xm.repeat(adfs_count, 1).view(adfs_count, nobsadf, (3+p))
-//         zbt[j, :, :] = zm.repeat(adfs_count, 1).view(adfs_count, nobsadf)
-//
-//         # sadf loop until minw, every matrix is smaller than the previous
-//         # zeroing i lines, observations are becomming less also
-//         for k in range(adfs_count): # each is smaller than previous
-//             Xbt[j, k, :k, :] = 0
-//             zbt[j, k, :k] = 0
-//             nobt[j, k] = float(nobsadf-k-(p+3))
-//
-//         t = t + 1
-//         # TO CUDA
-//         Xbt_[:lst_batch_size*adfs_count] = Xbt[:lst_batch_size,:, :, :].view(
-//                                      lst_batch_size*adfs_count, nobsadf, (3+p))[:]
-//         zbt_[:lst_batch_size*adfs_count] = zbt[:lst_batch_size,:, :].view(
-//                                      lst_batch_size*adfs_count, nobsadf, 1)[:]
-//         nobt_[:lst_batch_size*adfs_count] = nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count)[:]
-//         Xbt_ = Xbt_[:lst_batch_size*adfs_count]
-//         zbt_ = zbt_[:lst_batch_size*adfs_count]
-//         nobt_ = nobt_[:lst_batch_size*adfs_count]
-//         Xt = Xbt_.transpose(dim0=1, dim1=-1)
-//         Gi = th.inverse(th.bmm(Xt, Xbt_)) # ( X^T . X ) ^-1
-//         Bhat = th.bmm(Gi, th.bmm(Xt, zbt_))
-//         er = zbt_ - th.bmm(Xbt_, Bhat)
-//         Bhat = Bhat.squeeze()
-//         s2 = (er*er).sum(1).squeeze()/nobt_
-//         adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-//
-//     # adfstats = torch_bmadf(Xbt[:lst_batch_size,:, :, :].view(
-//     #                             lst_batch_size*adfs_count, nobsadf, (3+p)),
-//     #                      zbt[:lst_batch_size,:, :].view(
-//     #                             lst_batch_size*adfs_count, nobsadf),
-//     #                      nobt[:lst_batch_size,:].view(lst_batch_size*adfs_count))
-//
-//     sadf[(t-lst_batch_size):t] = th.max(adfstats.view(lst_batch_size, adfs_count), -1)[0]
-//
-//     return sadf.to('cpu').data.numpy()

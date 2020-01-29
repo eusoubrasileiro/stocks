@@ -11,7 +11,7 @@ auto dtype64_option = th::TensorOptions().dtype(th::kFloat64).requires_grad(fals
 
 th::Tensor thfdcoefs;
 th::Device deviceCPU = th::Device(th::kCPU);
-th::Device device = deviceCPU;
+th::Device deviceifGPU = deviceCPU;
 
 // calculate the fractdif coeficients to be used next
 // $$ \omega_{k} = -\omega_{k-1}\frac{d-k+1}{k} $$
@@ -25,7 +25,7 @@ void setFracDifCoefs(double d, int size){
     std::reverse(w, w+size);
     thfdcoefs = th::from_blob(w, {1, 1, size}, dtype64_option);
 	// to GPU or not
-    thfdcoefs.to(device);
+    thfdcoefs.to(deviceifGPU);
 }
 
 // apply fracdif filter on signal array
@@ -34,7 +34,7 @@ void setFracDifCoefs(double d, int size){
 int FracDifApply(double signal[], int size, double output[]){
   th::Tensor thdata = th::from_blob(signal, { 1, 1, size}, dtype64_option).clone();
   // to GPU or not
-  thdata.to(device);
+  thdata.to(deviceifGPU);
   th::Tensor thresult = th::conv1d(thdata, thfdcoefs).reshape({ -1 });
   // back to CPU
   thresult = thresult.to(deviceCPU);
@@ -59,7 +59,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         case DLL_PROCESS_ATTACH:
             if (th::cuda::is_available()) {
               //std::cout << "CUDA is available! Running on GPU." << std::endl;
-              device = th::Device(th::kCUDA);
+              deviceifGPU = th::Device(th::kCUDA);
             }
             break;
         case DLL_PROCESS_DETACH:
@@ -102,22 +102,17 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
 
     auto dtype_option = dtype32_option;
     auto nobs = n-p-1; // data used for regression
-    auto X = th::zeros({n-p-1, 3+p}, dtype_option);
+    auto X = th::zeros({nobs, 3+p}, dtype_option);
     auto y = th::from_blob(signal, {n}, dtype_option);
 
     auto diffilter = th::tensor({-1, 1}, dtype_option).view({ 1, 1, 2 }); // first difference filter
-//    diffilter[0][0][0] = -1;
     auto dy = th::conv1d(y.view({ 1, 1, -1 }), diffilter).view({ -1 });
-    y = y.view({ -1 });
     auto z = dy.slice(0, p).clone();
-
-    //dtype_option.device(th::kCUDA);
-    //dtype_option.device(th::kCPU);
 
     // fill in first 3 columns, drit, trend, reg. data
     // acessors or tensor[i][j].item<int>()
     auto ay = y.accessor<float, 1>();
-    auto aX = X.accessor<float, 2>(); //index_fill(0, { 1 }, 1); // drift
+    auto aX = X.accessor<float, 2>(); // drift
     auto ady = dy.accessor<float, 1>();
     for (auto i = 0; i < nobs; i++) {
         aX[i][0] = 1; // drift term
@@ -126,16 +121,15 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     }
     // fill in other columns, start at third
     for (auto j = 0; j < nobs; j++)
-        for (auto i = 1; i < p + 1; i++)
+        for (auto i = 1; i < p + 1; i++) //X[:, 2+i] = dy[p-i:-i]
             aX[j][2 + i] = ady[p - i + j];
-            //X[:, 2+i] = dy[p-i:-i]
 
     // 1 sadf point requires at least GB (only matrix storage)
     auto adfs_count = maxw - minw; // number of adfs for one sadf t
     auto nadf = maxw; // data used is (maximum - first adf)
     auto nobsadf = nadf - p - 1; // number of observations (maximum - first adf)
     auto xsize = (nobsadf * (3 + p)) * 4; // 4 bytes float32
-    auto sadft_GB = float( xsize * adfs_count / GIGABytes); // storage for 1 sadf point
+    auto sadft_GB = float( xsize * adfs_count / GIGABytes); // matrix storage for 1 sadf point
     auto nsadft = n - maxw; // number of sadf t's to calculate the entire SADF
 
     auto batch_size = 1; // number of sadft points to calculate at once
@@ -172,12 +166,12 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     auto anobt = nobt.accessor<float, 2>();
 
     // CUDA (if existent) - same as above to batch operation
-    auto Xbtc = th::zeros({ batch_size*adfs_count, nobsadf, (3 + p) }, dtype_option.device(device));
-    auto zbtc = th::zeros({ batch_size*adfs_count, nobsadf, 1}, dtype_option.device(device));
-    auto nobtc = th::zeros({ batch_size*adfs_count }, dtype_option.device(device));
+    auto Xbtc = th::zeros({ batch_size*adfs_count, nobsadf, (3 + p) }, dtype_option.device(deviceifGPU));
+    auto zbtc = th::zeros({ batch_size*adfs_count, nobsadf, 1}, dtype_option.device(deviceifGPU));
+    auto nobtc = th::zeros({ batch_size*adfs_count }, dtype_option.device(deviceifGPU));
 
     // result
-    auto sadf = th::zeros({ nsadft }, dtype_option.device(device));
+    auto sadf = th::zeros({ nsadft }, dtype_option.device(deviceifGPU));
 
     auto tline = 0; // start line for master main X OLS matrix/ z vector
     for (int i = 0; i < nbatchs; i++) {

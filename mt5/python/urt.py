@@ -19,11 +19,11 @@ def torch_adf(data, p=30, verbose=False):
         batch = 1
         data = data.reshape(1, -1)
     nobs = n-p-1 # data used for regression
-    X = th.zeros((batch, n-p-1, 3+p), device=dev, dtype=th.float64)
+    X = th.zeros((batch, n-p-1, 3+p), device=dev, dtype=th.float32)
     if verbose:
         print(batch, p, n)
-    y = th.tensor(data, device=dev, dtype=th.float64)
-    diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float64).reshape(1, 1, 2)
+    y = th.tensor(data, device=dev, dtype=th.float32)
+    diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float32).reshape(1, 1, 2)
     y = y.reshape(batch, 1, -1)
     dy = th.conv1d(y, diffilter).reshape(batch, -1)
     y = y.reshape(batch, -1)
@@ -42,14 +42,16 @@ def torch_adf(data, p=30, verbose=False):
         plt.imshow(X[0].to('cpu').data.numpy(), aspect='auto', vmin=-0.05, vmax=0.05)
     Xt = X.transpose(dim0=1, dim1=-1)
     z = z.unsqueeze(2)
-    Gi = th.inverse(th.matmul(Xt, X)) # ( X^T . X ) ^-1
-    Bhat = th.matmul(Gi, th.matmul(Xt, z))
-    er = z - th.matmul(X, Bhat)
-    s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er)/(nobs-(p+3))
-    s2 = s2.view(-1)
+    L = th.cholesky(th.bmm(Xt, X))
+    Gi =  th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
+    Xtz = th.bmm(Xt, z)
+    Bhat = th.bmm(Gi, Xtz)
+    er = z - th.bmm(X, Bhat)
+    s2 = (th.matmul(er.transpose(dim0=1, dim1=-1), er)/(nobs-(p+3))).view(-1)
     Bhat = Bhat.squeeze(2)
     tstat = Bhat[:, 2]/th.sqrt(s2*Gi[:,2,2])
-    return tstat.to('cpu').data.numpy()
+    #print(nobs-(p+3))
+    return tstat.item(), Gi.sum().item()
 
 #using float32
 def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
@@ -83,18 +85,47 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     #sadf loop until minw, every matrix is smaller than the previous
     # zeroing i lines, observations are becomming less also
     batch_size = maxw-minw
-    Xbt = X.repeat(batch_size, 1).view(batch_size, X.shape[0], X.shape[1])
-    zbt = z.repeat(batch_size, 1).view(batch_size, X.shape[0])
-    nobt = th.zeros(batch_size, dtype=th.float32)
+    Xb = X.repeat(batch_size, 1).view(batch_size, X.shape[0], X.shape[1])
+    zb = z.repeat(batch_size, 1).view(batch_size, X.shape[0])
+    zbx = z.repeat(batch_size, 1).view(batch_size, X.shape[0])
+    nobsi = th.zeros(batch_size, dtype=th.float32)
+    #zeromask = th.ones(batch_size, nobs, dtype=th.float32)
     for i in range(batch_size): # each is smaller than previous
-        Xbt[i, :i, :] = 0
-        zbt[i, :i] = 0
-        nobt[i] = float(n-i-p-1-(p+3))
+        Xb[i, :i, :] = 0
+        zb[i, :i] = 0
+        nobsi[i] = n-(float(i)+2*p+4)
+        #zeromask[i, :i] = 0;
+    #print(nobsi)
 
-    # compute batch_size adf's
-    tstats = torch_bmadf(Xbt, zbt, nobt)
+    # """given the ADF test ordinary least squares problem with
+    # matrix, vector already assembled and number of observations
+    #     Xbt : batch of X matrixes
+    #     zbt : batch of z (independent vector)
+    #     nobt : number of observations for each test in batch
+    # compute the given batch ammount of augmented dickey fuller tests
+    # return test statistics torch array
+    # """
+    zb = zb.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
+    zbx = zbx.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
+    Xt = Xb.transpose(dim0=1, dim1=-1)
+    L = th.cholesky(th.bmm(Xt, Xb))
+    Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
+    # how to ignore i first lines  of bmm(Xt, zbt)
+    Xtz= th.bmm(Xt, zb)
+    Bhat = th.bmm(Gi, Xtz)
+    zhat = th.bmm(Xb, Bhat) #*zeromask.unsqueeze(-1)  # estimated z
+    print(zhat.shape, Bhat.shape, Gi.shape)
+    # need to zeroing zhat entries
+    # each lines must b
+    er = (zb - zhat) #*zeromask.unsqueeze(-1) # zeromask # hadamart product
+    Bhat = Bhat.squeeze()
+    s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobsi
+    tstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
+    #print(nobsi)
 
-    return th.max(tstats).item()
+    #return th.max(tstats).item()
+    return tstats.data.numpy(), Gi.sum(1).sum(1).data.numpy()
+
 
 def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         gpumem_GB=3.0, verbose=False):
@@ -116,16 +147,15 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     th.set_grad_enabled(False)
     n = indata.size
     nobs = n-p-1 # data used for regression
-    X = th.zeros((n-p-1, 3+p), device=dev, dtype=th.float32)
+    X = th.zeros((nobs, 3+p), device=dev, dtype=th.float32)
     if verbose:
         print(p, n)
     y = th.tensor(indata, device=dev, dtype=th.float32)
     diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float32).view(1, 1, 2)
-    y = y.view(1, 1, -1)
-    dy = th.conv1d(y, diffilter).view(-1)
+    dy = th.conv1d(y.view(1, 1, -1), diffilter).view(-1)
     y = y.view(-1)
     z = dy[p:].clone()
-    y.shape, y.shape, X.shape, z.shape
+
     if verbose:
         print(len(z), nobs, p, n, X.shape)
     # X matrix
@@ -142,7 +172,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     nadf = maxw # data used is (maximum - first adf)
     nobsadf = nadf-p-1 # number of observations (maximum - first adf)
     xsize = (nobsadf*(3+p))*4 # 4 bytes float32
-    sadft_GB = xsize*adfs_count/(1024**3) # storage for 1 sadf point
+    sadft_GB = xsize*adfs_count/(1024**3) # matrix storage for 1 sadf point
     nsadft = n-maxw # number of sadf t's to calculate the entire SADF
 
     batch_size = 1 # number of sadft points to calculate at once
@@ -212,7 +242,8 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         nobt_.copy_(nobt.view(batch_size*adfs_count))
         #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
         Xt = Xbt_.transpose(1, -1)
-        Gi = Xt.bmm(Xbt_).inverse() # ( X^T . X ) ^-1
+        L = th.cholesky(Xt.bmm(Xbt_))
+        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
         Bhat = Gi.bmm(Xt.bmm(zbt_))
         er = zbt_ - th.bmm(Xbt_, Bhat)
         Bhat = Bhat.squeeze()
@@ -256,7 +287,8 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         nobt_.copy_(nobt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count))
 
         Xt = Xbt_.transpose(1, -1)
-        Gi = Xt.bmm(Xbt_).inverse() # ( X^T . X ) ^-1
+        L = th.cholesky(Xt.bmm(Xbt_))
+        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
         Bhat = Gi.bmm(Xt.bmm(zbt_))
         er = zbt_ - th.bmm(Xbt_, Bhat)
         Bhat = Bhat.squeeze()
@@ -267,24 +299,3 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 
     return sadf.to('cpu').data.numpy()
-
-
-def torch_bmadf(Xbt, zbt, nobt):
-    """given the ADF test ordinary least squares problem with
-    matrix, vector already assembled and number of observations
-        Xbt : batch of X matrixes
-        zbt : batch of z (independent vector)
-        nobt : number of observations for each test in batch
-    compute the given batch ammount of augmented dickey fuller tests
-    return test statistics torch array
-    """
-    # compute batch_size adf's
-    zbt = zbt.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-    Xt = Xbt.transpose(dim0=1, dim1=-1)
-    Gi = th.inverse(th.bmm(Xt, Xbt)) # ( X^T . X ) ^-1
-    Bhat = th.bmm(Gi, th.bmm(Xt, zbt))
-    er = zbt - th.bmm(Xbt, Bhat)
-    Bhat = Bhat.squeeze()
-    s2 = (er*er).sum(1).squeeze()/nobt
-    tstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-    return tstats

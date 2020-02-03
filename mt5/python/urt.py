@@ -61,17 +61,11 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     n = indata.size
     nobs = n-p-1 # data used for regression
     X = th.zeros((n-p-1, 3+p), device=dev, dtype=th.float32)
-    if verbose:
-        print(p, n)
     y = th.tensor(indata, device=dev, dtype=th.float32)
+
     diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float32).view(1, 1, 2)
-    y = y.view(1, 1, -1)
-    dy = th.conv1d(y, diffilter).view(-1)
-    y = y.view(-1)
+    dy = th.conv1d(y.view(1, 1, -1), diffilter).view(-1)
     z = dy[p:].clone()
-    y.shape, y.shape, X.shape, z.shape
-    if verbose:
-        print(len(z), nobs, p, n, X.shape)
     # X matrix
     X[:, 0] = 1 # drift
     X[:, 1] = th.arange(p+1, n) # deterministic trend
@@ -79,15 +73,11 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     # fill in columns, max lagged serial correlations
     for i in range(1, p+1):
         X[:, 2+i] = dy[p-i:-i]
-    if verbose:
-        print(len(z), nobs, p, n, X.shape)
-
-    #sadf loop until minw, every matrix is smaller than the previous
+    # sadf loop until minw, every matrix is smaller than the previous
     # zeroing i lines, observations are becomming less also
     batch_size = maxw-minw
     Xb = X.repeat(batch_size, 1).view(batch_size, X.shape[0], X.shape[1])
-    zb = z.repeat(batch_size, 1).view(batch_size, X.shape[0])
-    zbx = z.repeat(batch_size, 1).view(batch_size, X.shape[0])
+    zb = z.repeat(batch_size, 1).view(batch_size, X.shape[0], 1) # additonal dim for matrix*vector mult.
     nobsi = th.zeros(batch_size, dtype=th.float32)
     #zeromask = th.ones(batch_size, nobs, dtype=th.float32)
     for i in range(batch_size): # each is smaller than previous
@@ -95,18 +85,15 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
         zb[i, :i] = 0
         nobsi[i] = n-(float(i)+2*p+4)
         #zeromask[i, :i] = 0;
-    #print(nobsi)
 
     # """given the ADF test ordinary least squares problem with
     # matrix, vector already assembled and number of observations
     #     Xbt : batch of X matrixes
     #     zbt : batch of z (independent vector)
-    #     nobt : number of observations for each test in batch
+    #     nobi : number of observations for each test in batch
     # compute the given batch ammount of augmented dickey fuller tests
     # return test statistics torch array
     # """
-    zb = zb.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-    zbx = zbx.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
     Xt = Xb.transpose(dim0=1, dim1=-1)
     L = th.cholesky(th.bmm(Xt, Xb))
     Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
@@ -114,16 +101,13 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     Xtz= th.bmm(Xt, zb)
     Bhat = th.bmm(Gi, Xtz)
     zhat = th.bmm(Xb, Bhat) #*zeromask.unsqueeze(-1)  # estimated z
-    print(zhat.shape, Bhat.shape, Gi.shape)
     # need to zeroing zhat entries
     # each lines must b
     er = (zb - zhat) #*zeromask.unsqueeze(-1) # zeromask # hadamart product
     Bhat = Bhat.squeeze()
     s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobsi
     tstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-    #print(nobsi)
 
-    #return th.max(tstats).item()
     return tstats.data.numpy(), Gi.sum(1).sum(1).data.numpy()
 
 

@@ -23,7 +23,7 @@ extern "C" // removes decoration of functions __stdcall would mess up but in x64
 {
     DLL_EXPORT int  __stdcall FracDifApply(double signal[], int size, double output[]);
     DLL_EXPORT void __stdcall setFracDifCoefs(double d, int size);
-    DLL_EXPORT int sadf(float* signal, float *out, int n, int maxw, int minw, int p, float gpumem_gb, bool verbose);
+    DLL_EXPORT int sadf(float* signal, float *out, int n, int maxw, int p, float gpumem_gb, bool verbose);
 }
 
 #endif //PYTORCHCPP_EXPORTS_H

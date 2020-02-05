@@ -74,11 +74,10 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
 
-
-    // thsadf(py::array_t<float> data, int minw, int maxw, int p, bool verbose)
+    //thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose)
     m.def("thsadf", &thsadf, "supremum augmented dickey fuller test torch GPU",
-        py::arg("data"), py::arg("minw"), py::arg("maxw"),
-        py::arg("p"), py::arg("verbose"));
+        py::arg("data"), py::arg("maxw"),
+        py::arg("p"), py::arg("gpumem_gb"), py::arg("verbose"));
 
     //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter
 }

@@ -80,20 +80,14 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 // supremum augmented dickey fuller test SADF
 // expands backward many adfs for each point
 // using minw window size and maxw as maximum backward size
-int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpumem_gb=2.0, bool verbose=false){
+int sadf(float *signal, float *out, int n, int maxw, int p, float gpumem_gb=2.0, bool verbose=false){
     th::NoGradGuard guard; // same as with torch.no_grad(): block
   // fastest version
   //     - assembly rows of OLS problem using entire input data
   //     - send batchs of 1GB adfs tests to GPU until entire
   //     sadf is calculated, last batch might (should be smaller)
 
-    if (minw <= (2 * p + 4)) {
-        if (verbose) {
-            std::cout << "need more data for perform a OLS and calculate s2" << std::endl;
-            std::cout << "need minw > p+1+(p+3) => 2p+3+1 => 2p+4 : " << 2 * p + 4 << std::endl;
-        }
-        return 0;
-    }
+    int minw = (2*p + 4)*1.5; // to avoid many problems of bad conditionning of OLS matrix
 
     if (minw > maxw){
         if (verbose) std::cout << "error minw > maxw " << std::endl;
@@ -205,7 +199,8 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }));
         nobtc.copy_(nobt.view({batch_size * adfs_count}));
         auto Xt = Xbtc.transpose(1, -1);
-        auto Gi = Xt.bmm(Xbtc).inverse(); // (X ^ T.X) ^ -1
+        auto Lower = th::cholesky(Xt.bmm(Xbtc));
+        auto Gi = th::cholesky_solve(th::eye(p+3, dtype_option.device(deviceifGPU)), Lower); // (X ^ T.X) ^ -1
         auto Bhat = Gi.bmm(Xt.bmm(zbtc));
         auto er = zbtc - Xbtc.bmm(Bhat);
         Bhat = Bhat.squeeze();
@@ -242,7 +237,8 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }));
         nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }));
         auto Xt = Xbtc.transpose(1, -1);
-        auto Gi = Xt.bmm(Xbtc).inverse(); // (X ^ T.X) ^ -1
+        auto Lower = th::cholesky(Xt.bmm(Xbtc));
+        auto Gi = th::cholesky_solve(th::eye(p+3, dtype_option.device(deviceifGPU)), Lower); // (X ^ T.X) ^ -1
         auto Bhat = Gi.bmm(Xt.bmm(zbtc));
         auto er = zbtc - Xbtc.bmm(Bhat);
         Bhat = Bhat.squeeze();

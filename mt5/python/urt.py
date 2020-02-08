@@ -111,7 +111,7 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     return tstats.data.numpy(), Gi.sum(1).sum(1).data.numpy()
 
 
-def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
+def torch_sadf(indata, maxw, minw, p=30, pcrlimit=0.1, dev=th.device('cpu'),
         gpumem_GB=3.0, verbose=False):
     """fastest version
     - assembly rows of OLS problem using entire input data
@@ -224,16 +224,24 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Xbt_.copy_(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)))
         zbt_.copy_(zbt.view(batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.view(batch_size*adfs_count))
-        #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-        Xt = Xbt_.transpose(1, -1)
-        L = th.cholesky(Xt.bmm(Xbt_))
-        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
-        Bhat = Gi.bmm(Xt.bmm(zbt_))
-        er = zbt_ - th.bmm(Xbt_, Bhat)
+        # principal component regression PCR
+        U, S, V = th.svd(Xbt_)
+        # zero eigenvalues smaller than threshold (pcrlimit)
+        # S*S are the principal values
+        Sk = th.where(S <= th.tensor(pcrlimit, device=dev), th.tensor(0.0, device=dev), th.tensor(1.0, device=dev))
+        V = Sk.repeat(1, X.shape[1]).view(V.shape)*V # choose only the first, V_k
+        W = th.bmm(Xbt_, V)
+        Wt = W.transpose(1, -1)
+        WtWi = th.diag_embed(1/(S*S)) 
+        VWtWi = V.bmm(WtWi)
+        Bhat = VWtWi.bmm(Wt.bmm(zbt_))
+        Q = VWtWi.bmm(V.transpose(1,-1))
+        er = zbt_ - Xbt_.bmm(Bhat)
         Bhat = Bhat.squeeze()
         s2 = (er*er).sum(1).squeeze().div(nobt_)
+        #tstats = Bhat[:, 2]/th.sqrt(s2*Q[:, 2,2])
         # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Q.select(-2, 2).select(-1, 2)))
 
         # adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
         #                      zbt.view(batch_size*adfs_count, nobsadf),
@@ -270,16 +278,25 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         zbt_.copy_(zbt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count))
 
-        Xt = Xbt_.transpose(1, -1)
-        L = th.cholesky(Xt.bmm(Xbt_))
-        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
-        Bhat = Gi.bmm(Xt.bmm(zbt_))
-        er = zbt_ - th.bmm(Xbt_, Bhat)
+        # principal component regression PCR
+        U, S, V = th.svd(Xbt_)
+        # zero eigenvalues smaller than threshold (pcrlimit)
+        # S*S are the principal values
+        Sk = th.where(S <= th.tensor(pcrlimit, device=dev), th.tensor(0.0, device=dev), th.tensor(1.0, device=dev))
+        V = Sk.repeat(1, X.shape[1]).view(V.shape)*V # choose only the first, V_k
+        W = th.bmm(Xbt_, V)
+        Wt = W.transpose(1, -1)
+        WtWi = th.diag_embed(1/(S*S)) 
+        VWtWi = V.bmm(WtWi)
+        Bhat = VWtWi.bmm(Wt.bmm(zbt_))
+        Q = VWtWi.bmm(V.transpose(1,-1))
+        er = zbt_ - Xbt_.bmm(Bhat)
         Bhat = Bhat.squeeze()
         s2 = (er*er).sum(1).squeeze().div(nobt_)
+        #tstats = Bhat[:, 2]/th.sqrt(s2*Q[:, 2,2])
         # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
-
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Q.select(-2, 2).select(-1, 2)))
+        
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 
     return sadf.to('cpu').data.numpy()

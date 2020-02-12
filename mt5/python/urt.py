@@ -224,20 +224,29 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Xbt_.copy_(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)))
         zbt_.copy_(zbt.view(batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.view(batch_size*adfs_count))
-        #zbt_ = zbt_.unsqueeze(dim=-1) # additonal dim for matrix*vector mult.
-        Xt = Xbt_.transpose(1, -1)
-        L = th.cholesky(Xt.bmm(Xbt_))
-        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
-        Bhat = Gi.bmm(Xt.bmm(zbt_))
-        er = zbt_ - th.bmm(Xbt_, Bhat)
-        Bhat = Bhat.squeeze()
-        s2 = (er*er).sum(1).squeeze().div(nobt_)
-        # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
 
-        # adfstats = torch_bmadf(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)),
-        #                      zbt.view(batch_size*adfs_count, nobsadf),
-        #                      nobt.view(batch_size*adfs_count))
+        ej = th.zeros(p+3)
+        ej[2] = 1
+        ej = ej.repeat(batch_size*adfs_count).view(batch_size*adfs_count, -1, 1)
+        Q, R = th.qr(Xbt_, some=True)
+        qtz = th.bmm(Q.transpose(1, -1), zbt_)
+        Bhat, _ = th.triangular_solve(qtz, R, upper=True)
+        er = (zbt_ - Xbt_.bmm(Bhat))
+        y, _ = th.triangular_solve(ej, R.transpose(1,-1), upper=False)
+        d = th.bmm(y.transpose(1, -1),y).sum(-1).view(-1)
+        Bhat = Bhat.squeeze()
+        s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobt_
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
+        #tstats = Bhat[:, 2]/th.sqrt(s2*d)
+
+        #Xt = Xbt_.transpose(1, -1)
+        #L = th.cholesky(Xt.bmm(Xbt_))
+        # = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
+        #Bhat = Gi.bmm(Xt.bmm(zbt_))
+        #er = zbt_ - th.bmm(Xbt_, Bhat)
+        #Bhat = Bhat.squeeze()
+        #s2 = (er*er).sum(1).squeeze().div(nobt_)
+        #adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
 
         sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
 
@@ -270,15 +279,18 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         zbt_.copy_(zbt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count))
 
-        Xt = Xbt_.transpose(1, -1)
-        L = th.cholesky(Xt.bmm(Xbt_))
-        Gi = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
-        Bhat = Gi.bmm(Xt.bmm(zbt_))
-        er = zbt_ - th.bmm(Xbt_, Bhat)
+        ej = th.zeros(p+3)
+        ej[2] = 1
+        ej = ej.repeat(lst_batch_size*adfs_count).view(lst_batch_size*adfs_count, -1, 1)
+        Q, R = th.qr(Xbt_, some=True)
+        qtz = th.bmm(Q.transpose(1, -1), zbt_)
+        Bhat, _ = th.triangular_solve(qtz, R, upper=True)
+        er = (zbt_ - Xbt_.bmm(Bhat))
+        y, _ = th.triangular_solve(ej, R.transpose(1,-1), upper=False)
+        d = th.bmm(y.transpose(1, -1),y).sum(-1).view(-1)
         Bhat = Bhat.squeeze()
-        s2 = (er*er).sum(1).squeeze().div(nobt_)
-        # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
+        s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobt_
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
 
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 

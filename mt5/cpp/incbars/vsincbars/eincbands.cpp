@@ -869,11 +869,11 @@ double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string t
 }
 
 
-py::array thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose){
+py::array thsadf(py::array_t<float> data, int maxw, int minw, int p, float gpumem_gb, bool verbose){
     // make a copy to be able to use (non const)
     std::vector<float> indata(data.data(), data.data() + data.size());
     std::vector<float> out;
     out.resize(indata.size() - maxw);
-    int ressize = sadf(indata.data(), out.data(), indata.size(), maxw, p, gpumem_gb, verbose);
+    int ressize = sadf(indata.data(), out.data(), indata.size(), maxw, minw, p, gpumem_gb, verbose);
     return py::cast(out);
 }

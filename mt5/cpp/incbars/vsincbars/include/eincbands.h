@@ -110,7 +110,7 @@ double adfuller(std::vector<double> data, std::string lagmethod, std::string tre
 double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression);
 
 // Pytorch Cpp sadf in GPU
-py::array thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose);
+py::array thsadf(py::array_t<float> data, int maxw, int minw, int p, float gpumem_gb, bool verbose=false);
 
 py::array_t<MoneyBar> pyGetMoneyBars();
 

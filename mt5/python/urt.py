@@ -262,7 +262,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = Bhat.squeeze()
         s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
         adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
-        adfstats[th.isnan(adfstats)] = 1.17e-38 # in case something wrong like colinearity
+        adfstats[th.isnan(adfstats)] = -1.17e-38 # in case something wrong like colinearity
 
         sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
 
@@ -316,7 +316,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = Bhat.squeeze()
         s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
         adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
-        adfstats[th.isnan(adfstats)] = 1.17e-38 # in case something wrong like colinearity
+        adfstats[th.isnan(adfstats)] = -1.17e-38 # in case something wrong like colinearity
 
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 

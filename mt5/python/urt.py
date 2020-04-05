@@ -5,6 +5,21 @@ import torch as th
 from matplotlib import pyplot as plt
 import util
 
+# Batched Cholesky decomp nograd_cholesky
+def cholesky(A):
+    L = th.zeros_like(A)
+
+    for i in range(A.shape[-1]):
+        for j in range(i+1):
+            s = 0.0
+            for k in range(j):
+                s = s + L[...,i,k] * L[...,j,k]
+
+            L[...,i,j] = th.sqrt(A[...,i,i] - s) if (i == j) else \
+                      (1.0 / L[...,j,j] * (A[...,i,j] - s))
+    return L
+
+
 def torch_adf(data, p=30, verbose=False):
     """batched version usefull for data of equal size
     could be usefull for SADF if batchs are created for equal sub-data size
@@ -111,7 +126,7 @@ def torch_sadft(indata, maxw, minw, p=30, dev=th.device('cpu'),verbose=False):
     return tstats.data.numpy(), Gi.sum(1).sum(1).data.numpy()
 
 
-def torch_sadf(indata, maxw, minw, p=30, pcrlimit=0.1, dev=th.device('cpu'),
+def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         gpumem_GB=3.0, verbose=False):
     """fastest version
     - assembly rows of OLS problem using entire input data
@@ -223,34 +238,33 @@ def torch_sadf(indata, maxw, minw, p=30, pcrlimit=0.1, dev=th.device('cpu'),
 
             t = t + 1
         # TO CUDA
-        #print('gpu start')
         Xbt_.copy_(Xbt.view(batch_size*adfs_count, nobsadf, (3+p)))
         zbt_.copy_(zbt.view(batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.view(batch_size*adfs_count))
-        print('gpu compute')
-        Q, R = Xbt_.qr()
-        print('gpu QR final')
-        qtz = th.bmm(Q.transpose(1, -1), zbt_)
-        Bhat, _ = th.triangular_solve(qtz, R, upper=True)
-        er = (zbt_ - Xbt_.bmm(Bhat))
-        y, _ = th.triangular_solve(ejc, R.transpose(1,-1), upper=False)
-        d = th.bmm(y.transpose(1, -1),y).sum(-1).view(-1)
-        Bhat = Bhat.squeeze()
-        s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobt_
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
-        #tstats = Bhat[:, 2]/th.sqrt(s2*d)
 
-        #Xt = Xbt_.transpose(1, -1)
-        #L = th.cholesky(Xt.bmm(Xbt_))
-        # = th.cholesky_solve(th.eye(p+3), L) # ( X^T . X ) ^-1
-        #Bhat = Gi.bmm(Xt.bmm(zbt_))
-        #er = zbt_ - th.bmm(Xbt_, Bhat)
-        #Bhat = Bhat.squeeze()
-        #s2 = (er*er).sum(1).squeeze().div(nobt_)
-        #adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi.select(-2, 2).select(-1, 2)))
+        #L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        # xtz = th.bmm(Xbt_.transpose(1, -1), zbt_)
+        # Bhat = th.cholesky_solve(xtz, L)
+        # er = (zbt_ - Xbt_.bmm(Bhat))
+        # y = th.cholesky_solve(ejc, L)
+        # d = th.bmm(y.transpose(1, -1),y).sum(-1).view(-1)
+        # Bhat = Bhat.squeeze()
+        # s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
+        # adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
+
+        # L = th.cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
+        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        Gi =  th.cholesky_solve(th.eye(p+3, device=dev), L) # ( X^T . X ) ^-1
+        xtz = th.bmm(Xbt_.transpose(1, -1), zbt_)
+        Bhat = th.cholesky_solve(xtz, L)
+        er = zbt_ - th.bmm(Xbt_, Bhat)
+        Bhat = Bhat.squeeze()
+        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
+        adfstats[th.isnan(adfstats)] = 1.17e-38 # in case something wrong like colinearity
 
         sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
-        print('gpu end')
 
     # last fraction of a batch
     for j in range(lst_batch_size): # assembly batch_size sadf'ts matrixes
@@ -282,34 +296,27 @@ def torch_sadf(indata, maxw, minw, p=30, pcrlimit=0.1, dev=th.device('cpu'),
         zbt_.copy_(zbt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count, nobsadf, 1))
         nobt_.copy_(nobt.narrow(0, 0, lst_batch_size).view(lst_batch_size*adfs_count))
 
-        Q, R = th.qr(Xbt_, some=True)
-        qtz = th.bmm(Q.transpose(1, -1), zbt_)
-        Bhat, _ = th.triangular_solve(qtz, R, upper=True)
-        er = (zbt_ - Xbt_.bmm(Bhat))
-        y, _ = th.triangular_solve(ejc, R.transpose(1,-1), upper=False)
-        d = th.bmm(y.transpose(1, -1), y).sum(-1).view(-1)
-        Bhat = Bhat.squeeze()
-        s2 = th.matmul(er.transpose(dim0=1, dim1=-1), er).view(-1)/nobt_
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
-
-        # # principal component regression PCR
-        # U, S, V = th.svd(Xbt_)
-        # # zero eigenvalues smaller than threshold (pcrlimit)
-        # # S*S are the principal values
-        # Sk = th.where(S <= th.tensor(pcrlimit, device=dev), th.tensor(0.0, device=dev), th.tensor(1.0, device=dev))
-        # V = Sk.repeat(1, X.shape[1]).view(V.shape)*V # choose only the first, V_k
-        # W = th.bmm(Xbt_, V)
-        # Wt = W.transpose(1, -1)
-        # WtWi = th.diag_embed(1/(S*S))
-        # VWtWi = V.bmm(WtWi)
-        # Bhat = VWtWi.bmm(Wt.bmm(zbt_))
-        # Q = VWtWi.bmm(V.transpose(1,-1))
-        # er = zbt_ - Xbt_.bmm(Bhat)
+        # L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        # xtz = th.bmm(Xbt_.transpose(1, -1), zbt_)
+        # Bhat = th.cholesky_solve(xtz, L)
+        # er = (zbt_ - Xbt_.bmm(Bhat))
+        # y = th.cholesky_solve(ejc, L.transpose(1,-1), upper=True)
+        # d = th.bmm(y.transpose(1, -1),y).sum(-1).view(-1)
         # Bhat = Bhat.squeeze()
-        # s2 = (er*er).sum(1).squeeze().div(nobt_)
-        # #tstats = Bhat[:, 2]/th.sqrt(s2*Q[:, 2,2])
-        # # adfstats = Bhat[:, 2]/th.sqrt(s2*Gi[:, 2,2])
-        # adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Q.select(-2, 2).select(-1, 2)))
+        # s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
+        # adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*d))
+
+        # L = th.cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
+        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        Gi =  th.cholesky_solve(th.eye(p+3, device=dev), L) # ( X^T . X ) ^-1
+        Xtz = Xbt_.transpose(1, -1).bmm(zbt_)
+        Bhat = th.bmm(Gi, Xtz)
+        er = zbt_ - th.bmm(Xbt_, Bhat)
+        Bhat = Bhat.squeeze()
+        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
+        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
+        adfstats[th.isnan(adfstats)] = 1.17e-38 # in case something wrong like colinearity
 
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 

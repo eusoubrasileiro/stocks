@@ -72,7 +72,7 @@ PYBIND11_MODULE(incbars, m) {
 
     m.def("minbarsxvector", &MinPrevBars, "number of previous bars needed to form one X vector");
 
-    m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
+   // m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
 
     //thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose)
     m.def("thsadf", &thsadf, "supremum augmented dickey fuller test torch GPU",

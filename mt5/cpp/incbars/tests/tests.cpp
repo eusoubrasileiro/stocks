@@ -4,9 +4,12 @@
 // Since I just want to test the code
 // and I dont want to put all code in the export table of the main dll
 // I pass to the linker
-// 1. ctindicators.obj
-// 2. csindicators.obj
-// 3. buffers.obj
+//$(SolutionDir)\$(Platform)\csindicators.obj
+//$(SolutionDir)\$(Platform)\ctindicators.obj
+//$(SolutionDir)\$(Platform)\buffers.obj
+//$(SolutionDir)\$(Platform)\ticks.obj
+//$(SolutionDir)\$(Platform)\stdafx.obj
+//$(SolutionDir)\$(Platform)\callpython.obj
 // 4. pytorchcpp.lib - dlls required
 // 5. ctalib.lib - dll required
 

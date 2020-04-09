@@ -103,7 +103,7 @@
       <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;USE_ARMA;USE_ARMA</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\armadillo-code-9.600.x\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CallingConvention>
       </CallingConvention>
@@ -119,8 +119,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\OpenBLAS-0.3.6-x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;libopenblas.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(UserProfile)\Anaconda3\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ForceFileOutput>
       </ForceFileOutput>
       <OutputFile>$(ProjectName).dll</OutputFile>
@@ -148,7 +148,7 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <ConformanceMode>
       </ConformanceMode>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\armadillo-code-9.600.x\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CallingConvention>
       </CallingConvention>
@@ -185,8 +185,8 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       </GenerateDebugInformation>
       <EnableUAC>
       </EnableUAC>
-      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\OpenBLAS-0.3.6-x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;libopenblas.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(UserProfile)\Anaconda3\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ForceFileOutput>
       </ForceFileOutput>
       <OutputFile>$(ProjectName).dll</OutputFile>
@@ -231,7 +231,7 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <ConformanceMode>
       </ConformanceMode>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\armadillo-code-9.600.x\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\pybind11-master\include;$(SolutionDir)\include;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\boost_1_71_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <CallingConvention>
       </CallingConvention>
@@ -279,8 +279,8 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       </GenerateDebugInformation>
       <EnableUAC>
       </EnableUAC>
-      <AdditionalLibraryDirectories>$(UserProfile)\AppData\Local\Programs\Python\Python37\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\OpenBLAS-0.3.6-x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;libopenblas.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(UserProfile)\Anaconda3\libs;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37.lib;pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ForceFileOutput>
       </ForceFileOutput>
       <OutputFile>$(ProjectName).dll</OutputFile>
@@ -340,19 +340,6 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     <ClInclude Include="include\ticks.h" />
     <ClInclude Include="include\xypair.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="urt\include\ADF.hpp" />
-    <ClInclude Include="urt\include\Coeff_adf.hpp" />
-    <ClInclude Include="urt\include\Coeff_dfgls.hpp" />
-    <ClInclude Include="urt\include\Coeff_kpss.hpp" />
-    <ClInclude Include="urt\include\Coeff_pp.hpp" />
-    <ClInclude Include="urt\include\CsvManager.hpp" />
-    <ClInclude Include="urt\include\DFGLS.hpp" />
-    <ClInclude Include="urt\include\KPSS.hpp" />
-    <ClInclude Include="urt\include\OLS.hpp" />
-    <ClInclude Include="urt\include\PP.hpp" />
-    <ClInclude Include="urt\include\Tools.hpp" />
-    <ClInclude Include="urt\include\UnitRoot.hpp" />
-    <ClInclude Include="urt\include\URT.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buffers.cpp">
@@ -379,12 +366,6 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="urt\src\ADF.cpp" />
-    <ClCompile Include="urt\src\DFGLS.cpp" />
-    <ClCompile Include="urt\src\KPSS.cpp" />
-    <ClCompile Include="urt\src\OLS.cpp" />
-    <ClCompile Include="urt\src\PP.cpp" />
-    <ClCompile Include="urt\src\UnitRoot.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

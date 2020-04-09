@@ -102,12 +102,17 @@ DLL_EXPORT int isSellBuy(unixtime now);
 
 DLL_EXPORT void invalidateModel();
 
+DLL_EXPORT int sadfd_mt5(double* signal, double* out, int n, int maxw, int minw, int p, double gpumem_gb, bool verbose);
+
 #ifdef EXPORT
 
+// TODO:
+// since torch SADF using GPU now is fully working
+// lets remove this completely 
+// and replace by Libtorch version
 // serial correlation analysis - unit root test and indicator
-double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression);
-
-double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression);
+//double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression);
+//double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression);
 
 // Pytorch Cpp sadf in GPU
 py::array thsadf(py::array_t<float> data, int maxw, int minw, int p, float gpumem_gb, bool verbose=false);

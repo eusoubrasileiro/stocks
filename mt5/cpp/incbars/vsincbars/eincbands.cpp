@@ -792,6 +792,48 @@ int PythonPredict(XyPair xypair){
 }
 
 
+// to allow metatrader double arrays call the float SADF
+// forward fill EMPTY_VALUE == DBL_MAX
+// return count of filled values to have QC of data quality
+int sadfd_mt5(double* signal, double* out, int n, int maxw, int minw, int p, double gpumem_gb, bool verbose) {
+    float* fsignal = new float[n];
+    float* fout = new float[n];
+
+    float last_valid = 0;
+    int count_evalues = 0; // count of invalid values filled
+
+    try {
+        // forward fill EMPTY values and convert from double to float
+        for (int i = 0; i < n; i++)
+            if (signal[i] != DBL_MAX) {
+                last_valid = (float)signal[i];
+                fsignal[i] = (float)signal[i];
+            }
+            else
+            {
+                fsignal[i] = last_valid;
+                count_evalues++;
+            }
+
+        auto ns = sadf(fsignal, fout, n, maxw, minw, p, (float)gpumem_gb, verbose);
+
+        for (int i = 0; i < n; i++)
+            out[i] = (double)fout[i];
+
+        delete[] fsignal;
+        delete[] fout;
+    }
+    catch (const std::exception& ex) {
+        debugfile << "c++ exception: " << std::endl;
+        debugfile << ex.what() << std::endl;
+    }
+    catch (...) {
+        debugfile << "Weird no idea exception" << std::endl;
+    }
+
+    return count_evalues;
+}
+
 ////////////////////////////////////////////////
 ///////////////// Python API //////////////////
 ///////////////////////////////////////////////
@@ -855,18 +897,21 @@ int pyGetXdim() {
     return m_xtrain_dim;
 }
 
+// TODO:
+// since torch SADF using GPU now is fully working
+// lets remove this completely 
 
-double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression){
-    auto vdata = urt::Vector<double>(data.data(), data.size());
-    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);    
-    return m_adfuller.statistic();
-}
-
-double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression){
-    auto vdata = urt::Vector<double>(data.data(), data.size());
-    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);
-    return m_adfuller.statistic();
-}
+//double adfuller(std::vector<double> data, std::string lagmethod, std::string trend, bool regression){
+//    auto vdata = urt::Vector<double>(data.data(), data.size());
+//    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);    
+//    return m_adfuller.statistic();
+//}
+//
+//double pyadfuller(py::array_t<double> data, std::string lagmethod, std::string trend, bool regression){
+//    auto vdata = urt::Vector<double>(data.data(), data.size());
+//    auto m_adfuller = urt::ADF<double>(vdata, lagmethod, trend, regression);
+//    return m_adfuller.statistic();
+//}
 
 
 py::array thsadf(py::array_t<float> data, int maxw, int minw, int p, float gpumem_gb, bool verbose){
@@ -877,3 +922,4 @@ py::array thsadf(py::array_t<float> data, int maxw, int minw, int p, float gpume
     int ressize = sadf(indata.data(), out.data(), indata.size(), maxw, minw, p, gpumem_gb, verbose);
     return py::cast(out);
 }
+

@@ -75,39 +75,45 @@ void CBandSignal::Calculate(double indata[], int size, int outdata[])
 ///////////////////////////
 
 
+// TODO:
+// since torch SADF using GPU now is fully working
+// lets remove this completely 
 
-CSADFIndicator::CSADFIndicator() {
-    m_minw = m_maxw = 0;
-}
+//CSADFIndicator::CSADFIndicator() {
+//    m_minw = m_maxw = 0;
+//}
+//
+//void CSADFIndicator::Init(int minwindow, int maxwindow, std::string lagmethod) {
+//    // lagmethod
+//    //AIC = Aikaike Information Criterion
+//    //BIC = Bayesian Information Criterion
+//    //HQC = Hannah - Quinn Criterion
+//    //MAIC = Modified Aikaike Information Criterion
+//    //MBIC = Modified Bayesian Information Criterion
+//    //MHQC = Modified Hannah - Quinn Criterion    
+//    m_lagmethod = lagmethod;
+//    m_minw = minwindow;
+//    m_maxw = maxwindow;
+//    CWindowIndicator::Init(maxwindow + 1); // this amount of samples neeeded to calculate 1 output
+//}
+//
+//void CSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
+//
+//    double maxadf = -(1E300);
+//
+//    for (int i = m_maxw; i < size; i++) {
+//        for (int j = m_minw; j < m_maxw; j++) {
+//            // expadining backward each window calculation bigger than previous
+//            m_urtdata = urt::Vector<double>(indata[size - j], j);
+//            m_adfuller.reset(new urt::ADF<double>(m_urtdata, m_lagmethod));
+//            auto stat = m_adfuller->statistic();
+//            maxadf = (stat > maxadf) ? stat : maxadf; // getting the supremum
+//        }
+//        outdata[i] = maxadf;
+//    }
+//
+//}
 
-void CSADFIndicator::Init(int minwindow, int maxwindow, std::string lagmethod) {
-    // lagmethod
-    //AIC = Aikaike Information Criterion
-    //BIC = Bayesian Information Criterion
-    //HQC = Hannah - Quinn Criterion
-    //MAIC = Modified Aikaike Information Criterion
-    //MBIC = Modified Bayesian Information Criterion
-    //MHQC = Modified Hannah - Quinn Criterion    
-    m_lagmethod = lagmethod;
-    m_minw = minwindow;
-    m_maxw = maxwindow;
-    CWindowIndicator::Init(maxwindow + 1); // this amount of samples neeeded to calculate 1 output
-}
 
-void CSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
 
-    double maxadf = -(1E300);
-
-    for (int i = m_maxw; i < size; i++) {
-        for (int j = m_minw; j < m_maxw; j++) {
-            // expadining backward each window calculation bigger than previous
-            m_urtdata = urt::Vector<double>(indata[size - j], j);
-            m_adfuller.reset(new urt::ADF<double>(m_urtdata, m_lagmethod));
-            auto stat = m_adfuller->statistic();
-            maxadf = (stat > maxadf) ? stat : maxadf; // getting the supremum
-        }
-        outdata[i] = maxadf;
-    }
-
-}
 

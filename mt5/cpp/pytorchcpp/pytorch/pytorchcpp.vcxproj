@@ -130,6 +130,9 @@
       <SuppressStartupBanner>
       </SuppressStartupBanner>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="pytorch.cpp" />

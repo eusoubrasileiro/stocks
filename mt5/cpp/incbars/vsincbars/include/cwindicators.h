@@ -280,23 +280,28 @@ public:
 // SADF
 // 
 
-#include <..\urt\include\URT.hpp>
+// TODO:
+// since torch SADF using GPU now is fully working
+// lets remove this completely and replace by
+// the Libtorch version
 
-class CSADFIndicator : public CWindowIndicatorDouble
-{
-protected:
-    std::shared_ptr<urt::ADF<double>> m_adfuller;
-    urt::Vector<double> m_urtdata;
-    std::string m_lagmethod;
-    int m_minw, m_maxw;
+//#include <..\urt\include\URT.hpp>
 
-public:
-
-    CSADFIndicator();
-
-    void Init(int minwindow, int maxwindow, std::string lagmethod = "AIC");
-
-    void Calculate(double indata[], int size, double outdata[]);
-
-};
+//class CSADFIndicator : public CWindowIndicatorDouble
+//{
+//protected:
+//    std::shared_ptr<urt::ADF<double>> m_adfuller;
+//    urt::Vector<double> m_urtdata;
+//    std::string m_lagmethod;
+//    int m_minw, m_maxw;
+//
+//public:
+//
+//    CSADFIndicator();
+//
+//    void Init(int minwindow, int maxwindow, std::string lagmethod = "AIC");
+//
+//    void Calculate(double indata[], int size, double outdata[]);
+//
+//};
 

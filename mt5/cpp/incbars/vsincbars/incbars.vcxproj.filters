@@ -3,9 +3,6 @@
   <ItemGroup>
     <ClCompile Include="buffers.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="indicators\csindicators.cpp">
-      <Filter>indicators</Filter>
-    </ClCompile>
     <ClCompile Include="indicators\ctindicators.cpp">
       <Filter>indicators</Filter>
     </ClCompile>
@@ -22,69 +19,15 @@
       <Filter>python</Filter>
     </ClCompile>
     <ClCompile Include="eincbands.cpp" />
-    <ClCompile Include="urt\src\ADF.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
-    <ClCompile Include="urt\src\DFGLS.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
-    <ClCompile Include="urt\src\KPSS.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
-    <ClCompile Include="urt\src\OLS.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
-    <ClCompile Include="urt\src\PP.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
-    <ClCompile Include="urt\src\UnitRoot.cpp">
-      <Filter>urt\source</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>pch</Filter>
+    </ClCompile>
+    <ClCompile Include="indicators\csindicators.cpp">
+      <Filter>indicators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\dll.h" />
-    <ClInclude Include="urt\include\ADF.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\Coeff_adf.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\Coeff_dfgls.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\Coeff_kpss.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\Coeff_pp.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\CsvManager.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\DFGLS.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\KPSS.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\OLS.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\PP.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\Tools.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\UnitRoot.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
-    <ClInclude Include="urt\include\URT.hpp">
-      <Filter>urt\include</Filter>
-    </ClInclude>
     <ClInclude Include="include\buffers.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -111,15 +54,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="urt">
-      <UniqueIdentifier>{41b07ae8-f76f-46c4-ba4d-3053f63ffc18}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="urt\include">
-      <UniqueIdentifier>{143f6432-38fb-429a-be7e-8b1c3aefbf95}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="urt\source">
-      <UniqueIdentifier>{765d5987-4a76-4249-a8ac-019af646ff10}</UniqueIdentifier>
-    </Filter>
     <Filter Include="include">
       <UniqueIdentifier>{1f90b608-98d1-46ee-bcd6-3bb78d2ac3de}</UniqueIdentifier>
     </Filter>

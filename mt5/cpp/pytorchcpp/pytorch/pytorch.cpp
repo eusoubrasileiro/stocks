@@ -77,6 +77,39 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 #define GIGABytes 1073741824.0
 
+auto dtype_option = dtype32_option;
+
+// Batch Cholesky based on
+// https://www.pugetsystems.com/labs/hpc/PyTorch-for-Scientific-Computing---Quantum-Mechanics-Example-Part-3-Code-Optimizations---Batched-Matrix-Operations-Cholesky-Decomposition-and-Inverse-1225/
+inline th::Tensor Cholesky(th::Tensor &A){
+    auto L = th::zeros_like(A, dtype_option.device(deviceifGPU));
+    auto s = th::zeros(A.size(0), dtype_option.device(deviceifGPU));
+
+    for (int i = 0; i < A.size(-1); i++) {
+        for (int j = 0; j < i + 1; j++) {
+            s.fill_(0);
+            for (int k = 0; k < j; k++) {
+                s.add_(L.select(1, i).select(-1, k) * L.select(1, j).select(-1, k));
+            }
+            if (i == j)
+                L.select(1, i).select(-1, j).copy_(th::sqrt(A.select(1, i).select(-1, i) - s));
+            else
+                L.select(1, i).select(-1, j).copy_(1.0 / L.select(1, j).select(-1, j) * (A.select(1, i).select(-1, j) - s));
+        }
+    }
+  //
+  // for i in range(A.shape[-1]):
+  //     for j in range(i+1):
+  //         s = 0.0
+  //         for k in range(j):
+  //             s = s + L[...,i,k] * L[...,j,k]
+  //
+  //         L[...,i,j] = th.sqrt(A[...,i,i] - s) if (i == j) else \
+  //                   (1.0 / L[...,j,j] * (A[...,i,j] - s))
+  // return L
+    return L;
+}
+
 // supremum augmented dickey fuller test SADF
 // expands backward many adfs for each point
 // using minw window size and maxw as maximum backward size
@@ -86,7 +119,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
   //     - assembly rows of OLS problem using entire input data
   //     - send batchs of 1GB adfs tests to GPU until entire
   //     sadf is calculated, last batch might (should be smaller)
-    
+
     if (minw <= 2 * p + 4) {
         if (verbose) std::cout << "error minw <= 2 * p + 4 " << std::endl;
         return 0;
@@ -97,7 +130,11 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         return 0;
     }
 
-    auto dtype_option = dtype32_option;
+    if (verbose) {
+        std::cout << "using minw > maxw " << std::endl;
+    }
+
+
     auto nobs = n-p-1; // data used for regression
     auto X = th::zeros({nobs, 3+p}, dtype_option);
     auto y = th::from_blob(signal, {n}, dtype_option);
@@ -156,6 +193,11 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     auto Xbt = th::zeros({ batch_size, adfs_count, nobsadf, (3 + p) }, dtype_option.device(deviceCPU));
     auto zbt = th::zeros({ batch_size, adfs_count, nobsadf }, dtype_option.device(deviceCPU));
     auto nobt = th::zeros({ batch_size, adfs_count }, dtype_option.device(deviceCPU));
+    // pin memory to faster CPU to GPU  copy
+    // trying to make GPU less idle so far not working
+    Xbt = Xbt.pin_memory();
+    zbt = zbt.pin_memory();
+    nobt = nobt.pin_memory();
 
     //acessors
     auto aXbt = Xbt.accessor<float, 4>();
@@ -198,29 +240,41 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
             tline++;
         }
 
-        Xbtc.copy_(Xbt.view({ batch_size * adfs_count, nobsadf, (3 + p)}));
-        zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }));
-        nobtc.copy_(nobt.view({batch_size * adfs_count}));
-        auto ej = th::zeros({ p + 3 }, dtype_option.device(deviceifGPU));
-        ej[2] = 1;
-        ej = ej.repeat({ batch_size * adfs_count }).view({ batch_size * adfs_count , -1, 1 });
-        auto tuple = th::qr(Xbtc, true);
-        auto Q = std::get<0>(tuple);
-        auto R = std::get<1>(tuple);
-        auto qtz = th::bmm(Q.transpose(1, -1), zbtc);
-        auto Bhat = std::get<0>(th::triangular_solve(qtz, R, true));
-        auto er = (zbtc - Xbtc.bmm(Bhat));
-        auto y = std::get<0>(th::triangular_solve(ej, R.transpose(1, -1), false));
-        auto d = th::bmm(y.transpose(1, -1), y).sum(-1).view(-1);
-        Bhat = Bhat.squeeze();
-        auto s2 = (er * er).sum(1).squeeze().div(nobtc);        
-        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(d*s2));
-        sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(adfstats.view({ batch_size, adfs_count }).max(-1)));
+        Xbtc.copy_(Xbt.view({ batch_size * adfs_count, nobsadf, (3 + p)}), true);
+        zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }), true);
+        nobtc.copy_(nobt.view({batch_size * adfs_count}), true);
 
+        // auto ej = th::zeros({ p + 3 }, dtype_option.device(deviceifGPU));
+        // ej[2] = 1;
+        // ej = ej.repeat({ batch_size * adfs_count }).view({ batch_size * adfs_count , -1, 1 });
+        // auto tuple = th::qr(Xbtc, true);
+        // auto Q = std::get<0>(tuple);
+        // auto R = std::get<1>(tuple);
+        // auto qtz = th::bmm(Q.transpose(1, -1), zbtc);
+        // auto Bhat = std::get<0>(th::triangular_solve(qtz, R, true));
+        // auto er = (zbtc - Xbtc.bmm(Bhat));
+        // auto y = std::get<0>(th::triangular_solve(ej, R.transpose(1, -1), false));
+        // auto d = th::bmm(y.transpose(1, -1), y).sum(-1).view(-1);
+        // Bhat = Bhat.squeeze();
+        // auto s2 = (er * er).sum(1).squeeze().div(nobtc);
+        // auto adfstats = Bhat.select(-1, 2).div(th::sqrt(d*s2));
+        auto XbtcT = Xbtc.transpose(1, -1);
+        auto L = Cholesky(XbtcT.bmm(Xbtc));
+        auto xtz = XbtcT.bmm(zbtc);
+        auto Bhat = th::cholesky_solve(xtz, L);
+        auto Gi = th::cholesky_solve(th::eye(p+3, dtype_option.device(deviceifGPU)), L); // (X ^ T.X) ^ -1
+        auto er = zbtc - Xbtc.bmm(Bhat);
+        Bhat = Bhat.squeeze();
+        auto s2 = (er*er).sum(1).squeeze().div(nobtc);
+        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2)*s2));
+        //adfstats[th.isnan(adfstats)] = -3.4e+38
+        adfstats.index(th::isnan(adfstats)).fill_(-3.4e+38); // in case colinearity causes singular matrices
+
+        sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(adfstats.view({ batch_size, adfs_count }).max(-1)));
     }
     // last fraction of a batch (if exist)
     for (int j = 0; j < lst_batch_size; j++) { // assembly batch_size sadf'ts matrixes
-        Xm.copy_(X.narrow(0, tline, nobsadf)); //  master X for this sadft - biggest adf OLS X matrix
+        Xm.copy_(X.narrow(0, tline, nobsadf)); //  master X for this sinadft - biggest adf OLS X matrix
         zm.copy_(z.narrow(0, tline, nobsadf)); // master Z for this sadft (biggest adf OLS independent term)
 
         auto Xbts = Xbt.select(0, j);
@@ -242,23 +296,22 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         Xbtc = Xbtc.narrow(0, 0, lst_batch_size * adfs_count);
         zbtc = zbtc.narrow(0, 0, lst_batch_size * adfs_count);
         nobtc = nobtc.narrow(0, 0, lst_batch_size * adfs_count);
-        Xbtc.copy_(Xbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, (3 + p) }));
-        zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }));
-        nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }));
-        auto ej = th::zeros({ p + 3 }, dtype_option.device(deviceifGPU));
-        ej[2] = 1;
-        ej = ej.repeat({ lst_batch_size * adfs_count }).view({ lst_batch_size * adfs_count , -1, 1 });
-        auto tuple = th::qr(Xbtc, true);
-        auto Q = std::get<0>(tuple);
-        auto R = std::get<1>(tuple);
-        auto qtz = th::bmm(Q.transpose(1, -1), zbtc);
-        auto Bhat = std::get<0>(th::triangular_solve(qtz, R, true));
-        auto er = (zbtc - Xbtc.bmm(Bhat));
-        auto y = std::get<0>(th::triangular_solve(ej, R.transpose(1, -1), false));
-        auto d = th::bmm(y.transpose(1, -1), y).sum(-1).view(-1);
+        Xbtc.copy_(Xbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, (3 + p) }), true);
+        zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }), true);
+        nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }), true);
+
+        auto XbtcT = Xbtc.transpose(1, -1);
+        auto L = Cholesky(XbtcT.bmm(Xbtc));
+        auto xtz = XbtcT.bmm(zbtc);
+        auto Bhat = th::cholesky_solve(xtz, L);
+        auto Gi = th::cholesky_solve(th::eye(p + 3, dtype_option.device(deviceifGPU)), L); // (X ^ T.X) ^ -1
+        auto er = zbtc - Xbtc.bmm(Bhat);
         Bhat = Bhat.squeeze();
         auto s2 = (er * er).sum(1).squeeze().div(nobtc);
-        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(d * s2));
+        auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2) * s2));
+        //adfstats[th.isnan(adfstats)] = -3.4e+38
+        adfstats.index(th::isnan(adfstats)).fill_(-3.4e+38); // in case colinearity causes singular matrices
+
         sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(adfstats.view({ lst_batch_size, adfs_count }).max(-1)));
     }
 

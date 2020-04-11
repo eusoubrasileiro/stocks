@@ -6,17 +6,22 @@ from matplotlib import pyplot as plt
 import util
 
 # Batched Cholesky decomp nograd_cholesky
-def cholesky(A):
+def cholesky(A, dev):
     L = th.zeros_like(A)
+    s = th.zeros(A.shape[0], dtype=th.float32, device=dev);
 
     for i in range(A.shape[-1]):
         for j in range(i+1):
-            s = 0.0
+            s.fill_(0);
             for k in range(j):
-                s = s + L[...,i,k] * L[...,j,k]
-
-            L[...,i,j] = th.sqrt(A[...,i,i] - s) if (i == j) else \
-                      (1.0 / L[...,j,j] * (A[...,i,j] - s))
+                s.add_(L.select(1, i).select(-1, k) * L.select(1, j).select(-1, k))
+                #s = s + L[:,i,k] * L[:,j,k]
+            if i==j:
+                L.select(1, i).select(-1, j).copy_(th.sqrt(A.select(1, i).select(-1, i) - s))
+            else:
+                L.select(1, i).select(-1, j).copy_(1.0 / L.select(1, j).select(-1, j) * (A.select(1, i).select(-1, j) - s))
+#         L[...,i,j] = th.sqrt(A[...,i,i] - s) if (i == j) else \
+#                   (1.0 / L[...,j,j] * (A[...,i,j] - s))
     return L
 
 
@@ -254,7 +259,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
 
         # L = th.cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
         # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
-        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_), dev)
         Gi =  th.cholesky_solve(th.eye(p+3, device=dev), L) # ( X^T . X ) ^-1
         xtz = th.bmm(Xbt_.transpose(1, -1), zbt_)
         Bhat = th.cholesky_solve(xtz, L)
@@ -262,7 +267,8 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = Bhat.squeeze()
         s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
         adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
-        adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
+        #adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
+        adfstats.index_fill_(0, th.nonzero(th.isnan(adfstats)).view(-1), -3.4e+38)
 
         sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
 
@@ -308,7 +314,7 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
 
         # L = th.cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
         # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
-        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_))
+        L = cholesky(Xbt_.transpose(1, -1).bmm(Xbt_), dev)
         Gi =  th.cholesky_solve(th.eye(p+3, device=dev), L) # ( X^T . X ) ^-1
         Xtz = Xbt_.transpose(1, -1).bmm(zbt_)
         Bhat = th.bmm(Gi, Xtz)
@@ -316,7 +322,8 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = Bhat.squeeze()
         s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobt_
         adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
-        adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
+        adfstats.index_fill_(0, th.nonzero(th.isnan(adfstats)).view(-1), -3.4e+38)
+        #adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
 
         sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
 

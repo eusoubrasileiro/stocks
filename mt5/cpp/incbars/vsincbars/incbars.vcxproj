@@ -227,7 +227,7 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
       <Optimization>MaxSpeed</Optimization>
       <SDLCheck>
       </SDLCheck>
-      <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;USE_ARMA;USE_ARMAMETA5DEBUG;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BUILDING_DLL;_CRT_SECURE_NO_WARNINGS;USE_ARMA;USE_ARMA;META5DEBUG;</PreprocessorDefinitions>
       <ConformanceMode>
       </ConformanceMode>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>

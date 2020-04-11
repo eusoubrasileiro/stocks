@@ -195,9 +195,9 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     auto nobt = th::zeros({ batch_size, adfs_count }, dtype_option.device(deviceCPU));
     // pin memory to faster CPU to GPU  copy
     // trying to make GPU less idle so far not working
-    Xbt = Xbt.pin_memory();
-    zbt = zbt.pin_memory();
-    nobt = nobt.pin_memory();
+    //Xbt = Xbt.pin_memory();
+    //zbt = zbt.pin_memory();
+    //nobt = nobt.pin_memory();
 
     //acessors
     auto aXbt = Xbt.accessor<float, 4>();
@@ -240,9 +240,9 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
             tline++;
         }
 
-        Xbtc.copy_(Xbt.view({ batch_size * adfs_count, nobsadf, (3 + p)}), true);
-        zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }), true);
-        nobtc.copy_(nobt.view({batch_size * adfs_count}), true);
+        Xbtc.copy_(Xbt.view({ batch_size * adfs_count, nobsadf, (3 + p)}));
+        zbtc.copy_(zbt.view({ batch_size * adfs_count, nobsadf, 1 }));
+        nobtc.copy_(nobt.view({batch_size * adfs_count}));
 
         // auto ej = th::zeros({ p + 3 }, dtype_option.device(deviceifGPU));
         // ej[2] = 1;
@@ -268,7 +268,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         auto s2 = (er*er).sum(1).squeeze().div(nobtc);
         auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2)*s2));
         //adfstats[th.isnan(adfstats)] = -3.4e+38
-        adfstats.index(th::isnan(adfstats)).fill_(-3.4e+38); // in case colinearity causes singular matrices
+        adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), -3.4e+38); // in case colinearity causes singular matrices
 
         sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(adfstats.view({ batch_size, adfs_count }).max(-1)));
     }
@@ -296,9 +296,9 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         Xbtc = Xbtc.narrow(0, 0, lst_batch_size * adfs_count);
         zbtc = zbtc.narrow(0, 0, lst_batch_size * adfs_count);
         nobtc = nobtc.narrow(0, 0, lst_batch_size * adfs_count);
-        Xbtc.copy_(Xbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, (3 + p) }), true);
-        zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }), true);
-        nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }), true);
+        Xbtc.copy_(Xbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, (3 + p) }));
+        zbtc.copy_(zbt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count, nobsadf, 1 }));
+        nobtc.copy_(nobt.narrow(0, 0, lst_batch_size).view({ lst_batch_size * adfs_count }));
 
         auto XbtcT = Xbtc.transpose(1, -1);
         auto L = Cholesky(XbtcT.bmm(Xbtc));
@@ -310,7 +310,7 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
         auto s2 = (er * er).sum(1).squeeze().div(nobtc);
         auto adfstats = Bhat.select(-1, 2).div(th::sqrt(Gi.select(-2, 2).select(-1, 2) * s2));
         //adfstats[th.isnan(adfstats)] = -3.4e+38
-        adfstats.index(th::isnan(adfstats)).fill_(-3.4e+38); // in case colinearity causes singular matrices
+        adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), -3.4e+38); // in case colinearity causes singular matrices
 
         sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(adfstats.view({ lst_batch_size, adfs_count }).max(-1)));
     }
@@ -320,4 +320,38 @@ int sadf(float *signal, float *out, int n, int maxw, int minw, int p, float gpum
     memcpy(out, sadf.data_ptr<float>(), sizeof(float)*nsadft);
 
     return nsadft;
+}
+
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("pytorchcpp.txt");
+
+int sadfd_mt5(double* signal, double* out, int n, int maxw, int minw, int p, double gpumem_gb, bool verbose) {
+    float* fsignal = new float[n];
+    float* fout = new float[n - maxw];
+
+    float last_valid = 0;
+    int count_evalues = 0; // count of invalid values filled
+
+    try {
+        // forward fill EMPTY values and convert from double to float
+        for (int i = 0; i < n; i++)
+            fsignal[i] = (float)signal[i];
+
+        auto ns = sadf(fsignal, fout, n, maxw, minw, p, (float)gpumem_gb, verbose);
+
+        for (int i = 0; i < n - maxw; i++)
+            out[i] = (double)fout[i];
+
+        delete[] fsignal;
+        delete[] fout;
+    }
+    catch (const std::exception& ex) {
+        debugfile << "c++ exception: " << std::endl;
+        debugfile << ex.what() << std::endl;
+    }
+    catch (...) {
+        debugfile << "Weird no idea exception" << std::endl;
+    }
+
+    return count_evalues;
 }

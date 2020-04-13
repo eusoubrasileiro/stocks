@@ -88,7 +88,7 @@ void test_sadf() {
     int minw = 12;
     int p = 3;
     out.resize(data.size() - maxw);
-    sadf(data.data(), out.data(), data.size(), maxw, minw, p, 1.0, false);
+    sadf(data.data(), out.data(), data.size(), maxw, minw, p, 0.1, false);
 
     // to write assert here
     std::vector<float> pytruth = { -1.2095627e+00, -1.4402076e+00, -1.6808732e+00, -8.9917880e-01,

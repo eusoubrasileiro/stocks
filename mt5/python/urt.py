@@ -211,7 +211,7 @@ class SADFtMatrices(Dataset):
         # Xbts, nbts comes from repeat() so dont need clone
         return Xbts, zbts
 
-def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
+def torch_sadf(indata, maxw, minw, order=30, drift=True, dev=th.device('cpu'),
         gpumem_GB=3.0, verbose=False):
     """fastest version
     - assembly rows of OLS problem using entire input data
@@ -219,9 +219,10 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     sadf is calculated, last batch might (should be smaller)
     """
 
-    if minw <= (2*p+4):
+    params = order + 2 + 1 * drift
+    if minw <= order + 1 + params:
         print("need more data for perform a OLS and calculate s2")
-        print("need minw > p+1+(p+3) => 2p+3+1 => 2p+4 : ", 2*p+4)
+        print("error minw must be > order + 1 + params: ", order + 1 + params)
         return
 
     if minw > maxw:
@@ -230,31 +231,38 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
 
     th.set_grad_enabled(False)
     n = indata.size
-    nobs = n-p-1 # data used for regression
-    X = th.zeros((nobs, 3+p), device=dev, dtype=th.float32)
-    if verbose:
-        print(p, n)
+    neq = n - order - 1 # number of equations (lines)
+    X = th.zeros((neq, params), device=dev, dtype=th.float32)
     y = th.tensor(indata, device=dev, dtype=th.float32)
     diffilter = th.tensor([-1., 1.], device=dev, dtype=th.float32).view(1, 1, 2)
     dy = th.conv1d(y.view(1, 1, -1), diffilter).view(-1)
     y = y.view(-1)
-    z = dy[p:].clone()
+    z = dy[order:].clone()
 
-    if verbose:
-        print(len(z), nobs, p, n, X.shape)
     # X matrix
-    X[:, 0] = 1 # drift
-    X[:, 1] = th.arange(p+1, n) # deterministic trend
-    X[:, 2] = y[p:-1]# regression data (nobs)
-    # fill in columns, max lagged serial correlations
-    for i in range(1, p+1):
-        X[:, 2+i] = dy[p-i:-i]
+    #X[:, 0] = 1 # drift
+    X.select(1, 0).fill_(1) # first column 1 - drift term
+    if drift:
+        #X[:, 1] = th.arange(order+1, n) # deterministic trend
+        X.select(1, 1).copy_(th.arange(order + 1, n)) # deterministic trend
+        #X[:, 2] = y[order:-1]# regression data (neq)
+        X.select(1, 2).copy_(y.narrow(0, order, neq)) # regression data(nobs)
+    else:
+        X.select(1, 1).copy_(y.narrow(0, order, neq)) # without drift
+
+    # fill in max lagged serial correlations columns
+    #  starting from the last column
+    # ignoring the first param columns already filled
+    i = params-1
+    for j in range(params-(2+1*drift)) :
+        X.select(1, i).copy_(dy.narrow(0, j, neq))
+        i -= 1
 
     # 1 sadf point requires at least GB (only matrix storage)
     adfs_count = maxw-minw # number of adfs for one sadf t
     nadf = maxw # data used is (maximum - first adf)
-    nobsadf = nadf-p-1 # number of observations (maximum - first adf)
-    xsize = (nobsadf*(3+p))*4 # 4 bytes float32
+    neq_adf = nadf-order-1 # number of equation for longest adf (maxw)
+    xsize = (neq_adf*params)*4 # 4 bytes float32
     sadft_GB = xsize*adfs_count/(1024**3) # matrix storage for 1 sadf point
     nsadft = n-maxw # number of sadf t's to calculate the entire SADF
 
@@ -266,53 +274,57 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
     nbatchs = nsadft//batch_size # number of batchs to sent to GPU
     lst_batch_size = nsadft - nbatchs*batch_size # last batch of adfs (integer %)
 
+    # master X for a sadft (biggest adf OLS X matrix)
+    # batch version
+    Xmb = th.zeros(batch_size, neq_adf, params, device=th.device('cpu'), dtype=th.float32)
+    # master Z for a sadft (biggest adf OLS independent term)
+    zmb = th.zeros(batch_size, neq_adf, device=th.device('cpu'), dtype=th.float32)
+    # CUDA
+    Xcu = th.zeros(batch_size*adfs_count, neq_adf, params,  device=dev, dtype=th.float32)
+    zcu = th.zeros(batch_size*adfs_count, neq_adf, 1, device=dev, dtype=th.float32)
+    sadf = th.zeros(nsadft, device=dev, dtype=th.float32)
+    adfmaxidx = th.zeros(nsadft, device=dev, dtype=th.float32)
+    eye = th.eye(params, device=dev)
+    # statistical degrees of freedom for the t statistic test is allways the
+    # number of equations - number of params (decrease as the length of data reduces)
+    # the same based on the adf sequence inside a SADF(t) calculation
+    # nobsc = (maxw - p - 1 - (p + 3) - th.arange(maxw - minw));
+    dgfree = neq_adf-params-th.arange(maxw-minw)
+    dgfreecu = dgfree.repeat(batch_size).to(dev)
+    #ejc = ej_.repeat(batch_size*adfs_count).view(batch_size*adfs_count, -1).unsqueeze(-1)
+
     if verbose:
         print('ADF tests calculated for one sadf(t) ', adfs_count)
         print('number of sadf(t) points ', nsadft)
+        print('degrees of freedom (min, max)', np.min(dgfree.data.numpy()), np.max(dgfree.data.numpy()))
         print('sadft size (GB) ', sadft_GB)
-        print('batch size ', batch_size)
         print('number of batchs ', nbatchs)
+        print('batch size ', batch_size)
         print('last batch', lst_batch_size)
-
-    # master X for a sadft (biggest adf OLS X matrix)
-    # batch version
-    Xmb = th.zeros(batch_size, nobsadf, 3+p, device=th.device('cpu'), dtype=th.float32)
-    # master Z for a sadft (biggest adf OLS independent term)
-    zmb = th.zeros(batch_size, nobsadf, device=th.device('cpu'), dtype=th.float32)
-    # CUDA
-    Xcu = th.zeros(batch_size*adfs_count, nobsadf, (3+p),  device=dev, dtype=th.float32)
-    zcu = th.zeros(batch_size*adfs_count, nobsadf, 1, device=dev, dtype=th.float32)
-    sadf = th.zeros(nsadft, device=dev, dtype=th.float32)
-    eye = th.eye(p+3, device=dev)
-    # number of observations for the t statistic test is allways the
-    # the same based on the adf sequence inside a SADF(t) calculation
-    nobs = (maxw-p-1-(p+3)-th.arange(maxw-minw))
-    nobsc = nobs.repeat(batch_size).to(dev)
-    #ejc = ej_.repeat(batch_size*adfs_count).view(batch_size*adfs_count, -1).unsqueeze(-1)
 
     t = 0 # start line for master main X OLS matrix/ z vector
     for i in util.progressbar(range(nbatchs)):
         # copy the batch_size first SADF(t) points ADF bigger matrices
         for j in range(batch_size):
-            Xmb.select(0, j).copy_(X.narrow(0, t, nobsadf))
-            zmb.select(0, j).copy_(z.narrow(0, t, nobsadf))
+            Xmb.select(0, j).copy_(X.narrow(0, t, neq_adf))
+            zmb.select(0, j).copy_(z.narrow(0, t, neq_adf))
             t = t+1
         # repeat those matrix for the number of ADF's of each SADF(t) point
-        Xcpu = Xmb.repeat([1, adfs_count, 1]).view(batch_size, adfs_count, nobsadf, p+3)
-        zcpu = zmb.repeat([1, adfs_count]).view(batch_size, -1, nobsadf)
+        Xcpu = Xmb.repeat([1, adfs_count, 1]).view(batch_size, adfs_count, neq_adf, params)
+        zcpu = zmb.repeat([1, adfs_count]).view(batch_size, -1, neq_adf)
         # sadf loop until minw, every matrix is smaller than the previous
         # zeroing i lines, observations are becomming less also
         for k in range(adfs_count): # each is smaller than previous
             # Xbt[j, k, :k, :] = 0
             # zbt[j, k, :k] = 0
-            # nobt[j, k] = float(nobsadf-k-(p+3))
             Xcpu.select(1, k).narrow(1, 0, k).fill_(0)
             zcpu.select(1, k).narrow(1, 0, k).fill_(0)
 
         # TO CUDA
-        Xcu.copy_(Xcpu.view(batch_size*adfs_count, nobsadf, (3+p)))
-        zcu.copy_(zcpu.view(batch_size*adfs_count, nobsadf, 1))
+        Xcu.copy_(Xcpu.view(batch_size*adfs_count, neq_adf, params))
+        zcu.copy_(zcpu.view(batch_size*adfs_count, neq_adf, 1))
 
+        # solved bellow with custom cholesky
         # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
         XcuT = Xcu.transpose(1, -1)
         L = cholesky(XcuT.bmm(Xcu), dev)
@@ -321,12 +333,15 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = th.cholesky_solve(xtz, L)
         er = zcu - th.bmm(Xcu, Bhat)
         Bhat = Bhat.squeeze()
-        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobsc
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
+        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/dgfreecu
+        paridx = 2-1*(not drift) # index of param for stat. test with/without drift term
+        adfstats = Bhat.select(-1, paridx).div(th.sqrt(s2*Gi[:,paridx,paridx]))
         #adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
         adfstats.index_fill_(0, th.nonzero(th.isnan(adfstats)).view(-1), -3.4e+38)
 
-        sadf.narrow(0, t-batch_size, batch_size).copy_(adfstats.view(batch_size, adfs_count).max(-1)[0])
+        max = adfstats.view(batch_size, adfs_count).max(-1)
+        sadf.narrow(0, t-batch_size, batch_size).copy_(max[0])
+        adfmaxidx.narrow(0, t-batch_size, batch_size).copy_(max[1])
 
     if lst_batch_size > 0:
         # last fraction of a batch
@@ -334,28 +349,29 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         zmb = zmb.narrow(0, 0, lst_batch_size)
         # copy the batch_size first SADF(t) points ADF bigger matrices
         for j in range(lst_batch_size):
-            Xmb.select(0, j).copy_(X.narrow(0, t, nobsadf))
-            zmb.select(0, j).copy_(z.narrow(0, t, nobsadf))
+            Xmb.select(0, j).copy_(X.narrow(0, t, neq_adf))
+            zmb.select(0, j).copy_(z.narrow(0, t, neq_adf))
             t = t+1
         # repeat those matrix for the number of ADF's of each SADF(t) point
-        Xcpu = Xmb.repeat([1, adfs_count, 1]).view(lst_batch_size, adfs_count, nobsadf, p+3)
-        zcpu = zmb.repeat([1, adfs_count]).view(lst_batch_size, -1, nobsadf)
+        Xcpu = Xmb.repeat([1, adfs_count, 1]).view(lst_batch_size, adfs_count, neq_adf, params)
+        zcpu = zmb.repeat([1, adfs_count]).view(lst_batch_size, -1, neq_adf)
         # sadf loop until minw, every matrix is smaller than the previous
         # zeroing i lines, observations are becomming less also
         for k in range(adfs_count): # each is smaller than previous
             # Xbt[j, k, :k, :] = 0
             # zbt[j, k, :k] = 0
-            # nobt[j, k] = float(nobsadf-k-(p+3))
+            # nobt[j, k] = float(ne_adf-k-(p+3))
             Xcpu.select(1, k).narrow(1, 0, k).fill_(0)
             zcpu.select(1, k).narrow(1, 0, k).fill_(0)
 
         # TO CUDA
-        nobsc = nobs.repeat(lst_batch_size).to(dev)
+        dgfreecu = dgfree.repeat(lst_batch_size).to(dev)
         Xcu = Xcu.narrow(0, 0, lst_batch_size*adfs_count)
         zcu = zcu.narrow(0, 0, lst_batch_size*adfs_count)
-        Xcu.copy_(Xcpu.view(lst_batch_size*adfs_count, nobsadf, (3+p)))
-        zcu.copy_(zcpu.view(lst_batch_size*adfs_count, nobsadf, 1))
+        Xcu.copy_(Xcpu.view(lst_batch_size*adfs_count, neq_adf, params))
+        zcu.copy_(zcpu.view(lst_batch_size*adfs_count, neq_adf, 1))
 
+        # solved bellow with custom cholesky
         # RuntimeError: cholesky_cuda: For batch 12142: U(33,33) is zero, singular U.
         XcuT = Xcu.transpose(1, -1)
         L = cholesky(XcuT.bmm(Xcu), dev)
@@ -364,11 +380,26 @@ def torch_sadf(indata, maxw, minw, p=30, dev=th.device('cpu'),
         Bhat = th.cholesky_solve(xtz, L)
         er = zcu - th.bmm(Xcu, Bhat)
         Bhat = Bhat.squeeze()
-        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/nobsc
-        adfstats = Bhat.select(-1, 2).div(th.sqrt(s2*Gi[:,2,2]))
+        s2 = th.matmul(er.transpose(1, -1), er).view(-1)/dgfreecu
+        paridx = 2-1*(not drift) # index of param for stat. test with/without drift term
+        adfstats = Bhat.select(-1, paridx).div(th.sqrt(s2*Gi[:,paridx,paridx]))
         #adfstats[th.isnan(adfstats)] = -3.4e+38 # in case something wrong like colinearity
         adfstats.index_fill_(0, th.nonzero(th.isnan(adfstats)).view(-1), -3.4e+38)
 
-        sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(adfstats.view(lst_batch_size, adfs_count).max(-1)[0])
+        max = adfstats.view(lst_batch_size, adfs_count).max(-1)
+        sadf.narrow(0, t-lst_batch_size, lst_batch_size).copy_(max[0])
+        adfmaxidx.narrow(0, t-lst_batch_size, lst_batch_size).copy_(max[1])
 
-    return sadf.to('cpu').data.numpy()
+    adfmaxidx = adfmaxidx.to('cpu').float()
+
+    # adfmaxidx the closer to adfs_count is closer to the current point being calculated
+    # so invert values meaning 0 is closer to the current point
+    # and the bigger the value farther or bigger was the size of
+    # ADF where the max value was found
+    # convert to 0-1 range so
+    # we can use to analyse if it comes from a longer or shorter model
+    # the closer to 0 smaller the ADF window (closer to minw)
+    # the closer to 1 bigger  the ADF window (closer to maxw)
+    adfmaxidx = adfmaxidx.mul(-1).add(adfs_count).div(adfs_count);
+
+    return sadf.to('cpu').data.numpy(), adfmaxidx.data.numpy()

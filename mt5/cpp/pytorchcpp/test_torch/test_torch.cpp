@@ -83,12 +83,15 @@ void test_sadf() {
        53805., 53837., 53109., 52652., 54355., 54693., 55780., 56077.,
        56379., 55394., 53706., 53569., 53421., 54331., 53402., 53909.,
        54583., 55347., 54195., 53034., 52639., 52608. };
-    std::vector<float> out;
+    std::vector<float> outsadf;
+    std::vector<float> outlag;
+
     int maxw = 15;
     int minw = 12;
     int p = 3;
-    out.resize(data.size() - maxw);
-    sadf(data.data(), out.data(), data.size(), maxw, minw, p, 0.1, false);
+    outsadf.resize(data.size() - maxw);
+    outlag.resize(data.size() - maxw);
+    sadf(data.data(), outsadf.data(), outlag.data(), data.size(), maxw, minw, p, true, 0.1, false);
 
     // to write assert here
     std::vector<float> pytruth = { -1.2095627e+00, -1.4402076e+00, -1.6808732e+00, -8.9917880e-01,
@@ -125,7 +128,12 @@ void test_sadf() {
         -2.2981637e+00, -2.7850459e+00, -2.1055303e+00, -2.4616945e+00,
         -1.2686000e+00, -1.8379117e+00, -1.6301438e+00, -3.0783081e-01,
         -1.1272501e+00, -1.2535882e+00, -1.2739995e+00 };
+
+// include test for 1 point SADF
+
 }
+
+
 
 
 int main() {

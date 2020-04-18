@@ -5,6 +5,9 @@
 int sadfd_mt5(const double &signal[], double &outsadf[], double &idxadf[], int n, int maxw, int minw, int order, bool drift, double gpumem_gb, bool verbose);
 #import
 
+
+#include <Object.mqh>
+
 //--- indicator settings
 //#property indicator_chart_window
 #property indicator_separate_window
@@ -21,6 +24,7 @@ input int            InpMaxWin=2*90;         // Maximum backward window (bars)
 input int            InpMinWin=2*60;         // Minimum backward window (bars)
 input int            InpArOrder=15;          // Order of AR model
 input bool           InpModelDrift=false;     // Include Drift Term on AR model
+input int            InpMaxBars=60*7*21;      // Max M1 Bars (1 month)
 
 //--- indicator buffers
 double               SadfLineBuffer[];
@@ -42,8 +46,15 @@ double out_sadf[];
 double out_idxadf[];
 double in_data[];
 
-int prev_calc;
 int isbusy;
+int subwindow_index;
+int prev_calc;
+
+string idwindow_short_name = "SADF" + "("+string(InpMaxWin)+"/"+string(InpMinWin)+")";
+string label = idwindow_short_name+"_lbl1";
+string vline = idwindow_short_name+"_vline1";
+
+double last_maxadfidx;
 
 //rates_total
 //[in]  Size of the price[] array or input series available to the indicator for calculation.
@@ -62,7 +73,6 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
   {
    int i;
    int start; // first sample filled on indicator buffer
-   int evalues; // number of EMPTY_VALUE's forward filled
 
    // avoid uncessary re-calculation when a new bar arrives
    if(prev_calculated == 0 && prev_calc !=0){
@@ -70,7 +80,8 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
    }
 
    int nvalues = rates_total-prev_calculated-begin;
-   start = prev_calculated;
+   start = prev_calculated;   
+   begin = MathMax(rates_total-InpMaxBars,0);
 
 //--- first calculation
    if(prev_calculated==0){
@@ -83,13 +94,15 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
       // input data for SADF
       ArrayCopy(in_data, price, 0, begin);
       // returns number of EMPTY_VALUES forward filled
-      evalues = sadfd_mt5(in_data, out_sadf, out_idxadf, rates_total-begin, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, 2.0, false);
+      sadfd_mt5(in_data, out_sadf, out_idxadf, rates_total-begin, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, 2.0, false);
+      last_maxadfidx = out_idxadf[rates_total-begin-1];
    }
    else{
       if(nvalues > 0){ //at least one new sample compared to previous call
           start = prev_calculated;
           ArrayCopy(in_data, price, 0, (prev_calculated-InpMaxWin-1));
-          evalues = sadfd_mt5(in_data, out_sadf, out_idxadf, nvalues+InpMaxWin, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, 2.0, false);
+          sadfd_mt5(in_data, out_sadf, out_idxadf, nvalues+InpMaxWin, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, 2.0, false);
+          last_maxadfidx = out_idxadf[nvalues+InpMaxWin-1];
       }
       // dont recalculate on the fly last one point
       // too many calls at the tick resolution, make GPU unavailable
@@ -117,6 +130,11 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
 //---
     //Print("Total bars: ", ArraySize(price), " Empty filled ", evalues);
     prev_calc = rates_total;
+
+    double window_adfmax_length_M1 = last_maxadfidx*(InpMaxWin-InpMinWin)+InpMinWin;
+    ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF max (hours): %.2f", window_adfmax_length_M1/60.));
+    // vline for current last value
+    ObjectSetInteger(0, vline, OBJPROP_TIME,TimeCurrent()-window_adfmax_length_M1*60);
   }
 
 //+------------------------------------------------------------------+
@@ -141,7 +159,7 @@ void OnInit()
 //--- name for DataWindow
    string short_name="SADF";
 
-   IndicatorSetString(INDICATOR_SHORTNAME,short_name+"("+string(InpMaxWin)+")");
+   IndicatorSetString(INDICATOR_SHORTNAME, idwindow_short_name);
 
 //---- initialization done
 
@@ -159,7 +177,27 @@ void OnInit()
                       i,                    //  The index of the color, where we write the color
                       colors[i]);             //  A new color
      }
-
+     
+     subwindow_index = ChartWindowFind();
+     // max length of maximum ADF found
+     ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0,0);     
+     ObjectSetInteger(0, label,OBJPROP_CORNER, 3); 
+     //--- set X coordinate
+     ObjectSetInteger(0, label,OBJPROP_XDISTANCE,230);
+      //--- set Y coordinate
+     ObjectSetInteger(0, label,OBJPROP_YDISTANCE,10);
+     ObjectSetInteger(0, label,OBJPROP_FONTSIZE,10);
+     ObjectSetString(0, label,OBJPROP_FONT,"Arial");
+     
+     ObjectCreate(0, vline, OBJ_VLINE, subwindow_index, 0, 0);     
+     
+     ObjectSetInteger(0, vline,OBJPROP_COLOR,clrAntiqueWhite);
+    //--- set line display style
+     ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_DOT);
+    //--- set line width
+     ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
+    //--- display in the foreground (false) or background (true)
+     ObjectSetInteger(0, vline,OBJPROP_BACK, true);
   }
 
 int OnCalculate(const int rates_total,
@@ -181,6 +219,10 @@ int OnCalculate(const int rates_total,
    //--- calculation
    CalculateSADF(rates_total,prev_calculated,begin,price);
 //--- return value of prev_calculated for next call
+
+
+
+     
    return(rates_total);
   }
 //+------------------------------------------------------------------+

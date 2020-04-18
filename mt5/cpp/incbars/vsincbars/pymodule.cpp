@@ -77,7 +77,7 @@ PYBIND11_MODULE(incbars, m) {
     //thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose)
     m.def("thsadf", &thsadf, "supremum augmented dickey fuller test torch GPU",
         py::arg("data"), py::arg("maxw"), py::arg("minw"),
-        py::arg("p"), py::arg("gpumem_gb"), py::arg("verbose"));
+        py::arg("order"), py::arg("drift"), py::arg("gpumem_gb"), py::arg("verbose"));
 
     //m.def("unload", &unloadModule, "unload incbars"); - breaks python interpreter
 }

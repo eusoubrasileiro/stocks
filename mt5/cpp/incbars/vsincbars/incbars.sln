@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "..\tests\tests.vcx
 		{726129F3-8D75-4A47-96D6-0C2D9FE045C7} = {726129F3-8D75-4A47-96D6-0C2D9FE045C7}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "datastruct", "..\datastruct\datastruct.vcxproj", "{83A400C8-03FA-4684-BC7F-D042CA4E86A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -29,6 +31,12 @@ Global
 		{9F340E14-D79E-4F38-823B-BA89DEDE2DBE}.Release|x64.Build.0 = Release|x64
 		{9F340E14-D79E-4F38-823B-BA89DEDE2DBE}.ReleaseMeta5|x64.ActiveCfg = Release|x64
 		{9F340E14-D79E-4F38-823B-BA89DEDE2DBE}.ReleaseMeta5|x64.Build.0 = Release|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Debug|x64.ActiveCfg = Debug|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Debug|x64.Build.0 = Debug|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Release|x64.ActiveCfg = Release|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Release|x64.Build.0 = Release|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.ReleaseMeta5|x64.ActiveCfg = Release|x64
+		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.ReleaseMeta5|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

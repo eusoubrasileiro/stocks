@@ -46,7 +46,6 @@ double out_sadf[];
 double out_idxadf[];
 double in_data[];
 
-int isbusy;
 int subwindow_index;
 int prev_calc;
 
@@ -55,6 +54,8 @@ string label = idwindow_short_name+"_lbl1";
 string vline = idwindow_short_name+"_vline1";
 
 double last_maxadfidx;
+
+datetime before;
 
 //rates_total
 //[in]  Size of the price[] array or input series available to the indicator for calculation.
@@ -108,16 +109,16 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
       // too many calls at the tick resolution, make GPU unavailable
       // passing to CPU Pytorch
       else{
-          //if(!isbusy){
-          //// recalculate last 1 point
-          //// still on same bar
-          //// must be recalculating while a new bar is formed, so we can see it changing
-          //    isbusy = true;
-          //    start = prev_calculated-1;
-          //    ArrayCopy(in_data, price, 0, (prev_calculated-1-InpMaxWin-1));
-          //    evalues = sadfd_mt5(in_data, out_sadf, InpMaxWin, InpMaxWin, InpMinWin, InpArOrder, 2.0, false);
-          //    isbusy = false;
-          //}
+        //if( TimeCurrent() - before > 15){ // every 15 seconds
+        //  //too many calls freezes the tick movement of bars
+        //  // needed to control this somehow to avoid freeze and not see last bar evolving
+        //  // recalculate last 1 point
+        //  // still on same bar
+        //  // must be recalculating while a new bar is formed, so we can see it changing
+        //     start = prev_calculated-1;
+        //     ArrayCopy(in_data, price, 0, (prev_calculated-1-InpMaxWin-1));
+        //     sadfd_mt5(in_data, out_sadf, out_idxadf, InpMaxWin, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, 2.0, false);
+        //}
       }
    }
 
@@ -155,7 +156,6 @@ void OnInit()
 //---- line shifts when drawing
    PlotIndexSetInteger(2,PLOT_LINE_WIDTH,1);
 
-
 //--- name for DataWindow
    string short_name="SADF";
 
@@ -168,7 +168,6 @@ void OnInit()
    ArrayResize(in_data, 100000);
 
    prev_calc = 0; // real prev calculated
-   isbusy=false;
 
    // colors definition by integer mapping
      for(int i=0; i<5; i++){
@@ -198,6 +197,8 @@ void OnInit()
      ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
     //--- display in the foreground (false) or background (true)
      ObjectSetInteger(0, vline,OBJPROP_BACK, true);
+     
+     before = TimeCurrent();
   }
 
 int OnCalculate(const int rates_total,
@@ -209,7 +210,7 @@ int OnCalculate(const int rates_total,
    if(rates_total-begin<InpMaxWin)
       return(0);// not enough bars for calculation
 //--- first calculation or number of bars was changed
-   if(prev_calculated==0){
+   if(prev_calculated==0 && prev_calc ==0){
       ArrayInitialize(SadfLineBuffer,0);
       ArrayInitialize(SadfArrowBuffer,0);
       ArrayInitialize(SadfColorArrowBuffer,0);
@@ -219,9 +220,6 @@ int OnCalculate(const int rates_total,
    //--- calculation
    CalculateSADF(rates_total,prev_calculated,begin,price);
 //--- return value of prev_calculated for next call
-
-
-
      
    return(rates_total);
   }

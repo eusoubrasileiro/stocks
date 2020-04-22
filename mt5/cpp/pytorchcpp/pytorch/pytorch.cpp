@@ -1,10 +1,28 @@
 #pragma warning (disable : 4146)
 #include <iostream>
 #include <torch\torch.h>
-#define PYTORCHCPP_DLL
+#include <torch\cuda.h>
+
 #include "pytorchcpp.h"
+//#include "c10/cuda/CUDAStream.h"
+//#include "c10\cuda\CUDAGuard.h"
+#define PYTORCHCPP_DLL
+
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("pytorchcpp.txt");
+
 
 namespace th = torch;
+
+//bool waitGPU() {
+//    if (th::cuda::is_available()) {
+//        auto currentstream = c10::cuda::getCurrentCUDAStream();
+//        if (currentstream != c10::cuda::getDefaultCUDAStream())
+//            currentstream.synchronize(); // wait if another stream running
+//        //c10::cuda::CUDAStreamGuard()
+//    }    
+//    return true;
+//}
 
 auto dtype32_option = th::TensorOptions().dtype(th::kFloat32).requires_grad(false);
 auto dtype64_option = th::TensorOptions().dtype(th::kFloat64).requires_grad(false);
@@ -62,17 +80,21 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         case DLL_PROCESS_ATTACH:
             if (th::cuda::is_available()) {
               //std::cout << "CUDA is available! Running on GPU." << std::endl;
-              deviceifGPU = th::Device(th::kCUDA);
+                deviceifGPU = th::Device(th::kCUDA);
             }
+            //debugfile << "process attach" << std::endl;
             break;
         case DLL_PROCESS_DETACH:
             // detach from process
+            //debugfile << "process deattach" << std::endl;
             break;
         case DLL_THREAD_ATTACH:
-            // attach to thread
+            // attach from thread
+            //debugfile << "thread  attach" << std::endl;
             break;
         case DLL_THREAD_DETACH:
             // detach from thread
+            //debugfile << "thread  deattach" << std::endl;
             break;
     }
     return TRUE; // succesful
@@ -234,6 +256,7 @@ inline th::Tensor Cholesky(th::Tensor &A){
 // lag - which ADF backward lag gave the highest ADF
 int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, int minw, int order, bool drift, float gpumem_gb, bool verbose) {
     th::NoGradGuard guard; // same as with torch.no_grad(): block
+
   // fastest version
   //     - assembly rows of OLS problem using entire input data
   //     - send batchs of 1GB adfs tests to GPU until entire
@@ -460,8 +483,6 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
     return nsadft;
 }
 
-#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("pytorchcpp.txt");
 
 int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, int minw, int order, bool drift, double gpumem_gb, bool verbose) {
     float* fsignal = new float[n];
@@ -471,7 +492,11 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
     float last_valid = 0;
     int count_evalues = 0; // count of invalid values filled
 
-    m.lock(); // no other call by Metatrader - just one GPU
+
+    // working perfectly
+    //debugfile << "sadfd_mt5 locking thread" << std::endl;
+    //Sleep(1000);
+    m.lock();
 
     try {
         // forward fill EMPTY values and convert from double to float
@@ -497,7 +522,10 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
         debugfile << "Weird no idea exception" << std::endl;
     }
 
-    m.unlock(); // no other call by Metatrader - just one GPU
+    //debugfile << "sadfd_mt5 unlocking thread" << std::endl;
+    m.unlock();
 
     return count_evalues;
 }
+
+

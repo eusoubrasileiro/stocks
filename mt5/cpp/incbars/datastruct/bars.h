@@ -58,6 +58,8 @@ protected:
     // if a day is crossed the data for this bar is ignored
     tm ctime;
 
+    //BufferMqlTicks m_ticks;
+
 public:
     size_t m_nnew; // number of bars nnew on last call
     buffer<uint64_t> uidtimes;

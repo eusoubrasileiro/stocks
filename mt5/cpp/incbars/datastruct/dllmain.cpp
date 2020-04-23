@@ -3,6 +3,14 @@
 #include "windows.h"
 #include "databuffers.h"
 
+#ifdef DEBUG
+#include <fstream>
+std::ofstream debugfile("databufferlog.txt");
+#else
+#define debugfile std::cout
+#endif
+
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -28,17 +36,14 @@ double m_moneybar_size; // R$ to form 1 money bar
 
 void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    // ticks control,
-    bool isbacktest,
     char* cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
-    int64_t mt5_timenow) {
+    int64_t mt5_timenow) { // use to get begin of day
     m_moneybar_size = moneybar_size;
 
     m_ticks.reset(new BufferMqlTicks());
     m_bars.reset(new MoneyBarBuffer());
 
-    m_ticks->Init(std::string(cs_symbol),
-        isbacktest, mt5_timenow);
+    m_ticks->Init(std::string(cs_symbol), mt5_timenow);
 
     m_bars->Init(tickvalue,
         ticksize, m_moneybar_size);
@@ -49,15 +54,47 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
 // returns the next cmpbegin_time
 int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks){
 
-    int64_t cmpbegin_time = m_ticks->Refresh(mt5_pticks, mt5_nticks);
-
+    int64_t cmpbegin_time = 0;
     m_newbars = false;
+
+    auto ticks_left = mt5_nticks - MAX_TICKS;
+
+#ifdef  DEBUG
+    try {
+#endif //  DEBUG
+
+    cmpbegin_time = m_ticks->Refresh(mt5_pticks, min(mt5_nticks, MAX_TICKS), true);
 
     if (m_ticks->nNew() > 0) {
         if (m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(),
             m_ticks->end()) > 0)
             m_newbars = true;
     }
+
+    // send ticks on 'batches' of MAX_TICKS
+    // changed this to avoid needing a HUGE buffer for ticks
+    while(ticks_left > 0) {
+
+        cmpbegin_time = m_ticks->Refresh(mt5_pticks, min(ticks_left, MAX_TICKS), false);
+        ticks_left -= MAX_TICKS;
+
+        if (m_ticks->nNew() > 0) {
+            if (m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(),
+                m_ticks->end()) > 0)
+                m_newbars = true;
+        }
+    }
+
+#ifdef  DEBUG
+    }
+    catch (const std::exception& ex) {
+        debugfile << "c++ exception: " << std::endl;
+        debugfile << ex.what() << std::endl;
+    }
+    catch (...) {
+        debugfile << "Weird no idea exception" << std::endl;
+    }
+#endif //  DEBUG
 
     return cmpbegin_time;
 }
@@ -98,9 +135,13 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
 
     auto mbarsize = m_bars->size();    
     maxbars = min(mbarsize, maxbars); // use only bars available
+    int i, j;
+#ifdef  DEBUG
+    try {
+#endif //  DEBUG
 
     if (maxbars > 0) {
-        for (int i = mt5ptsize - maxbars, j = mbarsize - maxbars; i < mt5ptsize; i++, j++) {
+        for (i = mt5ptsize - maxbars, j = mbarsize - maxbars; i < mt5ptsize; i++, j++) {
             mt5_ptO[i] = m_bars->at(j).wprice10; // average weighted price percentile 10
             mt5_ptC[i] = m_bars->at(j).wprice90; // average weighted price percentile 90
             mt5_ptH[i] = m_bars->at(j).max; // max value negotiated
@@ -109,6 +150,19 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
             mt5_petimes[i] = (unixtime)(m_bars->at(j).emsc * 0.001);
         }
     }
+
+
+#ifdef  DEBUG
+}
+catch (const std::exception& ex) {
+    debugfile << mt5ptsize << maxbars << mbarsize << i << j << std::endl;
+    debugfile << "c++ exception: " << std::endl;
+    debugfile << ex.what() << std::endl;
+}
+catch (...) {
+    debugfile << "Weird no idea exception" << std::endl;
+}
+#endif //  DEBUG
 
     return maxbars;
 }

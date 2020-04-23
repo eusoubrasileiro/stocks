@@ -80,7 +80,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;DATASTRUCT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);BUILDING_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;DEBUG;DATASTRUCT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);BUILDING_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include</AdditionalIncludeDirectories>
@@ -91,6 +91,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <PostBuildEvent>
+      <Command>copy  $(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="bars.h" />

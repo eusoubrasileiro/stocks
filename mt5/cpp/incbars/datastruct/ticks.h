@@ -5,13 +5,7 @@
 #include <iostream>
 #include <time.h>
 
-#ifdef DEBUG
-#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("databufferlog.txt");
-#else
-#define debugfile std::cout
-#endif
-
+#define MAX_TICKS 20000000
 
 typedef  int64_t unixtime;
 typedef  int64_t unixtime_ms;
@@ -50,10 +44,8 @@ void fixArrayTicks(MqlTick* ticks, size_t nticks);
 size_t MqltickTimeGtEqIdx(std::vector<MqlTick> ticks, unixtime_ms time);
 
 
-// Messed ticks from Meta5 will also come to C++
-// here we fix then replacing by a file of correct ones
- 
-extern short mt5_debug_level; // metatrader debugging messages level
+// Messed ticks from Meta5 only on every tick
+// use only every tick based on real ticks
 
 // circular buffer version
 // 10k ticks maximum downloaded every time Refresh is called
@@ -70,14 +62,8 @@ protected:
   bool m_scheck; // security check of sync with data server
   unixtime_ms m_scheck_bg_time; // begin time of comparison for security check
   int m_scheck_bg_idx; // begin idx ... for new ticks (sync with server)  
-
-  //////////////////////////////////////////////
-  ////// backtest workaround for stupid mt5 fake ticks creation
-  bool m_isbacktest;
-  std::vector<MqlTick> m_fticks; // correct ticks (from file) without stupid mt5 modifications
-  std::vector<MqlTick>::iterator m_cftick; // current position on reference ticks file
-  // on volume etc by MT5 to fuc** with everything serious
-  int m_trash_count;
+  int m_sync_overlap; // number of miliseconds to overlap between calls to
+  // guarantee syncronization between this and the metatrader server 
 
   ////////////////////////////////////////////
   ////// for testing against Python/C++ since i need to
@@ -97,13 +83,27 @@ protected:
 
 public:
 
-  BufferMqlTicks(void);
+  // Buffer size for MqlTicks is the only that can be different from the rest
+  // if it is small for example when operating Money Bars as a indicator
+  // and for example 15MM arrive
+  // bars will be creted only for last BUFFERSIZE < 15 MM
+  // 20 MM seams reasonable, for 10/15 days of ticks 
+  // think this should be changed with a loop, with max buffersize 
+  // creating moneybars...
+
+  BufferMqlTicks() : buffer<MqlTick>(MAX_TICKS) {
+      m_scheck = false;
+      m_mt5ncopied = 0;
+      m_nnew = 0;
+      m_sync_overlap = 200; // 200 ms of overlap to guarantee sync with. metatrader server
+  };
 
   int nNew(); // number of new ticks added
 
-  void Init(std::string symbol, bool isbacktest, unixtime timenow);
+  void Init(std::string symbol, unixtime timenow);
 
-  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); // will be called somehow by mt5
+  // will be called somehow by mt5
+  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, bool begin_scheck); 
 
 };
 

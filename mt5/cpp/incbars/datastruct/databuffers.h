@@ -18,7 +18,6 @@
 
 DLL_EXPORT void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    bool isbacktest, // ticks control, for backtesting and debug
     char* cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
     int64_t mt5_timenow);
 

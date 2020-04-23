@@ -112,7 +112,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
     return m_nnew;
 }
 
-// add ticks for metatrader support
+// add ticks for metatrader support?
 size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start,
     boost::circular_buffer<MqlTick>::iterator end) {
     size_t nnew = 0;

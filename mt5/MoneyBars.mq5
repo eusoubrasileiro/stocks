@@ -9,7 +9,6 @@ datetime CppOnTicks(MqlTick &mt5_pticks[], int mt5_nticks);
 
 void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    bool isbacktest, // ticks control, for backtesting and debug
     char& cs_symbol[],  // cs_symbol is a char[] null terminated string (0) value at end
     datetime mt5_timenow);
 
@@ -29,7 +28,7 @@ bool CppNewBars(); // are there any new bars after call of CppOnTicks
 #property indicator_type2   DRAW_ARROW
 #property indicator_color2  clrRed
 #property indicator_width2  1
-#property indicator_color1  clrBlue,clrWhite 
+#property indicator_color1  clrWhite,clrBlue
 #property indicator_width1  3
 
 //--- input parameters
@@ -54,7 +53,8 @@ color colors[]= // rainbow
     C'255,102,102' // red - farther from current sample
   };
 
-const int                Expert_Max_Tick_Copy   = 10e3; // max ticks copied at every CopyTicksRange call
+// doesnt matter mql5 resizes if its necessary
+ const int                Expert_Max_Tick_Copy   = 10e3; // max ticks copied at every CopyTicksRange call
 
 int prev_calc;
 
@@ -101,9 +101,6 @@ void OnInit()
    SymbolInfoDouble(Symbol(),SYMBOL_TRADE_TICK_SIZE, tick_size);
    
    PlotIndexSetDouble(0,PLOT_EMPTY_VALUE, EMPTY_VALUE);
-//    PlotIndexSetDouble(1,PLOT_EMPTY_VALUE, EMPTY_VALUE);
-//    PlotIndexSetDouble(2,PLOT_EMPTY_VALUE, EMPTY_VALUE);
-//    PlotIndexSetDouble(3,PLOT_EMPTY_VALUE, EMPTY_VALUE);
   }
 
 void GetTicks(){
@@ -168,16 +165,16 @@ int OnCalculate(const int rates_total,
         // will come from C++
         // time now is in seconds unix timestamp
         m_cmpbegin_time = time[rates_total-InpMaxBars-1];
-        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, false, csymbol, m_cmpbegin_time);
+        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol, m_cmpbegin_time);
         m_cmpbegin_time*=1000; // to ms next CopyTicksRange call        
         m_ncopied = 0;
+        Print("Last Bar Open Time: ", time[rates_total-1]);
    }
    //--- sets first bar from what index will be draw
    //PlotIndexSetInteger(2,PLOT_DRAW_BEGIN,rates_total-InpMaxBars-1);
    ArrayResize(MoneyBarsETimes, rates_total);
-   
+
    GetTicks();
-   Print("Last Bar Open Time: ", time[rates_total-1]);
 
    int totalbars = CppMoneyBarMt5Indicator(MoneyBarsOBuffer,MoneyBarsHBuffer, MoneyBarsLBuffer, 
                 MoneyBarsCBuffer, MoneyBarsMBuffer, MoneyBarsETimes, rates_total, InpMaxBars);

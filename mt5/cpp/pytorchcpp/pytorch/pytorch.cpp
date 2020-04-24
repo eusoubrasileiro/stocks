@@ -107,6 +107,8 @@ auto dtype_option = dtype32_option;
 // Batch Cholesky based on
 // https://www.pugetsystems.com/labs/hpc/PyTorch-for-Scientific-Computing---Quantum-Mechanics-Example-Part-3-Code-Optimizations---Batched-Matrix-Operations-Cholesky-Decomposition-and-Inverse-1225/
 inline th::Tensor Cholesky(th::Tensor &A){
+    th::NoGradGuard guard; // same as with torch.no_grad(): block
+
     auto L = th::zeros_like(A, dtype_option.device(deviceifGPU));
     auto s = th::zeros(A.size(0), dtype_option.device(deviceifGPU));
 
@@ -255,6 +257,10 @@ inline th::Tensor Cholesky(th::Tensor &A){
 // using minw window size and maxw as maximum backward size
 // lag - which ADF backward lag gave the highest ADF
 int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, int minw, int order, bool drift, float gpumem_gb, bool verbose) {
+    // working perfectly - only one GPU so only one thread can access it a time
+    // debugfile << "sadfd_mt5 locking thread" << std::endl;
+    m.lock();
+
     th::NoGradGuard guard; // same as with torch.no_grad(): block
 
   // fastest version
@@ -467,18 +473,20 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
     sadf = sadf.to(deviceCPU);
     adfmaxidx = th::_cast_Float(adfmaxidx.to(deviceCPU));
 
-    // adfmaxidx the closer to adfs_count is closer to the current point being calculated
+    // adfs windows start bigger and get smaller to the end
+    // adfmaxidx the closer to adfs_count smaller the window being used
+    // so closer to the current point being calculated
     // so invert values meaning 0 is closer to the current point
     // and the bigger the value farther or bigger was the size of
     // ADF where the max value was found
-    // convert to 0-1 range so
-    // we can use to analyse if it comes from a longer or shorter model
-    // the closer to 0 smaller the ADF window (closer to minw)
-    // the closer to 1 bigger  the ADF window (closer to maxw)
-    adfmaxidx = adfmaxidx.mul(-1).add(adfs_count).div(adfs_count);
+    adfmaxidx = adfmaxidx.mul(-1).add(adfs_count);
 
     memcpy(outsadf, sadf.data_ptr<float>(), sizeof(float) * nsadft);
     memcpy(outadfmaxidx, adfmaxidx.data_ptr<float>(), sizeof(float)* nsadft);
+
+    // working perfectly - only one GPU so only one thread can access it a time
+    // debugfile << "sadfd_mt5 unlocking thread" << std::endl;
+    m.unlock();
 
     return nsadft;
 }
@@ -491,13 +499,7 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
 
     float last_valid = 0;
     int count_evalues = 0; // count of invalid values filled
-
-
-    // working perfectly
-    //debugfile << "sadfd_mt5 locking thread" << std::endl;
-    //Sleep(1000);
-    m.lock();
-
+        
     try {
         // forward fill EMPTY values and convert from double to float
         for (int i = 0; i < n; i++)
@@ -522,8 +524,7 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
         debugfile << "Weird no idea exception" << std::endl;
     }
 
-    //debugfile << "sadfd_mt5 unlocking thread" << std::endl;
-    m.unlock();
+
 
     return count_evalues;
 }

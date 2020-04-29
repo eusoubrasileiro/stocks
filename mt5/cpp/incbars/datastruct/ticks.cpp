@@ -51,6 +51,27 @@ void SaveTicks(BufferMqlTicks* ticks, std::string filename){
     fh.close();
 }
 
+#include <iostream>
+
+void PrintTicks(MqlTick *ticks, int size, std::ofstream &file){
+    char line[256];
+    file  << "       time_msc       |   last   |  r.volume |  volume  " << std::endl;
+    for (int i = 0; i < size; i++) {
+        sprintf(line, "%22llu|%9.1f|%11g|%10llu", ticks[i].time_msc, ticks[i].last, ticks[i].volume_real, ticks[i].volume);
+        file <<  std::string(line) << std::endl;
+    }
+}
+
+void PrintTicks(boost::circular_buffer<MqlTick>::iterator begin, boost::circular_buffer<MqlTick>::iterator end,
+    std::ofstream &file) {
+    char line[256];
+    file << "       time_msc       |   last   |  r.volume |  volume  " << std::endl;
+    for (auto tick = begin; tick != end; tick++) {
+        sprintf(line, "%22llu|%9.1f|%11g|%10llu", (*tick).time_msc, (*tick).last, (*tick).volume_real, (*tick).volume);
+        file << std::string(line) << std::endl;
+    }
+}
+
 // check if the ticks are all included in
 // the ticks on the specified filename
 // seek file if needed
@@ -65,7 +86,7 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
     for (; cftick != fticks.end(); cftick++)
         if (cftick->time_msc == ticks->at(0).time_msc) break;
 
-#ifdef DEBUG
+#ifdef DEBUGMORE
     debugfile << "isInFile seeked file start at: " << std::distance(fticks.begin(), cftick) << std::endl;
 #endif
 
@@ -79,7 +100,7 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
             break;
         }
 
-#ifdef DEBUG
+#ifdef DEBUGMORE
     debugfile << "isInFile end of comparison: " << std::distance(ticks->begin(), creftick) << std::endl;
     debugfile << "isInFile total ticks compared: " << std::distance(ticks->begin(), creftick) << std::endl;
     debugfile << "isInFile : " << result << std::endl;
@@ -94,7 +115,7 @@ bool isInFile(BufferMqlTicks* ticks, std::string filename){
 void fixArrayTicks(MqlTick *ticks, size_t nticks) {
     double       bid = 0;           // (Last) Bid price
     double       ask = 0;           // (Last) Ask price
-    double       last = 0;          // (Last) Price of the last deal 
+    double       last = 0;          // (Last) Price of the last deal
     for (int i = 0; i < nticks; i++) { // cannot be done in parallel?
         if (ticks[i].bid == 0)
             ticks[i].bid = bid;
@@ -131,14 +152,14 @@ void fixArrayTicks(std::vector<MqlTick> ticks) {
 bool BufferMqlTicks::seekBeginMt5Ticks(){
     m_scheck = false;
 
-    #ifdef DEBUG
+    #ifdef DEBUGMORE
         debugfile << "BufferMqlTicks seekBeginMt5Ticks mt5ncopied: " << m_mt5ncopied << std::endl;
         debugfile << "BufferMqlTicks seekBeginMt5Ticks (Sync Check) 1st local tick: " << (*this)[m_scheck_bg_idx + 0].time_msc << std::endl;
         debugfile << "BufferMqlTicks seekBeginMt5Ticks (Sync Check) 1st  mt5  tick: " << m_mt5ticks[0].time_msc << std::endl;
     #endif
 
 
-    int wrong_ticks = 0; // 10 ticks can be wrong 
+    int wrong_ticks = 0; // 10 ticks can be wrong
     // before find the equals inside security check window
 
     int mt5i = 0; // indexer for received ticks
@@ -160,20 +181,34 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
         // security check and seek of begin of new ticks
         // seek to begin of new ticks
         // remember a c-style pointer can be used as an interator
-        
+
         for (; mt5i < m_mt5ncopied; mt5i++, m_mt5ticks++) {
-            // verify initial tick from mt5 is equal 
+            // verify initial tick from mt5 is equal
             // the first tick from the security check
-            // if it's not, ignore and try the second or third 
-            // until tolerance, then 
+            // if it's not, ignore and try the second or third
+            // until tolerance, then
             if (m_mt5ticks->time_msc == (*this)[m_scheck_bg_idx + mt5i].time_msc) {
                 m_scheck = true; // must have at least one sample equal
                 // for security check of sync with server
             }
             else {
                 if (!m_scheck) { // did not find begin of real data yet
-                    if (wrong_ticks > 10) // will throw an exception ahead
+                    if (wrong_ticks > 10) { // will throw an exception ahead
+#ifdef DEBUGMORE
+#define fileout debugfile
+#else
+                        auto fileout = std::ofstream("wrong_ticks.txt");
+                        fileout << "wrong_ticks > 10" << std::endl;
+#endif
+                        // almost probably a real time issue
+                        fileout << "number of ticks from mt5 " << m_mt5ncopied << std::endl;
+                        fileout << "begin check time: " << m_scheck_bg_time << std::endl;
+                        fileout << "begin check idx: " << m_scheck_bg_idx << std::endl;
+                        PrintTicks(this->begin(), this->begin() + 20, fileout);
+                        fileout << "from mt5 ticks " << std::endl;
+                        PrintTicks(m_mt5ticks-mt5i, 20, fileout);
                         break;
+                    }
                     wrong_ticks++;
                 }
                 else // seeking finished to begin of new data - stop
@@ -181,10 +216,12 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
             }
         }
         m_nnew = m_mt5ncopied - mt5i;
+        if (m_nnew == 0)
+            m_scheck = true;
     }
 
-    #ifdef DEBUG
-        debugfile << "BufferMqlTicks seekBeginMt5Ticks  wrong ticks (10) : " << wrong_ticks << std::endl;
+    #ifdef DEBUGMORE
+        debugfile << "BufferMqlTicks seekBeginMt5Ticks  wrong ticks (100) : " << wrong_ticks << std::endl;
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  mt5 begin idx : " << mt5i << std::endl;
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  nnew : " << m_nnew << std::endl;
     #endif
@@ -214,7 +251,7 @@ void BufferMqlTicks::Init(std::string symbol, unixtime timenow){
     m_scheck_bg_time *= 1000;// turn in ms
     m_scheck_bg_idx = 0;
 
-#ifdef DEBUG
+#ifdef DEBUGMORE
     debugfile << "BufferMqlTicks symbol: " << m_symbol << std::endl;
     debugfile << "BufferMqlTicks timenow: " << timenow << std::endl;
     debugfile << "BufferMqlTicks scheck_bg_time: " << m_scheck_bg_time << std::endl;
@@ -246,10 +283,10 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, boo
     }
     else { // special case when huge ammount of ticks arrive at once
         // this methos is called many times for same ticks
-        m_nnew = m_mt5ncopied; 
+        m_nnew = m_mt5ncopied;
         // m_mt5ticks already is pointing to the begin
     }
-    
+
     // fix nonsense last, ask, bid empty
     fixArrayTicks(m_mt5ticks, m_nnew);
 
@@ -270,7 +307,7 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, boo
                 break;
             }
     }
-#ifdef DEBUG
+#ifdef DEBUGMORE
         debugfile << "BufferMqlTicks Refresh nnew : " << m_nnew << std::endl;
         debugfile << "BufferMqlTicks Refresh mt5ticks last new : " << m_mt5ticks[m_nnew - 1].time_msc << std::endl;
         debugfile << "BufferMqlTicks Refresh scheck_bg_time : " << m_scheck_bg_time << std::endl;

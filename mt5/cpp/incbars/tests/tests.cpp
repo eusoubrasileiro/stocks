@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <array>
+#include "cwindicators.h"
 
 // Since I just want to test the code
 // and I dont want to put all code in the export table of the main dll
@@ -12,6 +13,13 @@
 //$(SolutionDir)\$(Platform)\callpython.obj
 // 4. pytorchcpp.lib - dlls required
 // 5. ctalib.lib - dll required
+
+#ifdef DEBUG
+#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+std::ofstream debugfile("testing_file.txt");
+#else
+#define debugfile std::cout
+#endif
 
 // also remember that Python3 (python3.dll and others) is a dependency due
 // python interpreter embedding
@@ -130,7 +138,7 @@ TEST(Indicators, CTaMAIndicator){
 
     std::vector<double> ta_truth = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.begin(), 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.begin(), 9, 0.01);
 
 }
 
@@ -237,19 +245,16 @@ TEST(Indicators, CBandSignal) {
 
 #include <iostream>
 #include <fstream>
+#include "databuffers.h"
 
-TEST(Expert, Initialize) {
-    char *symbol = "PETR4"; // is null terminated by default - char* string literal C++
+TEST(MoneyBars, InitializeNoSADF) {
+    char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
 
-    CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
-        10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
-        25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
-        100, 0.01, 0.01, // minlot, ticksize, tickvalue
-        500e3, // must ignore the null terminating character at 6th position
-        true, symbol, 0); // time first tick or time of day
+    CppDataBuffersInit(0.01, 0.01, 25E6, symbol, 0, false, 250, 200, 15, false, 200, 5);
 }
 
-TEST(Expert, OnTicks) {
+
+TEST(MoneyBars, OnTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
@@ -262,7 +267,7 @@ TEST(Expert, OnTicks) {
     // Read a file and simulate CopyTicksRange 
 
     int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 1e6); // 1MM
-    BufferMqlTicks* pticks = GetTicks();                                                                 
+    BufferMqlTicks* pticks = GetBufferMqlTicks();                                                                 
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
@@ -291,9 +296,14 @@ TEST(Expert, OnTicks) {
 
 }
 
-TEST(ExpertPythonAPI, pyAddTicks) {
+TEST(MoneyBars, OnTicksSADF) {
     std::fstream fh;
     std::streampos begin, end;
+
+    char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
+
+    // load SADF indicator
+    CppDataBuffersInit(0.01, 0.01, 25E6, symbol, 0, true, 250, 200, 15, false, 200, 5);
 
     // calculate number of ticks on file
     std::string user_data = std::string(std::getenv("USERPROFILE")) +
@@ -301,147 +311,35 @@ TEST(ExpertPythonAPI, pyAddTicks) {
 
     std::vector<MqlTick> ticks;
 
-    // start again first - same as reset
-    char *symbol = "PETR4"; // is null terminated by default C++
-    CppExpertInit(6, 12, 2.0, 5, int(100e3), // # 5 bands, 15 / 2 first band, batch 5, 100k training samples
-        10.5, 16.5, 1.5, // 10:30 to 16 : 30, expires in 1 : 30 h
-        25000, 100, 50, 3, // 25K BRL, sl 100, tp 50, 3 increases = 4 max position
-        100, 0.01, 0.01, // minlot, ticksize, tickvalue
-        500e3, // must ignore the null terminating character at 6th position
-        true, symbol, 0); // time first tick or time of day
-
     // Read a file and simulate CopyTicksRange 
-    int nticks = int(1e6);
-    ReadTicks(&ticks, user_data, (size_t) nticks); // 1MM
-    BufferMqlTicks* pticks = GetTicks();
+
+    int64_t nticks = ReadTicks(&ticks, user_data, (size_t)1e6); // 1MM
+    BufferMqlTicks* pticks = GetBufferMqlTicks();
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
-        
-    // create py::array_t<MqlTick> mocking Python iterp. call
 
-    PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    auto b = py::buffer_info(
-        NULL,
-        sizeof(MqlTick), //itemsize
-        py::format_descriptor<MqlTick>::format(),
-        1, // ndim
-        std::vector<size_t> { int(1e6) }, // shape
-        std::vector<size_t> { sizeof(MqlTick)} // strides
-    );
-    auto pyticks = py::array_t<MqlTick>(b);
-    auto dptr = (MqlTick*) pyticks.request().ptr;
-    std::memcpy(dptr, ticks.data(), nticks *sizeof(MqlTick));
+    auto next_timebg = CppOnTicks(ticks.data(), chunck_s);
+    EXPECT_EQ(pticks->size(), chunck_s);
 
-    pyAddTicks(pyticks);
+    // get allowed overlapping of 1ms
+    // get idx first tick with time >= next_timebg 
+    auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
+    auto overlap = chunck_s - next_idx;
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    EXPECT_EQ(pticks->size(), chunck_s * 2);
+
+    // get allowed overlapping of 1ms
+    next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
+    overlap = 2 * chunck_s - next_idx;
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    EXPECT_EQ(pticks->size(), chunck_s * 3);
+
+    // get allowed overlapping of 1ms
+    next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
+    overlap = 3 * chunck_s - next_idx;
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+
+    EXPECT_EQ(pticks->size(), chunck_s * 4);
 
 }
 
-
-TEST(Expert, Refresh){    
-    CppRefresh();
-}
-
-
-TEST(Expert, CreateXyVectors) {
-    CreateXyVectors();
-}
-
-
-TEST(EmbeddedPython, LoadPythonCode){
-    std::string pyfile = R"(#script only for testing
-import numpy as np
-from sklearn.ensemble import ExtraTreesClassifier
-import pickle
-
-trees = ExtraTreesClassifier(n_estimators = 120, verbose = 0)
-
-def pyTrainModel(X, y):
-    global trees
-    trees.fit(X, y)
-    # save model
-    str_trees = pickle.dumps(trees)
-    return str_trees # easier to pass to C++
-
-def pyPredictwModel(X, str_trees):
-    global trees
-    return trees.predict(X)[0]
-)";
-
-    std::ofstream out("python_code.py");
-    out << pyfile;
-    out.close();
-
-    LoadPythonCode();
-}
-
-TEST(EmbeddedPython, pyTrainModel) {
-    // xor example
-    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2
-    int y[] = { 0, 0, 1, 1 }; // first dim = 4
-    int xdim = 2;
-    int ntrain = 4;
-    char* strmodel = (char*)malloc(1024 * 500); // 500 Kb
-    int modelsize = pyTrainModel(X, y, 4, 2, strmodel, 1024 * 1500);
-    EXPECT_TRUE(modelsize > 0);
-}
-
-TEST(EmbeddedPython, PyTrain_n_Predict){
-    // xor example
-    double X[] = { 0, 0, 1, 1, 0, 1, 1, 0 };  // second dim = 2
-    int y[] = { 0, 0, 1, 1 }; // first dim = 4
-    int ypred = -5;
-    int xdim = 2;
-    int ntrain = 4;
-    char* strmodel = (char*)malloc(1024 * 500); // 500 Kb
-    int modelsize = pyTrainModel(X, y, 4, 2, strmodel, 1024 * 1500);
-    EXPECT_TRUE(modelsize > 0);
-    // what is the prediction for [0, 1] = should be 1
-    ypred = pyPredictwModel(&X[4], 2, strmodel, modelsize);
-    EXPECT_EQ(ypred, 1);
-}
-
-// Testing with LoadLibrary is more realistic for Mt5
-// need new tests with Load Library here since
-// Python is called internally by C++
-//TEST(DllMain, PyTrain_n_Predict) {
-//    HINSTANCE hinstDll;
-//    FARPROC ProcAdd = NULL;
-//    FARPROC ProcAdd_1 = NULL;
-//    std::string pyfile = R"(#script only for testing
-//import numpy as np
-//from sklearn.ensemble import ExtraTreesClassifier
-//import pickle
-//
-//def pyTrainModel(X, y) :
-//    trees = ExtraTreesClassifier(n_estimators = 120, verbose = 0)
-//    trees.fit(X, y)
-//    # save model
-//    str_trees = pickle.dumps(trees)
-//    return str_trees # easier to pass to C++
-//
-//def pyPredictwModel(X, str_trees) :
-//    trees = pickle.loads(str_trees);
-//    return trees.predict(X)[0]
-//)";
-//
-//    std::ofstream out("python_code.py");
-//    out << pyfile;
-//    out.close();
-//
-//    for (int i = 0; i < 3; i++) { // call 3 times the same function loading and unloading the dll
-//    // Get a handle to the DLL module.
-//        hinstDll = LoadLibrary(TEXT("incbars.dll"));
-//        EXPECT_TRUE(hinstDll != NULL);
-//        // If the handle is valid, try to get the function address.
-//        if (hinstDll != NULL) {
-//            ProcAdd = GetProcAddress(hinstDll, "pyTrainModel");
-//            ProcAdd_1 = GetProcAddress(hinstDll, "pyPredictwModel");
-//            EXPECT_TRUE(ProcAdd != NULL);
-//            EXPECT_TRUE(ProcAdd_1 != NULL);
-//            if (ProcAdd != NULL && ProcAdd_1 != NULL) {
-//                test_pyTrainAndPredict((funcpyTrainModel)ProcAdd, (funcpyPredictwModel)ProcAdd_1);
-//            }
-//            FreeLibrary(hinstDll); // Free the DLL module.
-//        }
-//    }
-//}

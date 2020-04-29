@@ -61,10 +61,15 @@ protected:
     //BufferMqlTicks m_ticks;
 
 public:
+    size_t m_hash; // unique identifier of this money bar instance
+
     size_t m_nnew; // number of bars nnew on last call
+
     buffer<uint64_t> uidtimes;
 
     MoneyBarBuffer();
+
+    MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor
 
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)
@@ -81,8 +86,23 @@ public:
 
     // return buffer index position
     size_t Search(uint64_t uid);
+    
     size_t SearchStime(int64_t emsc);
 };
+
+// MoneyBar isnt a class so I will not add this operator bellow on it or anything else
+//inline bool operator<(const MoneyBar& a, const MoneyBar& b) or
+// inline bool operator<(const MoneyBar& a, unsigned long long uid)
+//{
+//    return a.uid < b.uid;
+//    return a.uid < uid;
+//}
+// we will use this comparator
+// compare a MoneyBar's to a uid to see if it comes before it or not
+inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
+    return a.uid < uid;
+}
+
 
 // standar 1 minute bar since it's easier
 // to do everythin with this first

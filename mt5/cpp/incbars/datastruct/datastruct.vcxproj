@@ -45,9 +45,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(ProjectDir)</OutDir>
+    <IntDir>$(ProjectDir)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(ProjectDir)</OutDir>
+    <IntDir>$(ProjectDir)</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -60,7 +64,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;DATASTRUCT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);BUILDING_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -69,9 +73,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+      <Command>copy $(ProjectDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -83,26 +89,35 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;DEBUG;DATASTRUCT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);BUILDING_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
+      <LanguageStandard>Default</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <BasicRuntimeChecks />
+      <BufferSecurityCheck />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>pytorchcpp.lib;ctalib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy  $(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+      <Command>copy $(ProjectDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="bars.h" />
+    <ClInclude Include="cwindicators.h" />
     <ClInclude Include="databuffers.h" />
     <ClInclude Include="ticks.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bars.cpp" />
-    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="buffers.cpp" />
+    <ClCompile Include="csindicators.cpp" />
+    <ClCompile Include="ctindicators.cpp" />
+    <ClCompile Include="MoneyBars.cpp" />
     <ClCompile Include="ticks.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

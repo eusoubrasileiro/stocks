@@ -37,6 +37,7 @@ th::Device deviceifGPU = deviceCPU;
 // output is allocated inside to a pytorch tensor
 // on current device
 void setFracDifCoefs(double d, int size){
+    th::NoGradGuard guard; // same as with torch.no_grad(): block
     double *w = new double[size];
     w[0] = 1.;
     for(int k=1; k<size; k++)
@@ -51,6 +52,7 @@ void setFracDifCoefs(double d, int size){
 // FracDifCoefs must be supplied
 // output is allocated inside
 int FracDifApply(double signal[], int size, double output[]){
+  th::NoGradGuard guard; // same as with torch.no_grad(): block
   th::Tensor thdata = th::from_blob(signal, { 1, 1, size}, dtype64_option).clone();
   // to GPU or not
   thdata.to(deviceifGPU);
@@ -259,7 +261,7 @@ inline th::Tensor Cholesky(th::Tensor &A){
 int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, int minw, int order, bool drift, float gpumem_gb, bool verbose) {
     // working perfectly - only one GPU so only one thread can access it a time
     // debugfile << "sadfd_mt5 locking thread" << std::endl;
-    m.lock();
+    std::lock_guard<std::mutex> lock(m);
 
     th::NoGradGuard guard; // same as with torch.no_grad(): block
 
@@ -486,7 +488,6 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
 
     // working perfectly - only one GPU so only one thread can access it a time
     // debugfile << "sadfd_mt5 unlocking thread" << std::endl;
-    m.unlock();
 
     return nsadft;
 }

@@ -10,6 +10,9 @@ std::ofstream debugfile("databufferlog.txt");
 #define debugfile std::cout
 #endif
 
+#include <mutex>
+
+std::mutex m;
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -27,6 +30,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE;
 }
 
+//#define MT5_MAX_INDICATORS 10 // maximum number of indicators using money bars
+
 // Base Data
 std::shared_ptr<BufferMqlTicks> m_ticks; // buffer of ticks w. control to download unique ones.
 
@@ -40,6 +45,8 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
     int64_t mt5_timenow) { // use to get begin of day
     m_moneybar_size = moneybar_size;
 
+    m.lock(); // prevent resource anavaible multiple indicator threads on MT5
+
     m_ticks.reset(new BufferMqlTicks());
     m_bars.reset(new MoneyBarBuffer());
 
@@ -49,6 +56,8 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
         ticksize, m_moneybar_size);
 
     m_newbars = false;
+
+    m.unlock();
 }
 
 // returns the next cmpbegin_time
@@ -57,7 +66,9 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks){
     int64_t cmpbegin_time = 0;
     m_newbars = false;
 
-    auto ticks_left = mt5_nticks - MAX_TICKS;
+    int ticks_left = mt5_nticks - MAX_TICKS;
+
+    m.lock(); // prevent resource anavaible multiple indicator threads on MT5
 
 #ifdef  DEBUG
     try {
@@ -70,6 +81,8 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks){
             m_ticks->end()) > 0)
             m_newbars = true;
     }
+
+    
 
     // send ticks on 'batches' of MAX_TICKS
     // changed this to avoid needing a HUGE buffer for ticks
@@ -90,32 +103,35 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks){
     catch (const std::exception& ex) {
         debugfile << "c++ exception: " << std::endl;
         debugfile << ex.what() << std::endl;
+        // I suspect that on periods of high volatility
+        // or internet connection problems
+        // many more ticks are dropped (also commented on MT5 forums)
+        // so for those days would have to write some work around
+        // to make money bars restart from MT5 side
+        //cmpbegin_time = -1;
+        // when iceberg orders show up
+        // just saw iceberg orders on history
+
     }
     catch (...) {
         debugfile << "Weird no idea exception" << std::endl;
+        debugfile << "mt5_nticks " << mt5_nticks << std::endl;
+        debugfile << "ticks_left " << mt5_nticks << std::endl;
+        //cmpbegin_time = -1;<
     }
 #endif //  DEBUG
+
+    m.unlock();
 
     return cmpbegin_time;
 }
 
-MoneyBarBuffer* CppGetMoneyBars() {
-    return &(*m_bars);
-}
-
-BufferMqlTicks* CppGetTicks() // get m_ticks variable
-{
-    return &(*m_ticks);
-}
-
 void CppTicksToFile(char* cs_filename) {
-    BufferMqlTicks* ticks = CppGetTicks();
-    SaveTicks(ticks, std::string(cs_filename));
+    SaveTicks(&(*m_ticks), std::string(cs_filename));
 }
 
 bool CppisInsideFile(char* cs_filename) {
-    BufferMqlTicks* ticks = CppGetTicks();
-    return isInFile(ticks, std::string(cs_filename));
+    return isInFile(&(*m_ticks), std::string(cs_filename));
 }
 
 bool CppNewBars() // are there any new bars after call of CppOnTicks
@@ -132,7 +148,6 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
     // receives the buffer indicator pointers from metatrader for fill in
     // taking in to account maxbars that will be filled
     // and size that is the maximum size, fill in the latest (maxbar values only)
-
     auto mbarsize = m_bars->size();    
     maxbars = min(mbarsize, maxbars); // use only bars available
     int i, j;
@@ -163,6 +178,11 @@ catch (...) {
     debugfile << "Weird no idea exception" << std::endl;
 }
 #endif //  DEBUG
-
     return maxbars;
+}
+
+
+DLL_EXPORT size_t SearchMoneyBars(buffer<MoneyBar> mbars, uint64_t uid) {
+    auto iter = std::lower_bound(mbars.begin(), mbars.end(), uid, cmpMoneyBarSmallUid);
+    return (iter == mbars.end()) ? -1 : iter - mbars.begin();
 }

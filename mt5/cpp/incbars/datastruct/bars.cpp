@@ -1,6 +1,7 @@
 
 #include "bars.h"
 #include <algorithm>    // std::max
+#include <ctime>
 
 // calculate percentile simple
 double percentile(std::vector<double> data, double perc, bool sort) {
@@ -28,12 +29,25 @@ MoneyBarBuffer::MoneyBarBuffer() {
     m_bar.time.tm_yday = -1;  // first dtp calc. needs this
     // so first dtp gets zeroed as if crossing to a new day
     m_bar.netvol = 0;
-    m_bar.min = m_bar.max =  DBL_EMPTY_VALUE;
+    m_bar.min = m_bar.max = DBL_EMPTY_VALUE;
+
+}
+
+  // copy constructor, incomplete
+MoneyBarBuffer::MoneyBarBuffer(const MoneyBarBuffer &moneybars) {
+    m_nnew = moneybars.m_nnew;
+    m_hash = moneybars.m_hash;
+    *this = moneybars; // copy circular buffer of money bars using inner copy constructor
+    uidtimes = moneybars.uidtimes;
+    /// need to change design probably
+    // something messyy here
 }
 
 void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize){
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;
+    auto hasher = std::hash<std::string>(); // to create a unique hash for this money bar
+    m_hash = hasher(std::to_string(m_point_value) + std::to_string(m_moneybarsize) + std::to_string(std::time(0)));
 }
 
 // add one tick and create as many money bars as needed (or 0)
@@ -132,18 +146,7 @@ size_t MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
     return m_nnew;
 }
 
-// MoneyBar isnt a class so I will not add this operator bellow on it or anything else
-//inline bool operator<(const MoneyBar& a, const MoneyBar& b) or
-// inline bool operator<(const MoneyBar& a, unsigned long long uid)
-//{
-//    return a.uid < b.uid;
-//    return a.uid < uid;
-//}
-// we will use this comparator
-// compare a MoneyBar's to a uid to see if it comes before it or not
-inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
-    return a.uid < uid;
-}
+
 // or if it comes after that uid
 //inline bool CmpMoneyBarGreaterUid(const MoneyBar& a, const unsigned long long uid) {
 //    return a.uid > uid;

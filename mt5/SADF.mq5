@@ -24,7 +24,7 @@ input int            InpMaxWin=2*90;         // Maximum backward window (bars)
 input int            InpMinWin=2*60;         // Minimum backward window (bars)
 input int            InpArOrder=15;          // Order of AR model
 input bool           InpModelDrift=false;     // Include Drift Term on AR model
-input int            InpMaxBars=60*7*21;      // Max M1 Bars (1 month)
+input int            InpMaxBars=60*7*5;      // Max M1 Bars (1 week)
 
 //--- indicator buffers
 double               SadfLineBuffer[];

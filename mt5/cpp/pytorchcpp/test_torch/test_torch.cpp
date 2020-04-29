@@ -137,8 +137,7 @@ void test_sadf() {
 
 
 int main() {
-	//test_fracdif();
-    //test_torch();
+	test_fracdif();
     test_sadf();
 	return 0;
 }

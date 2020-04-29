@@ -1,10 +1,9 @@
 #property copyright "Andre"
 #property description "Supremum Augmented Dickey Fuller Test - limited backward window"
 
-#import "indicators.dll"
-void CppSADFMoneyBarsInit(int maxwindow, int minwindow, int order, bool usedrift, int maxbars, int numcolors);
-
+#import "datastruct.dll"
 int CppSADFMoneyBars(double& mt5_SADFline[], double& mt5_SADFdots[], double& mt5_imaxadfcolor[],double &mt5_imaxadflast, int mt5ptsize);
+void CppGetSADFWindows(int &minwin, int &maxwin);
 #import
 
 
@@ -20,12 +19,6 @@ int CppSADFMoneyBars(double& mt5_SADFline[], double& mt5_SADFdots[], double& mt5
 #property indicator_color2  clrLightGray
 #property indicator_width2  1
 
-//--- input parameters
-input int            InpMaxWin=2*90;         // Maximum backward window (bars)
-input int            InpMinWin=2*60;         // Minimum backward window (bars)
-input int            InpArOrder=15;          // Order of AR model
-input bool           InpModelDrift=false;     // Include Drift Term on AR model
-input int            InpMaxBars=60*7*21;      // Max M1 Bars (1 month)
 
 //--- indicator buffers
 double               SadfLineBuffer[];
@@ -44,14 +37,23 @@ color colors[]= // rainbow
 
 int subwindow_index;
 
-string idwindow_short_name = "SADF_MB" + "("+string(InpMaxWin)+"/"+string(InpMinWin)+")";
-string label = idwindow_short_name+"_lbl1";
-string vline = idwindow_short_name+"_vline1";
+string idwindow_short_name;
+string label;
+string vline;
+
+int SADFminWin, SADFmaxWin;
+
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
 void OnInit(){
+
+  CppGetSADFWindows(SADFminWin, SADFmaxWin);
+  idwindow_short_name  = "SADF_MB"+ "("+string(SADFmaxWin)+"/"+string(SADFminWin)+")";
+  label = idwindow_short_name+"_lbl1";
+  vline = idwindow_short_name+"_vline1";
+
   //--- indicator buffers mapping
   SetIndexBuffer(2,SadfLineBuffer,INDICATOR_DATA);
   //--- indicator buffers mapping
@@ -60,7 +62,7 @@ void OnInit(){
   //--- set accuracy
   IndicatorSetInteger(INDICATOR_DIGITS,_Digits+3);
   //--- sets first bar from what index will be drawn
-  PlotIndexSetInteger(2,PLOT_DRAW_BEGIN,InpMaxWin);
+  PlotIndexSetInteger(2,PLOT_DRAW_BEGIN,SADFmaxWin);
   PlotIndexSetInteger(0,PLOT_ARROW,159);
   //---- line shifts when drawing
   PlotIndexSetInteger(2,PLOT_LINE_WIDTH,1);
@@ -72,7 +74,6 @@ void OnInit(){
   // colors definition by integer mapping
   // index of max adf will go from 0 to InpMaxWin-InpMinWin
   // divide colors uniformily
-  int color_span = (InpMaxWin-InpMinWin)/5;
   for(int i=0; i<5; i++){
      PlotIndexSetInteger(0,             //  The number of a graphical style
                   PLOT_LINE_COLOR,      //  Property identifier
@@ -104,8 +105,6 @@ void OnInit(){
   PlotIndexSetDouble(0,PLOT_EMPTY_VALUE, EMPTY_VALUE);
   PlotIndexSetDouble(1,PLOT_EMPTY_VALUE, EMPTY_VALUE);
   PlotIndexSetDouble(2,PLOT_EMPTY_VALUE, EMPTY_VALUE);
-
-  CppSADFMoneyBarsInit(InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
 }
 
 int OnCalculate(const int rates_total,
@@ -122,8 +121,8 @@ int OnCalculate(const int rates_total,
   //--- calculation
   int ncalculated = CppSADFMoneyBars(SadfLineBuffer, SadfArrowBuffer, SadfColorArrowBuffer, last_maxadfidx, rates_total);
 
-  double window_adfmax_length = last_maxadfidx+InpMinWin;
-  ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF max (hours): %.2f", window_adfmax_length));
+  double window_adfmax_length = last_maxadfidx+SADFminWin;
+  ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF max: %.2f", window_adfmax_length));
   // vline for current last value
   ObjectSetInteger(0, vline, OBJPROP_TIME, TimeCurrent()-window_adfmax_length);
 

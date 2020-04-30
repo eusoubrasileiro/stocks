@@ -66,31 +66,45 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
     bool usedrift, 
     int maxbars, 
     int numcolors) { // use to get begin of day
-    m_moneybar_size = moneybar_size;
 
-    // m.lock(); // prevent resource anavaible multiple indicator threads on MT5
+#ifdef DEBUG
+    try {
+#endif
+        m_moneybar_size = moneybar_size;
 
-    m_ticks.reset(new BufferMqlTicks());
-    m_bars.reset(new MoneyBarBuffer());
-    m_ticks->Init(std::string(cs_symbol));
-    m_bars->Init(tickvalue,
-        ticksize, m_moneybar_size);
-    m_newbars = false;
-    m_maxbars = maxbars;
-    m_sadfindicator = sadfindicator;
-    // SADF part
-    if (sadfindicator) { 
-        m_SADFi.reset(new CSADFIndicator(m_bars->capacity()));
-        m_minw = minwindow;
-        m_maxw = maxwindow;
-        m_order = order;
-        m_numcolors = numcolors;
-        m_usedrift = usedrift;
-        m_SADFi->Init(maxwindow, minwindow, order, usedrift);
-        m_adfscount = m_maxw - m_minw;
-        //m_CumSumi.reset(new CCumSumIndicator(m_bars->capacity()));
-    }
+        // m.lock(); // prevent resource anavaible multiple indicator threads on MT5
 
+        m_ticks.reset(new BufferMqlTicks());
+        m_bars.reset(new MoneyBarBuffer());
+        m_ticks->Init(std::string(cs_symbol));
+        m_bars->Init(tickvalue,
+            ticksize, m_moneybar_size);
+        m_newbars = false;
+        m_maxbars = maxbars;
+        m_sadfindicator = sadfindicator;
+        // SADF part
+        if (sadfindicator) { 
+            m_SADFi.reset(new CSADFIndicator(m_bars->capacity()));
+            m_minw = minwindow;
+            m_maxw = maxwindow;
+            m_order = order;
+            m_numcolors = numcolors;
+            m_usedrift = usedrift;
+            m_SADFi->Init(maxwindow, minwindow, order, usedrift);
+            m_adfscount = m_maxw - m_minw;
+            //m_CumSumi.reset(new CCumSumIndicator(m_bars->capacity()));
+        }
+#ifdef  DEBUG
+        }
+        catch (const std::exception& ex) {
+            debugfile << "c++ exception: " << std::endl;
+            debugfile << ex.what() << std::endl;
+        }
+        catch (...) {
+            debugfile << "Weird no idea exception" << std::endl;
+            //cmpbegin_time = -1;<
+        }
+#endif //  DEBUG
     // m.unlock();
 }
 
@@ -106,27 +120,38 @@ void CppGetSADFWindows(int *minwin, int *maxwin){
 
 void RefreshIndicators() {
     debugfile << "number of bars " << m_bars->size() << std::endl;
-    if (m_sadfindicator) {
-        auto bar_values = new float[m_bars->m_nnew];
-        auto bar_count = m_bars->size();
-        int errvalue = 0;
+#ifdef DEBUG
+    try {
+#endif
+        if (m_sadfindicator) {
+            auto bar_values = new float[m_bars->m_nnew];
+            auto bar_count = m_bars->size();
+            int errvalue = 0;
 
-        for (int i = bar_count - m_bars->m_nnew; i < bar_count; i++) {
-            auto value = m_bars->at(i).wprice;
-            auto err = fpclassify(value);
-            if (err == FP_INFINITE || err == FP_NAN){
-                errvalue++;
-                value = 0;
+            for (int i = bar_count - m_bars->m_nnew; i < bar_count; i++) {
+                auto value = m_bars->at(i).wprice;
+                auto err = fpclassify(value);
+                if (err == FP_INFINITE || err == FP_NAN) {
+                    errvalue++;
+                    value = 0;
+                }
+                bar_values[i] = value;
             }
-            bar_values[i] = value;                
-        }
-
 #ifdef  DEBUG
-        if(errvalue > 0)
-            debugfile << "values with error on money bars" << errvalue << std::endl;
+            if (errvalue > 0)
+                debugfile << "values with error on money bars" << errvalue << std::endl;
+            m_SADFi->Refresh(bar_values, m_bars->m_nnew);
+        }
+    }
+    catch (const std::exception& ex) {
+        debugfile << "c++ exception: " << std::endl;
+        debugfile << ex.what() << std::endl;
+    }
+    catch (...) {
+        debugfile << "Weird no idea exception" << std::endl;
+        //cmpbegin_time = -1;<
+    }
 #endif //  DEBUG
-
-        m_SADFi->Refresh(bar_values, m_bars->m_nnew);
         // delete[] bar_values;
         //// I dont care for if first value is EMPTY, cumsum will be also EMPTY?
         //// to think about...
@@ -137,7 +162,7 @@ void RefreshIndicators() {
         //m_CumSumi->Refresh(sadfv, m_bars->m_nnew);
 
         //delete[] sadfv;
-    }
+    
 }
 
 

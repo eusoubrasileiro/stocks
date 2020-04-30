@@ -10,7 +10,6 @@ datetime CppOnTicks(MqlTick &mt5_pticks[], int mt5_nticks);
 void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     char& cs_symbol[],  // cs_symbol is a char[] null terminated string (0) value at end
-    datetime mt5_timenow,
     // SADF part
     bool sadfindicator, // wether to load sadf indicator or not in bakground
     int maxwindow,
@@ -40,12 +39,12 @@ bool CppNewBars(); // are there any new bars after call of CppOnTicks
 #property indicator_width1  3
 
 //--- input parameters
-input double         InpMoneyBarSize=200;         // in MM BRL
+input double         InpMoneyBarSize=40;         // in MM BRL
 input int            InpMaxBars=400;      // Max Bars
 //--- input parameters
 input bool           InpSADF=true;
-input int            InpMaxWin=250;         // Maximum backward window (bars)
-input int            InpMinWin=200;         // Minimum backward window (bars)
+input int            InpMaxWin=350;         // Maximum backward window (bars)
+input int            InpMinWin=150;         // Minimum backward window (bars)
 input int            InpArOrder=15;          // Order of AR model
 input bool           InpModelDrift=false;     // Include Drift Term on AR model
 
@@ -82,6 +81,8 @@ double tick_value, tick_size;
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
+string label;
+
 void OnInit()
   {
 //--- indicator buffers mapping
@@ -103,7 +104,8 @@ void OnInit()
 //   PlotIndexSetInteger(0,PLOT_ARROW,159);
 ////---- line shifts when drawing
 //   PlotIndexSetInteger(2,PLOT_LINE_WIDTH,1);
-   IndicatorSetString(INDICATOR_SHORTNAME, "MoneyBars("+string(InpMoneyBarSize)+"MM_BRL)");
+   string short_name = "MoneyBars("+string((int)InpMoneyBarSize)+")MM BRL";
+   IndicatorSetString(INDICATOR_SHORTNAME, short_name);
     // Ticks download control
    ArrayResize(m_copied_ticks, Expert_Max_Tick_Copy);
    
@@ -115,6 +117,19 @@ void OnInit()
    SymbolInfoDouble(Symbol(),SYMBOL_TRADE_TICK_SIZE, tick_size);
    
    PlotIndexSetDouble(0,PLOT_EMPTY_VALUE, EMPTY_VALUE);
+   
+   label = short_name+"lbl";
+   int subwindow_index = ChartWindowFind();
+   // max length of maximum ADF found
+   ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0, 0);
+   ObjectSetInteger(0, label,OBJPROP_CORNER, 3);
+   //--- set X coordinate
+   ObjectSetInteger(0, label,OBJPROP_XDISTANCE,230);
+   //--- set Y coordinate
+   ObjectSetInteger(0, label,OBJPROP_YDISTANCE,30);
+   ObjectSetInteger(0, label,OBJPROP_FONTSIZE,10);
+   ObjectSetString(0, label,OBJPROP_FONT,"Arial");
+   ObjectSetString(0, label, OBJPROP_TEXT, short_name);
   }
 
 void GetTicks(){
@@ -179,8 +194,8 @@ int OnCalculate(const int rates_total,
         // will come from C++
         // time now is in seconds unix timestamp
         m_cmpbegin_time = time[rates_total-InpMaxBars-1];
-        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol, m_cmpbegin_time, 
-                InpSADF, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
+        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol, 
+            InpSADF, InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
         m_cmpbegin_time*=1000; // to ms next CopyTicksRange call        
         m_ncopied = 0;
         Print("Last Bar Open Time: ", time[rates_total-1]);
@@ -199,3 +214,7 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 
 
+void OnDeinit(const int reason)
+{
+    ObjectDelete(0, label);
+}

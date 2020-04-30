@@ -168,12 +168,18 @@ public:
 
 class CWindowIndicatorDouble : public  CWindowIndicator<double, double> 
 {
+public:
+
+    CWindowIndicatorDouble(int buffersize) : CWindowIndicator<double, double>(buffersize)
+    {};
+
+    CWindowIndicatorDouble(void) : CWindowIndicatorDouble(BUFFERSIZE)
+    {};
+
     void AddEmpty(int count) override {
         buffer<double>::addempty(count);
     }
 };
-
-
 
 
 //
@@ -184,7 +190,7 @@ class CWindowIndicatorDouble : public  CWindowIndicator<double, double>
 class CTaSTDDEV : public CWindowIndicatorDouble {
 public:
 
-    CTaSTDDEV(void) {};
+    CTaSTDDEV(void) : CWindowIndicatorDouble() {};
 
     void Init(int window);
 
@@ -333,7 +339,7 @@ protected:
 
 public:
 
-    CCumSumIndicator() { m_cum_up = m_cum_down = 0; };
+    CCumSumIndicator(int buffersize);
 
     void Init(double cum_reset);
 

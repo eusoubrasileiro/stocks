@@ -74,7 +74,8 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>
+      </SDLCheck>
       <PreprocessorDefinitions>_CONSOLE;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
@@ -109,12 +110,12 @@
       </Optimization>
       <SDLCheck>
       </SDLCheck>
-      <PreprocessorDefinitions>_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>
       </ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\incbars\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat />
       <SupportJustMyCode />
@@ -161,7 +162,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>
       </GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)\$(Platform)\csindicators.obj;$(SolutionDir)\$(Platform)\ctindicators.obj;$(SolutionDir)\$(Platform)\buffers.obj;$(SolutionDir)\$(Platform)\ticks.obj;$(SolutionDir)\$(Platform)\stdafx.obj;$(SolutionDir)\$(Platform)\callpython.obj;$(SolutionDir)\incbars.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib;python37.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ticks.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\datastruct.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
       <SuppressStartupBanner />
       <RegisterOutput />
       <PerUserRedirection />

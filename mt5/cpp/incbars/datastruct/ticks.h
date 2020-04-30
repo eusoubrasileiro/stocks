@@ -60,10 +60,7 @@ protected:
   
   // sync check 
   bool m_scheck; // security check of sync with data server
-  unixtime_ms m_scheck_bg_time; // begin time of comparison for security check
-  int m_scheck_bg_idx; // begin idx ... for new ticks (sync with server)  
-  int m_sync_overlap; // number of miliseconds to overlap between calls to
-  // guarantee syncronization between this and the metatrader server 
+
 
   ////////////////////////////////////////////
   ////// for testing against Python/C++ since i need to
@@ -95,15 +92,14 @@ public:
       m_scheck = false;
       m_mt5ncopied = 0;
       m_nnew = 0;
-      m_sync_overlap = 200; // 200 ms of overlap to guarantee sync with. metatrader server
   };
 
   int nNew(); // number of new ticks added
 
-  void Init(std::string symbol, unixtime timenow);
+  void Init(std::string symbol);
 
   // will be called somehow by mt5
-  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, bool begin_scheck); 
+  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); 
 
 };
 

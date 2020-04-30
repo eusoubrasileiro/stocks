@@ -1,5 +1,6 @@
 #include "cwindicators.h"
 #include "pytorchcpp.h"
+#include <algorithm>
 
 /////////////////////////////
 //// special indicators ////
@@ -95,7 +96,7 @@ void CSADFIndicator::Init(int maxwindow, int minwindow, int order, bool usedrift
     m_minw = minwindow;
     m_maxw = maxwindow;
     m_order = order;
-    IWindowIndicator::Init(m_maxw);
+    IWindowIndicator::Init(m_maxw+1);
 };
 
 void CSADFIndicator::AddEmpty(int count) {
@@ -120,6 +121,34 @@ void CSADFIndicator::Calculate(float indata[], int size, SADFt outdata[])
 }
 
 
+// Cum sum simetric filter 
+// +1 for up entries, -1 for down entries
 
+CCumSumIndicator::CCumSumIndicator(int buffersize) : CWindowIndicatorDouble(buffersize){ 
+    m_cum_up = m_cum_down = 0; m_cum_reset = 1;
+};
 
+void CCumSumIndicator::Init(double cum_reset) {
+    m_cum_reset = cum_reset;
+    IWindowIndicator::Init(2);
+}
 
+void CCumSumIndicator::Calculate(double indata[], int size, double outdata[]) {
+
+    for (int i = 1; i < size; i++) {
+        auto diff = indata[i] - indata[i - 1];
+        m_cum_up = std::max((double) 0, m_cum_up + diff);
+        m_cum_up = std::min((double) 0, m_cum_up + diff);
+        if (m_cum_up > m_cum_reset) {
+            m_cum_up = 0;
+            outdata[i-1] = +1;
+        }
+        else
+        if (m_cum_down < -m_cum_reset) {
+            m_cum_down = 0;
+            outdata[i - 1] = -1;
+        }
+        else
+            outdata[i - 1] = 0;
+    }
+}

@@ -50,12 +50,14 @@ int m_minw, m_maxw, m_order;
 bool m_usedrift;
 int m_numcolors; // number of colors to plot max
 int m_adfscount; // to define color of indicator dots
+// Indicator Cum Sum
+double m_reset = 0.5;
+std::shared_ptr<CCumSumIndicator> m_CumSumi;
 
 
 void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     char* cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
-    int64_t mt5_timenow,
     bool sadfindicator, // wether to load sadf indicator or not in bakground
     // SADF part
     int maxwindow, 
@@ -70,7 +72,7 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
 
     m_ticks.reset(new BufferMqlTicks());
     m_bars.reset(new MoneyBarBuffer());
-    m_ticks->Init(std::string(cs_symbol), mt5_timenow);
+    m_ticks->Init(std::string(cs_symbol));
     m_bars->Init(tickvalue,
         ticksize, m_moneybar_size);
     m_newbars = false;
@@ -86,6 +88,7 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
         m_usedrift = usedrift;
         m_SADFi->Init(maxwindow, minwindow, order, usedrift);
         m_adfscount = m_maxw - m_minw;
+        //m_CumSumi.reset(new CCumSumIndicator(m_bars->capacity()));
     }
 
     // m.unlock();
@@ -93,20 +96,47 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
 
 // for use on SADF Money Bars plot only indicator
 void CppGetSADFWindows(int *minwin, int *maxwin){
-    *minwin = m_minw;
-    *maxwin = m_maxw;
+    if (m_sadfindicator) {
+        *minwin = m_minw;
+        *maxwin = m_maxw;
+    }
 }
+
+#include <cmath>
 
 void RefreshIndicators() {
     debugfile << "number of bars " << m_bars->size() << std::endl;
     if (m_sadfindicator) {
         auto bar_values = new float[m_bars->m_nnew];
         auto bar_count = m_bars->size();
+        int errvalue = 0;
 
-        for (int i = bar_count - m_bars->m_nnew; i < bar_count; i++)
-            bar_values[i] = m_bars->at(i).wprice;
+        for (int i = bar_count - m_bars->m_nnew; i < bar_count; i++) {
+            auto value = m_bars->at(i).wprice;
+            auto err = fpclassify(value);
+            if (err == FP_INFINITE || err == FP_NAN){
+                errvalue++;
+                value = 0;
+            }
+            bar_values[i] = value;                
+        }
+
+#ifdef  DEBUG
+        if(errvalue > 0)
+            debugfile << "values with error on money bars" << errvalue << std::endl;
+#endif //  DEBUG
 
         m_SADFi->Refresh(bar_values, m_bars->m_nnew);
+        // delete[] bar_values;
+        //// I dont care for if first value is EMPTY, cumsum will be also EMPTY?
+        //// to think about...
+        //double* sadfv = new double[m_bars->m_nnew];
+        //for (int i = m_SADFi->size()-m_bars->m_nnew, j=0; i < m_SADFi->size(); i++, j++)
+        //    sadfv[j] = m_SADFi->at(i).sadf;
+
+        //m_CumSumi->Refresh(sadfv, m_bars->m_nnew);
+
+        //delete[] sadfv;
     }
 }
 
@@ -118,32 +148,18 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks){
 
 
     m_newbars = false;
-
-    int ticks_left = mt5_nticks - MAX_TICKS;
-
     //m.lock(); // prevent resource anavaible multiple indicator threads on MT5
 
 #ifdef  DEBUG
     try {
-#endif //  DEBUG
-
-        next_bgticktime = m_ticks->Refresh(mt5_pticks, min(mt5_nticks, MAX_TICKS), true);
-
-    if (m_ticks->nNew() > 0) {
-        if (m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(),
-            m_ticks->end()) > 0) {
-            m_newbars = true;
-            RefreshIndicators();
-        }
-    }
-
+#endif //  DEBUG    
     
-
+    int ticks_left = mt5_nticks;
     // send ticks on 'batches' of MAX_TICKS
     // changed this to avoid needing a HUGE buffer for ticks
     while(ticks_left > 0) {
 
-        next_bgticktime = m_ticks->Refresh(mt5_pticks, min(ticks_left, MAX_TICKS), false);
+        next_bgticktime = m_ticks->Refresh(mt5_pticks, min(ticks_left, MAX_TICKS));
         ticks_left -= MAX_TICKS;
 
         if (m_ticks->nNew() > 0) {
@@ -193,12 +209,16 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
     // receives the buffer indicator pointers from metatrader for fill in
     // taking in to account maxbars that will be filled
     // and size that is the maximum size, fill in the latest (maxbar values only)
-    auto mbarsize = m_bars->size();    
-    auto maxbarsplot = min(mbarsize, m_maxbars); // use only bars available
+    int maxbarsplot;
+    int mbarsize;
     int i, j;
+
 #ifdef  DEBUG
     try {
 #endif //  DEBUG
+        mbarsize = m_bars->size();
+        maxbarsplot = min(mbarsize, m_maxbars); // use only bars available
+        
 
     if (maxbarsplot > 0) {
         for (i = mt5ptsize - maxbarsplot, j = mbarsize - maxbarsplot; i < mt5ptsize; i++, j++) {
@@ -284,6 +304,18 @@ DLL_EXPORT size_t SearchMoneyBars(buffer<MoneyBar> mbars, uint64_t uid) {
 }
 
 
+bool CppNewBars() // are there any new bars after call of CppOnTicks
+{
+    return m_newbars;
+}
+
+
+
+// for 
+// debugging only
+BufferMqlTicks* GetBufferMqlTicks() {
+    return &*m_ticks;
+}
 
 void CppTicksToFile(char* cs_filename) {
     SaveTicks(&*m_ticks, std::string(cs_filename));
@@ -291,13 +323,4 @@ void CppTicksToFile(char* cs_filename) {
 
 bool CppisInsideFile(char* cs_filename) {
     return isInFile(&*m_ticks, std::string(cs_filename));
-}
-
-bool CppNewBars() // are there any new bars after call of CppOnTicks
-{
-    return m_newbars;
-}
-
-BufferMqlTicks* GetBufferMqlTicks() {
-    return &*m_ticks;
 }

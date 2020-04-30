@@ -113,19 +113,24 @@ int OnCalculate(const int rates_total,
                 const double &price[]){
   //--- first calculation or number of bars was changed
   if(prev_calculated==0){
-    ArrayInitialize(SadfLineBuffer,0);
-    ArrayInitialize(SadfArrowBuffer,0);
-    ArrayInitialize(SadfColorArrowBuffer,0);
+    ArrayInitialize(SadfLineBuffer,EMPTY_VALUE);
+    ArrayInitialize(SadfArrowBuffer,EMPTY_VALUE);
+    ArrayInitialize(SadfColorArrowBuffer,EMPTY_VALUE);
   }
-  double last_maxadfidx;
+  double last_maxadfidx=0;
   //--- calculation
   int ncalculated = CppSADFMoneyBars(SadfLineBuffer, SadfArrowBuffer, SadfColorArrowBuffer, last_maxadfidx, rates_total);
 
   double window_adfmax_length = last_maxadfidx+SADFminWin;
   ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF max: %.2f", window_adfmax_length));
   // vline for current last value
-  ObjectSetInteger(0, vline, OBJPROP_TIME, TimeCurrent()-window_adfmax_length);
+  ObjectSetInteger(0, vline, OBJPROP_TIME, TimeCurrent()-window_adfmax_length*60);
 
   return(rates_total);
 }
 //+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    ObjectDelete(0, label);
+    ObjectDelete(0, vline);
+}

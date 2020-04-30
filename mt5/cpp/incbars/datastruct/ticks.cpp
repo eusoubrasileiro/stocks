@@ -159,7 +159,7 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
     #endif
 
 
-    int wrong_ticks = 0; // 10 ticks can be wrong
+    int lost_ticks = 0; // 10 ticks can be wrong
     // before find the equals inside security check window
 
     int mt5i = 0; // indexer for received ticks
@@ -170,55 +170,48 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
         m_nnew = m_mt5ncopied;
     }
     else{
-        // secury check of data with server
-        // for the last tick received previously
-        // get its time (eg. xxxx300 ms)
-        // and asks for the next call to be made using
-        // m_sync_overlap (e.g. 200) milliseconds of overlap with previous data
+        // get begin of new ticks from ticks sent by metatrader 5
+        // comparing with last received
+        // secury check of data with server - just get how many are being lost
         // CopyTicksRange(..., ..., ..., xxxx300-200, 0)
-        // that will include the previous ticks within e.g. 200 ms
-        // make that
-        // security check and seek of begin of new ticks
-        // seek to begin of new ticks
-        // remember a c-style pointer can be used as an interator
-
+        // cannot make a request with overlap for sync check
+        // because that drop is certain and must be acceptable
         for (; mt5i < m_mt5ncopied; mt5i++, m_mt5ticks++) {
-            // verify initial tick from mt5 is equal
-            // the first tick from the security check
-            // if it's not, ignore and try the second or third
-            // until tolerance, then
-            if (m_mt5ticks->time_msc == (*this)[m_scheck_bg_idx + mt5i].time_msc) {
-                m_scheck = true; // must have at least one sample equal
-                // for security check of sync with server
-            }
-            else {
-                if (!m_scheck) { // did not find begin of real data yet
-                    if (wrong_ticks > 10) { // will throw an exception ahead
-#ifdef DEBUGMORE
-#define fileout debugfile
-#else
-                        auto fileout = std::ofstream("wrong_ticks.txt");
-                        fileout << "wrong_ticks > 10" << std::endl;
-#endif
-                        // almost probably a real time issue
-                        fileout << "number of ticks from mt5 " << m_mt5ncopied << std::endl;
-                        fileout << "begin check time: " << m_scheck_bg_time << std::endl;
-                        fileout << "begin check idx: " << m_scheck_bg_idx << std::endl;
-                        PrintTicks(this->begin(), this->begin() + 20, fileout);
-                        fileout << "from mt5 ticks " << std::endl;
-                        PrintTicks(m_mt5ticks-mt5i, 20, fileout);
-                        break;
-                    }
-                    wrong_ticks++;
-                }
-                else // seeking finished to begin of new data - stop
-                    break;
+            // some ticks might have been lost from previsous call
+            // that cannot be solved
+            // so verify where in the mt5 ticks is the last tick we got
+            // return number of lost ticks
+            if (m_mt5ticks->time_msc == this->back().time_msc) {
+                m_scheck = true; // found begin
+                mt5i++; // begin is next
+                m_mt5ticks++; // walk to begin
+                break; // and stop
             }
         }
+        if (!m_scheck) { // did not find begin of real data - something really wrong
+            #ifdef DEBUGMORE
+            #define fileout debugfile
+            #else
+                    auto fileout = std::ofstream("wrong_ticks.txt");
+                    fileout << "wrong_ticks > 10" << std::endl;
+            #endif     
+                    fileout << "begin check time: " << this->back().time_msc << std::endl;
+                    fileout << "begin check idx: " << this->size()-1 << std::endl;
+                    auto printstart = (this->size() - 10 > 0) ? this->size() - 10 : 0;
+                    PrintTicks(this->begin() + printstart, this->end(), fileout); // print last 10
+                    fileout << "number of ticks from mt5 " << m_mt5ncopied << std::endl;
+                    fileout << "from mt5 ticks " << std::endl;
+                    PrintTicks(m_mt5ticks - mt5i, std::min(200, m_mt5ncopied), fileout);
+                    debugfile << "Data Without Sync With Server!" << std::endl;
+                    throw new std::runtime_error("Tick data out-of-sync with server!");
+        }
         m_nnew = m_mt5ncopied - mt5i;
-        if (m_nnew == 0)
-            m_scheck = true;
     }
+
+    #ifdef DEBUG
+        if (mt5i > 1) // that happens 
+            debugfile << "lost ticks: " << mt5i - 1 << std::endl;
+    #endif
 
     #ifdef DEBUGMORE
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  wrong ticks (100) : " << wrong_ticks << std::endl;
@@ -226,7 +219,7 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
         debugfile << "BufferMqlTicks seekBeginMt5Ticks  nnew : " << m_nnew << std::endl;
     #endif
 
-    return (m_scheck);
+    return mt5i-1;
 }
 
 
@@ -235,21 +228,9 @@ int BufferMqlTicks::nNew(){ // you may add more data than the buffer
     return (m_nnew > BUFFERSIZE) ? BUFFERSIZE : m_nnew;
 }
 
-void BufferMqlTicks::Init(std::string symbol, unixtime timenow){
+void BufferMqlTicks::Init(std::string symbol){
     m_symbol = symbol;
     m_nnew = 0;
-
-    // time_t same as int64_t unixtime stamp
-    // get raw time than convert to struct tm and them get
-    // first 1 hour of day 1:00 am
-    // time now in ms will work 'coz next tick.ms value will be bigger
-    // and will take its place
-    tm tm_time;
-    gmtime_s(&tm_time, &timenow); // unixtime timestamp to tm_struct
-    // begin of day at 1:00 am
-    m_scheck_bg_time = timenow - (tm_time.tm_hour*3600+tm_time.tm_min*60+tm_time.tm_sec) + 3600;
-    m_scheck_bg_time *= 1000;// turn in ms
-    m_scheck_bg_idx = 0;
 
 #ifdef DEBUGMORE
     debugfile << "BufferMqlTicks symbol: " << m_symbol << std::endl;
@@ -265,27 +246,17 @@ void BufferMqlTicks::Init(std::string symbol, unixtime timenow){
 // COPY_TICKS_ALL, m_cmpbegin_time, 0)
 // passing m_copied_ticks as *pmt5_mqlticks
 // will compare with ticks
-unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, bool begin_scheck=true){
+unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied){
 
     m_mt5ticks = mt5_pmqlticks;
     m_mt5ncopied = mt5_ncopied;
     m_nnew = 0;
 
     if (mt5_ncopied < 1) // no data
-        return m_scheck_bg_time;
+        return this->back().time_msc;
 
-    if (begin_scheck) {
-        // secury check and get begin
-        if (!seekBeginMt5Ticks()) {
-            debugfile << "Data Without Sync With Server!" << std::endl;
-            throw new std::runtime_error("Tick data out-of-sync with server!");
-        }
-    }
-    else { // special case when huge ammount of ticks arrive at once
-        // this methos is called many times for same ticks
-        m_nnew = m_mt5ncopied;
-        // m_mt5ticks already is pointing to the begin
-    }
+    // secury check and get begin
+    seekBeginMt5Ticks();
 
     // fix nonsense last, ask, bid empty
     fixArrayTicks(m_mt5ticks, m_nnew);
@@ -293,27 +264,13 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, boo
     // if on back-test use every tick based on real ticks
     addrange(m_mt5ticks, m_nnew);
 
-    // get begin time of comparison to check for new ticks
-    // last tick ms - m_sync_overlap (default 200 ms)
-    // get index of first tick with time >= (last tick ms) - (200 ms)
-    // begin time of comparison is tick with time >= [last copied tick - 200 ms)]
-
-    if (m_nnew > 0) {
-        m_scheck_bg_time = m_mt5ticks[m_nnew - 1].time_msc - m_sync_overlap;
-        m_scheck_bg_idx = 0;
-        for (int64_t i = size() - 1; i >= 0; i--)
-            if ((*this)[i].time_msc < m_scheck_bg_time) {
-                m_scheck_bg_idx = i + 1;
-                break;
-            }
-    }
 #ifdef DEBUGMORE
         debugfile << "BufferMqlTicks Refresh nnew : " << m_nnew << std::endl;
         debugfile << "BufferMqlTicks Refresh mt5ticks last new : " << m_mt5ticks[m_nnew - 1].time_msc << std::endl;
         debugfile << "BufferMqlTicks Refresh scheck_bg_time : " << m_scheck_bg_time << std::endl;
 #endif
-
-    return m_scheck_bg_time;
+        // get begin time for next call by Metatrader 5 to CopyTicks
+    return this->back().time_msc;
 }
 
 

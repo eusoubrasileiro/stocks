@@ -20,7 +20,7 @@ int sadfd_mt5(const double &signal[], double &outsadf[], double &idxadf[], int n
 #property indicator_width2  1
 
 //--- input parameters
-input int            InpMaxWin=2*90;         // Maximum backward window (bars)
+input int            InpMaxWin=4*90;         // Maximum backward window (bars)
 input int            InpMinWin=2*60;         // Minimum backward window (bars)
 input int            InpArOrder=15;          // Order of AR model
 input bool           InpModelDrift=false;     // Include Drift Term on AR model
@@ -228,3 +228,8 @@ int OnCalculate(const int rates_total,
    return(rates_total);
   }
 //+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    ObjectDelete(0, label);
+    ObjectDelete(0, vline);
+}

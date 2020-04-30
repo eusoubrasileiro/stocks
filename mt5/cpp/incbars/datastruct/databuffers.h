@@ -20,7 +20,6 @@
 DLL_EXPORT void CppDataBuffersInit(double ticksize, double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
     char* cs_symbol,  // cs_symbol is a char[] null terminated string (0) value at end
-    int64_t mt5_timenow,
     // SADF part
     bool sadfindicator, // wether to load sadf indicator or not in bakground
     int maxwindow,

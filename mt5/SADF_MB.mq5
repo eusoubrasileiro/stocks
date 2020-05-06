@@ -14,7 +14,7 @@ void CppGetSADFWindows(int &minwin, int &maxwin);
 #property indicator_buffers 3
 #property indicator_plots   2
 #property indicator_type1   DRAW_COLOR_ARROW
-#property indicator_color1  C'255,255,102',C'157,226,79',C'135,206,250',C'255,189,85',C'255,102,102'
+#property indicator_color1  clrYellow, clrGreen, clrBlue, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
 #property indicator_type2   DRAW_LINE
 #property indicator_color2  clrLightGray
 #property indicator_width2  1
@@ -24,16 +24,6 @@ void CppGetSADFWindows(int &minwin, int &maxwin);
 double               SadfLineBuffer[];
 double               SadfArrowBuffer[];
 double               SadfColorArrowBuffer[];
-
-//--- An array for storing colors contains 14 elements
-color colors[]= // rainbow
-  {
-    C'255,255,102', // yellow  - closer to current sample
-    C'157,226,79', // green
-    C'135,206,250', // blue
-    C'255,189,85', // orange
-    C'255,102,102' // red - farther from current sample
-  };
 
 int subwindow_index;
 
@@ -71,17 +61,6 @@ void OnInit(){
   IndicatorSetString(INDICATOR_SHORTNAME, idwindow_short_name);
 
   //---- initialization done
-
-  // colors definition by integer mapping
-  // index of max adf will go from 0 to InpMaxWin-InpMinWin
-  // divide colors uniformily
-  for(int i=0; i<5; i++){
-     PlotIndexSetInteger(0,             //  The number of a graphical style
-                  PLOT_LINE_COLOR,      //  Property identifier
-                  i,                    //  The index of the color, where we write the color
-                  colors[i]);             //  A new color
-  }
-
   subwindow_index = ChartWindowFind();
   // max length of maximum ADF found
   ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0,0);
@@ -129,6 +108,7 @@ int OnCalculate(const int rates_total,
 
   return(rates_total);
 }
+
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {

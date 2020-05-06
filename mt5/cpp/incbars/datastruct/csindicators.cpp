@@ -108,8 +108,8 @@ void CSADFIndicator::AddEmpty(int count) {
 
 void CSADFIndicator::Calculate(float indata[], int size, SADFt outdata[])
 {
-    m_sadf.resize(size - m_maxw);
-    m_imaxadf.resize(size - m_maxw);
+    //m_sadf.resize(size - m_maxw); // has buffesize suppose to be allways enough
+    //m_imaxadf.resize(size - m_maxw);
 
     int ncalculated = sadf(indata, m_sadf.data(), m_imaxadf.data(), size,
         m_maxw, m_minw, m_order, m_usedrift, m_gpumemgb, m_verbose);

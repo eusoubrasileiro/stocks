@@ -49,6 +49,7 @@ int SADFminWin, SADFmaxWin;
 //+------------------------------------------------------------------+
 void OnInit(){
 
+  
   CppGetSADFWindows(SADFminWin, SADFmaxWin);
   idwindow_short_name  = "SADF_MB"+ "("+string(SADFmaxWin)+"/"+string(SADFminWin)+")";
   label = idwindow_short_name+"_lbl1";

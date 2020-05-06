@@ -272,6 +272,7 @@ TEST(MoneyBars, OnTicks) {
         std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
 
     std::vector<MqlTick> ticks;
+    double lost_ticks;
 
     // Read a file and simulate CopyTicksRange 
 
@@ -280,26 +281,26 @@ TEST(MoneyBars, OnTicks) {
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
-    auto next_timebg = CppOnTicks(ticks.data(), chunck_s);
+    auto next_timebg = CppOnTicks(ticks.data(), chunck_s, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s);
 
     // get allowed overlapping of 1ms
     // get idx first tick with time >= next_timebg 
     auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);    
     auto overlap = chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s*2);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 2*chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s*3);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 3*chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
 
     EXPECT_EQ(pticks->size(), chunck_s*4);   
 
@@ -310,6 +311,7 @@ TEST(MoneyBars, OnTicksSADF) {
     std::streampos begin, end;
 
     char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
+    double lost_ticks; // qc for real time 
 
     // load SADF indicator
     CppDataBuffersInit(0.01, 0.01, 25E6, symbol, true, 250, 200, 15, false, 200, 5);
@@ -319,7 +321,7 @@ TEST(MoneyBars, OnTicksSADF) {
         std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
 
     std::vector<MqlTick> ticks;
-
+    
     // Read a file and simulate CopyTicksRange 
 
     int64_t nticks = ReadTicks(&ticks, user_data, (size_t)1e6); // 1MM
@@ -327,26 +329,26 @@ TEST(MoneyBars, OnTicksSADF) {
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
-    auto next_timebg = CppOnTicks(ticks.data(), chunck_s);
+    auto next_timebg = CppOnTicks(ticks.data(), chunck_s, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s);
 
     // get allowed overlapping of 1ms
     // get idx first tick with time >= next_timebg 
     auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     auto overlap = chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s * 2);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 2 * chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s * 3);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 3 * chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap);
+    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
 
     EXPECT_EQ(pticks->size(), chunck_s * 4);
 
@@ -440,3 +442,6 @@ TEST(Indicators, CSADFIndicator) {
 
     EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->nvalid(), 0.04);
 }
+
+// need to use DLL Load to Deal with 
+// more reallistic enviorment of mt5

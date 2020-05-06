@@ -58,18 +58,16 @@ protected:
     // if a day is crossed the data for this bar is ignored
     tm ctime;
 
-    //BufferMqlTicks m_ticks;
+    //BufferMqlTicks m_ticks; // ticks used to build bars from mt5
 
 public:
     size_t m_hash; // unique identifier of this money bar instance
-
     size_t m_nnew; // number of bars nnew on last call
 
     buffer<uint64_t> uidtimes;
 
     MoneyBarBuffer();
-
-    MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor
+    MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor 
 
     void Init(double tickvalue, double ticksize, double moneybarsize);
     // add one tick and create as many money bars as needed (or 0)

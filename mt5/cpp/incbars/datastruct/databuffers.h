@@ -31,7 +31,7 @@ DLL_EXPORT void CppDataBuffersInit(double ticksize, double tickvalue,
 
 DLL_EXPORT void CppGetSADFWindows(int* minwin, int* maxwin);
 
-DLL_EXPORT int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks);
+DLL_EXPORT int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double *lost_ticks);
 
 DLL_EXPORT int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, double* mt5_ptC, double* mt5_ptM, unixtime* mt5_petimes, int mt5ptsize);
 

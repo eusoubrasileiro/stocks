@@ -309,7 +309,7 @@ class CSADFIndicator : public CWindowIndicator<SADFt, float>
 protected:
     int m_minw, m_maxw; // minimum and maximum backward window
     int m_order; // max lag order of AR model
-    int m_usedrift; // wether to include drift on AR model 
+    bool m_usedrift; // wether to include drift on AR model 
     float m_gpumemgb; // how much GPU memory each batch of SADF(t) should have
     bool m_verbose; // wether show verbose messages when calculating 
     // for calculation using pytorchpp.dll

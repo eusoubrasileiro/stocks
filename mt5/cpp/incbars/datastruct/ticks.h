@@ -60,18 +60,10 @@ protected:
   
   // sync check 
   bool m_scheck; // security check of sync with data server
-
-
-  ////////////////////////////////////////////
-  ////// for testing against Python/C++ since i need to
-  ////// know boundaries of new ticks (since data comes in chuncks)
-  //std::vector<int> m_bound_ticks;
-  //int ib_tick; // count of calls to AddRange
+  unixtime_ms m_request; // time of/for last/next request of ticks by MT5
   int m_nnew; // number of new ticks added
+  double m_perc_lost; // lost ticks in percentage (number of lost)/(number received) - last 
 
-  bool addFromFileTicks();
-
-  void loadCorrectTicks(std::string symbol);
 //////////////////////////////////////////////
 
   // secury check of sync with server of ticks
@@ -92,6 +84,9 @@ public:
       m_scheck = false;
       m_mt5ncopied = 0;
       m_nnew = 0;
+      m_request = 0;
+      m_mt5ticks = NULL;
+      m_perc_lost = 0; 
   };
 
   int nNew(); // number of new ticks added
@@ -99,7 +94,7 @@ public:
   void Init(std::string symbol);
 
   // will be called somehow by mt5
-  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied); 
+  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, double *perc_lost); 
 
 };
 

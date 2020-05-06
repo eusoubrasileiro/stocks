@@ -81,16 +81,22 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\incbars\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>Default</LanguageStandard>
-      <BasicRuntimeChecks />
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck />
+      <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ticks.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\datastruct.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(UserProfile)\Anaconda3\libs</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <CLRImageType />
+      <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -136,7 +142,7 @@
       <ForceConformanceInForLoopScope />
       <RemoveUnreferencedCodeData />
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <CallingConvention />
+      <CallingConvention>StdCall</CallingConvention>
       <CompileAs />
       <ShowIncludes />
       <UseFullPaths />

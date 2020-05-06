@@ -30,7 +30,7 @@ MoneyBarBuffer::MoneyBarBuffer() {
     // so first dtp gets zeroed as if crossing to a new day
     m_bar.netvol = 0;
     m_bar.min = m_bar.max = DBL_EMPTY_VALUE;
-
+    // m_ticks // has a default constructor that uses MAX_TICKS
 }
 
   // copy constructor, incomplete

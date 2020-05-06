@@ -3,7 +3,7 @@
 
 #import "datastruct.dll"
 int CppMoneyBarMt5Indicator(double &mt5_ptO[], double &mt5_ptH[], double &mt5_ptL[], double &mt5_ptC[],
-        double &mt5_ptM[], datetime &mt5_ptE[], int mt5ptsize);
+        double &mt5_ptM[], datetime &mt5_ptE[], double &mt5_Color[], int mt5ptsize);
 
 datetime CppOnTicks(MqlTick &mt5_pticks[], int mt5_nticks, double &ticks_lost);
 
@@ -29,17 +29,17 @@ bool CppNewBars(); // are there any new bars after call of CppOnTicks
 //--- indicator settings
 //#property indicator_chart_window
 //#property indicator_separate_window
-#property indicator_buffers 5
+#property indicator_buffers 6
 #property indicator_plots   2
-#property indicator_type1   DRAW_CANDLES
+#property indicator_type1   DRAW_COLOR_CANDLES
 #property indicator_type2   DRAW_ARROW
 #property indicator_color2  clrRed
 #property indicator_width2  1
-#property indicator_color1  clrBlue,clrBlue
+#property indicator_color1  clrRed,clrOrange,clrGray,clrGreen,clrBlue // 0,4 from bear to bull
 #property indicator_width1  3
 
 //--- input parameters
-input double         InpMoneyBarSize=40;         // in MM BRL
+input double         InpMoneyBarSize=400;         // in MM BRL
 input int            InpMaxBars=400;      // Max Bars
 //--- input parameters
 input bool           InpSADF=true;
@@ -55,16 +55,8 @@ double               MoneyBarsLBuffer[];
 double               MoneyBarsCBuffer[];
 double               MoneyBarsMBuffer[];
 datetime             MoneyBarsETimes[];
+double               MoneyBarsColor[];
 
-//--- An array for storing colors contains 14 elements
-color colors[]= // rainbow
-  {
-    C'255,255,102', // yellow  - closer to current sample
-    C'157,226,79', // green
-    C'135,206,250', // blue
-    C'255,189,85', // orange
-    C'255,102,102' // red - farther from current sample
-  };
 
 // doesnt matter mql5 resizes if its necessary
  const int                Expert_Max_Tick_Copy   = 10e3; // max ticks copied at every CopyTicksRange call
@@ -82,6 +74,7 @@ double tick_value, tick_size;
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
 string label;
+string label_tlost;
 bool cppstart=false;
 double ticks_lost=0; // ticks lost between calls of CopyTicksRange unavoidable
 
@@ -93,9 +86,10 @@ void OnInit()
    SetIndexBuffer(1,MoneyBarsHBuffer,INDICATOR_DATA);
    SetIndexBuffer(2,MoneyBarsLBuffer,INDICATOR_DATA);
    SetIndexBuffer(3,MoneyBarsCBuffer,INDICATOR_DATA);
+   SetIndexBuffer(4,MoneyBarsColor,INDICATOR_DATA);
 
-   PlotIndexSetInteger(4,PLOT_ARROW,158);
-   SetIndexBuffer(4,MoneyBarsMBuffer,INDICATOR_DATA);
+   PlotIndexSetInteger(5,PLOT_ARROW,158);
+   SetIndexBuffer(5,MoneyBarsMBuffer,INDICATOR_DATA);
 
 //--- indicator buffers mapping
 //   SetIndexBuffer(0,SadfArrowBuffer,INDICATOR_DATA);
@@ -122,8 +116,9 @@ void OnInit()
    PlotIndexSetDouble(0,PLOT_EMPTY_VALUE, EMPTY_VALUE);
 
    label = short_name+"lbl";
+   label_tlost = short_name+"lbl"+"lost";
    int subwindow_index = ChartWindowFind();
-   // max length of maximum ADF found
+   // Indicator NAME
    ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0, 0);
    ObjectSetInteger(0, label,OBJPROP_CORNER, 3);
    //--- set X coordinate
@@ -133,6 +128,16 @@ void OnInit()
    ObjectSetInteger(0, label,OBJPROP_FONTSIZE,10);
    ObjectSetString(0, label,OBJPROP_FONT,"Arial");
    ObjectSetString(0, label, OBJPROP_TEXT, short_name);
+   // Lost ticks
+   ObjectCreate(0, label_tlost, OBJ_LABEL, subwindow_index, 0, 0);
+   ObjectSetInteger(0, label_tlost,OBJPROP_CORNER, 3);
+   //--- set X coordinate
+   ObjectSetInteger(0, label_tlost,OBJPROP_XDISTANCE,230);
+   //--- set Y coordinate
+   ObjectSetInteger(0, label_tlost,OBJPROP_YDISTANCE,50);
+   ObjectSetInteger(0, label_tlost,OBJPROP_FONTSIZE,10);
+   ObjectSetString(0, label_tlost,OBJPROP_FONT,"Arial");
+   ObjectSetString(0, label_tlost, OBJPROP_TEXT, "Ticks Lost: " + string(ticks_lost));
   }
 
 
@@ -163,6 +168,7 @@ void GetTicks()
 
   // call C++ passing ticks
     m_cmpbegin_time = CppOnTicks(m_copied_ticks, m_ncopied, ticks_lost);
+    ObjectSetString(0, label_tlost, OBJPROP_TEXT, "Ticks Lost: " + string(ticks_lost));
 }
 
 //void OnTimer(){
@@ -195,8 +201,9 @@ int OnCalculate(const int rates_total,
     ArrayInitialize(MoneyBarsLBuffer,EMPTY_VALUE);
     ArrayInitialize(MoneyBarsCBuffer,EMPTY_VALUE);
     ArrayInitialize(MoneyBarsMBuffer,EMPTY_VALUE);
+    ArrayInitialize(MoneyBarsColor,EMPTY_VALUE);
 
-   if(!cppstart){ // starting
+   if(!cppstart && rates_total > InpMaxBars+1){ // starting
         // first m_cmpbegin_time must be done here others
         // will come from C++
         // time now is in seconds unix timestamp
@@ -212,7 +219,7 @@ int OnCalculate(const int rates_total,
    //--- sets first bar from what index will be draw
    ArrayResize(MoneyBarsETimes, rates_total);
    int totalbars = CppMoneyBarMt5Indicator(MoneyBarsOBuffer,MoneyBarsHBuffer, MoneyBarsLBuffer,
-                MoneyBarsCBuffer, MoneyBarsMBuffer, MoneyBarsETimes, rates_total);
+                MoneyBarsCBuffer, MoneyBarsMBuffer, MoneyBarsETimes, MoneyBarsColor, rates_total);
    return(rates_total);
   }
 //+------------------------------------------------------------------+
@@ -222,5 +229,6 @@ void OnDeinit(const int reason)
 {
     cppstart = false;
     ObjectDelete(0, label);
+    ObjectDelete(0, label_tlost);
     EventKillTimer();
 }

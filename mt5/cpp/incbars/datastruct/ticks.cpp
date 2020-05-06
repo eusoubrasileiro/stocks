@@ -139,12 +139,16 @@ void fixArrayTicks(MqlTick *ticks, size_t nticks) {
             ticks[i].last = last;
         else
             last = ticks[i].last; // save this for use next
+        // try to get who is attacking who
         // TICK BUY or TICK SELL == most time not set
         // very predictive power information?? or Market Makers?
-        if (ticks[i].last != ticks[i].ask)
+        // used by net_vol buy//sell power
+        ticks[i].flags = 0; // not sure NA
+        if (ticks[i].last == ticks[i].bid)
             ticks[i].flags = TICK_FLAG_SELL;
         else
-            ticks[i].flags = TICK_FLAG_BUY;
+            if (ticks[i].last == ticks[i].ask)
+                ticks[i].flags = TICK_FLAG_BUY;
     }
 }
 
@@ -212,6 +216,10 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
 
     // current percentage of lost ticks
     m_perc_lost = (m_nnew > 0) ? (double) lost_ticks / m_nnew : m_perc_lost; 
+    #ifdef  DEBUG
+        if(m_perc_lost > 0)
+            debugfile << "ticks lost: " << m_perc_lost << std::endl;
+    #endif //  DEBUG
 
     #ifdef DEBUGMORE
         if (lost_ticks > 0) // that happens 

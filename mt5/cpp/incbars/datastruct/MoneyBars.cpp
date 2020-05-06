@@ -241,7 +241,7 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double *lost_ticks){
 // Open, Close show percentile 10, 90 of weighted volume prices
 // mt5_pM shows the average weigthed price of entire bar, will be plot with DRAW_ARROW
 int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, double* mt5_ptC, double* mt5_ptM, 
-    unixtime *mt5_petimes, int mt5ptsize) {
+    unixtime *mt5_petimes, double* mt5_bearbull, int mt5ptsize) {
     // receives the buffer indicator pointers from metatrader for fill in
     // taking in to account maxbars that will be filled
     // and size that is the maximum size, fill in the latest (maxbar values only)
@@ -264,6 +264,7 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
             mt5_ptL[i] = m_bars->at(j).min; // min value negotiated
             mt5_ptM[i] = m_bars->at(j).wprice; // average weighted price of entire bar
             mt5_petimes[i] = (unixtime)(m_bars->at(j).emsc * 0.001);
+            mt5_bearbull[i] = (int)((m_numcolors - 1) * (1+m_bars->at(j).netvol)/2.); // from -1/+1 to 0/1 where 0.5 is no bear no bull
         }
     }
 

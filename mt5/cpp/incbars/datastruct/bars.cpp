@@ -96,6 +96,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
         m_bar.nticks++;
         auto sametick = false;
         while (m_count_money >= m_moneybarsize) { 
+
             // may need to create many bars for one same tick
             // in this case nticks == 0 for the second one and so forth
             // start/exit time also == 0
@@ -104,6 +105,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
                 m_bar.wprice10 = percentile(m_wprices, 0.1, true);
                 m_bar.wprice90 = percentile(m_wprices, 0.9, false);
                 m_bar.emsc = tick.time_msc; // exit time
+                m_bar.netvol /= m_pvs * m_point_value; // net volume negotiated divided by total volume (-1/1+)
             }
             m_bar.uid = cuid++;
             uidtimes.add(m_bar.uid);
@@ -120,7 +122,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             // createas a new bar
             m_count_money -= m_moneybarsize;
             m_nnew++;
-            sametick = true; // if keeps on this loop
+            sametick = true; // if, keeps on this loop
         }
     }
     return m_nnew;

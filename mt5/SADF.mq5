@@ -14,10 +14,11 @@ int sadfd_mt5(const double &signal[], double &outsadf[], double &idxadf[], int n
 #property indicator_buffers 3
 #property indicator_plots   2 // 2 plots, arrow and line
 #property indicator_type1   DRAW_COLOR_ARROW
-#property indicator_color1  C'255,255,102',C'157,226,79',C'135,206,250',C'255,189,85',C'255,102,102'
+#property indicator_color1  clrYellow, clrGreen, clrBlue, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
 #property indicator_type2   DRAW_LINE
 #property indicator_color2  clrLightGray
 #property indicator_width2  1
+#property indicator_applied_price PRICE_MEDIAN
 
 //--- input parameters
 input int            InpMaxWin=4*90;         // Maximum backward window (bars)
@@ -30,16 +31,6 @@ input int            InpMaxBars=60*7*5;      // Max M1 Bars (1 week)
 double               SadfLineBuffer[];
 double               SadfArrowBuffer[];
 double               SadfColorArrowBuffer[];
-
-//--- An array for storing colors contains 14 elements
-color colors[]= // rainbow
-  {
-    C'255,255,102', // yellow  - closer to current sample
-    C'157,226,79', // green
-    C'135,206,250', // blue
-    C'255,189,85', // orange
-    C'255,102,102' // red - farther from current sample
-  };
 
 // SADF output array
 double out_sadf[];
@@ -142,68 +133,58 @@ void CalculateSADF(int rates_total,int prev_calculated,int begin, const double &
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
-void OnInit()
-  {
-  
-   //--- indicator buffers mapping
-   // COLOR_ARROW
-   SetIndexBuffer(0,SadfArrowBuffer,INDICATOR_DATA);
-   SetIndexBuffer(1,SadfColorArrowBuffer,INDICATOR_COLOR_INDEX);
-   // LINE
-   //--- indicator buffers mapping
-   SetIndexBuffer(2,SadfLineBuffer,INDICATOR_DATA);
-
-   //--- set accuracy
-   IndicatorSetInteger(INDICATOR_DIGITS,_Digits+3);
-   //--- sets first bar from what index will be drawn
-   PlotIndexSetInteger(2,PLOT_DRAW_BEGIN,InpMaxWin);
-   PlotIndexSetInteger(0,PLOT_ARROW,159);
-   //---- line shifts when drawing
-   PlotIndexSetInteger(2,PLOT_LINE_WIDTH,1);
-
-   //--- name for DataWindow
-   string short_name="SADF";
-
-   IndicatorSetString(INDICATOR_SHORTNAME, idwindow_short_name);
-
-   //---- initialization done
-   ArrayResize(out_sadf, 100000); // huge size just to make sure is enough
-   ArrayResize(out_idxadf, 100000);
-   ArrayResize(in_data, 100000);
-
-   prev_calc = 0; // real prev calculated
-
-   // colors definition by integer mapping
-     for(int i=0; i<5; i++){
-         PlotIndexSetInteger(0,             //  The number of a graphical style
-                      PLOT_LINE_COLOR,      //  Property identifier
-                      i,                    //  The index of the color, where we write the color
-                      colors[i]);             //  A new color
-     }
-     
-     subwindow_index = ChartWindowFind();
-     // max length of maximum ADF found
-     ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0,0);     
-     ObjectSetInteger(0, label,OBJPROP_CORNER, 3); 
-     //--- set X coordinate
-     ObjectSetInteger(0, label,OBJPROP_XDISTANCE,230);
-      //--- set Y coordinate
-     ObjectSetInteger(0, label,OBJPROP_YDISTANCE,10);
-     ObjectSetInteger(0, label,OBJPROP_FONTSIZE,10);
-     ObjectSetString(0, label,OBJPROP_FONT,"Arial");
-     
-     ObjectCreate(0, vline, OBJ_VLINE, subwindow_index, 0, 0);     
-     
-     ObjectSetInteger(0, vline,OBJPROP_COLOR,clrAntiqueWhite);
+void OnInit(){
+    
+    //--- indicator buffers mapping
+    // COLOR_ARROW
+    SetIndexBuffer(0,SadfArrowBuffer,INDICATOR_DATA);
+    SetIndexBuffer(1,SadfColorArrowBuffer,INDICATOR_COLOR_INDEX);
+    // LINE
+    //--- indicator buffers mapping
+    SetIndexBuffer(2,SadfLineBuffer,INDICATOR_DATA);
+    
+    //--- set accuracy
+    IndicatorSetInteger(INDICATOR_DIGITS,_Digits+3);
+    //--- sets first bar from what index will be drawn
+    PlotIndexSetInteger(2,PLOT_DRAW_BEGIN,InpMaxWin);
+    PlotIndexSetInteger(0,PLOT_ARROW,159);
+    //---- line shifts when drawing
+    PlotIndexSetInteger(2,PLOT_LINE_WIDTH,1);
+    
+    //--- name for DataWindow
+    string short_name="SADF";
+    
+    IndicatorSetString(INDICATOR_SHORTNAME, idwindow_short_name);
+    
+    //---- initialization done
+    ArrayResize(out_sadf, 100000); // huge size just to make sure is enough
+    ArrayResize(out_idxadf, 100000);
+    ArrayResize(in_data, 100000);
+    
+    prev_calc = 0; // real prev calculated
+    subwindow_index = ChartWindowFind();
+    // max length of maximum ADF found
+    ObjectCreate(0, label, OBJ_LABEL, subwindow_index, 0,0);     
+    ObjectSetInteger(0, label,OBJPROP_CORNER, 3); 
+    //--- set X coordinate
+    ObjectSetInteger(0, label,OBJPROP_XDISTANCE,230);
+    //--- set Y coordinate
+    ObjectSetInteger(0, label,OBJPROP_YDISTANCE,10);
+    ObjectSetInteger(0, label,OBJPROP_FONTSIZE,10);
+    ObjectSetString(0, label,OBJPROP_FONT,"Arial");
+    
+    ObjectCreate(0, vline, OBJ_VLINE, subwindow_index, 0, 0);     
+    
+    ObjectSetInteger(0, vline,OBJPROP_COLOR,clrAntiqueWhite);
     //--- set line display style
-     ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_DOT);
+    ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_DOT);
     //--- set line width
-     ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
+    ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
     //--- display in the foreground (false) or background (true)
-     ObjectSetInteger(0, vline,OBJPROP_BACK, true);
-     
-     adfs_count = InpMaxWin - InpMinWin;
-  }
+    ObjectSetInteger(0, vline,OBJPROP_BACK, true);
+    
+    adfs_count = InpMaxWin - InpMinWin;
+}
 
 int OnCalculate(const int rates_total,
                 const int prev_calculated,

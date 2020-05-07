@@ -1,9 +1,8 @@
 #pragma warning (disable : 4146)
-#include <iostream>
 #include "pytorchcpp.h"
-#include <torch\torch.h>
-
-namespace th = torch;
+#include <windows.h>
+#include <iostream>
+#include <vector>
 
 // from Python
 double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a

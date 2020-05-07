@@ -33,14 +33,14 @@ std::ofstream debugfile("testing_file.txt");
         }
         //EXPECT_EQ(expected.size(), actual.size()) << "Array sizes differ."; \
 
-// distance between arrays/vectors
+// average distance between arrays/vectors
 #define EXPECT_FLOATS_AVG_DIST_NEARLY(expected, actual, size, thresh) \
-        auto dist=0;\
+        float dist=0;\
         for(size_t idx = 0; idx < size; ++idx) \
         { \
            dist += sqrt(pow(expected[idx]-actual[idx], 2)); \
         } \
-        EXPECT_EQ(dist <= thresh, true) << dist << std::endl;
+        EXPECT_EQ((dist/size) <= thresh, true) << (dist/size) << std::endl;
 
 //ENUM_DEFINE(TA_MAType_SMA, Sma) = 0,
 //ENUM_DEFINE(TA_MAType_EMA, Ema) = 1,
@@ -311,7 +311,7 @@ TEST(MoneyBars, OnTicksSADF) {
     std::streampos begin, end;
 
     char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
-    double lost_ticks; // qc for real time 
+    double lost_ticks; // qc for real time
 
     // load SADF indicator
     CppDataBuffersInit(0.01, 0.01, 25E6, symbol, true, 250, 200, 15, false, 200, 5);
@@ -433,14 +433,13 @@ TEST(Indicators, CSADFIndicator) {
     for (int i = iSADF->valididx(); i < iSADF->size(); i++)
         sadf[i- iSADF->valididx()] = iSADF->at(i).sadf;
 
-    //auto dist = 0; 
-    //for (size_t idx = 0; idx < iSADF->nvalid(); ++idx)
-    //{ 
+    // due model aproximation zeroing rows there is an error
+    //float dist = 0; // 1.53806006 - real distance th.dist
+    //for (size_t idx = 0; idx < sadf.size(); ++idx)
     //    dist += sqrt(pow(pytruth[idx] - sadf[idx], 2));
-    //} 
-    //EXPECT_EQ(dist <= 0.01, true) << dist << std::endl;
-
-    EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->nvalid(), 0.04);
+    // avg distance (CPU) 0.011393038 ~ avg. error 1.114% 
+    // avg distance (GPU) 0.013229601 ~ avg. error 1.3% 
+    EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->nvalid(), 0.014);
 }
 
 // need to use DLL Load to Deal with 

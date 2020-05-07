@@ -1,148 +1,169 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x86</PreferredToolArchitecture>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
-  <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{E32AD162-78FB-4CBD-B244-01023ED6EFF0}</ProjectGuid>
-    <Keyword>Win32Proj</Keyword>
-    <RootNamespace>testtorch</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>pytorchcpp</ProjectName>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>
-    </LinkIncremental>
-    <OutDir>$(SolutionDir)</OutDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental />
-    <OutDir>$(SolutionDir)</OutDir>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>
-      </Optimization>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDLL;_UNICODE;UNICODE</PreprocessorDefinitions>
-      <ConformanceMode>
-      </ConformanceMode>
-      <AdditionalIncludeDirectories>$(USERPROFILE)\Projects\libtorch\include\torch\csrc\api\include;$(USERPROFILE)\Projects\libtorch\include;$(USERPROFILE)\Projects\libtorch\include\c10;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>
-      </LanguageStandard>
-      <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <CallingConvention>StdCall</CallingConvention>
-      <AdditionalOptions>
-      </AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <TreatWChar_tAsBuiltInType />
-      <ForceConformanceInForLoopScope />
-      <RemoveUnreferencedCodeData />
-      <PrecompiledHeaderFile />
-      <PrecompiledHeaderOutputFile />
-      <CompileAs>CompileAsCpp</CompileAs>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <WholeProgramOptimization>
-      </WholeProgramOptimization>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(USERPROFILE)\Projects\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>c10.lib;c10_cuda.lib;torch.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <SuppressStartupBanner />
-    </Link>
-    <PostBuildEvent>
-      <Command>copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5\"</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>
-      </Optimization>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDLL;_UNICODE;UNICODE</PreprocessorDefinitions>
-      <ConformanceMode>
-      </ConformanceMode>
-      <AdditionalIncludeDirectories>$(USERPROFILE)\Projects\libtorch\include\torch\csrc\api\include;$(USERPROFILE)\Projects\libtorch\include;$(USERPROFILE)\Projects\libtorch\include\c10;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp14</LanguageStandard>
-      <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <CallingConvention>StdCall</CallingConvention>
-      <AdditionalOptions>
-      </AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <TreatWChar_tAsBuiltInType>
-      </TreatWChar_tAsBuiltInType>
-      <ForceConformanceInForLoopScope>
-      </ForceConformanceInForLoopScope>
-      <RemoveUnreferencedCodeData>
-      </RemoveUnreferencedCodeData>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-      <CompileAs>CompileAsCpp</CompileAs>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <WholeProgramOptimization>
-      </WholeProgramOptimization>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(USERPROFILE)\Projects\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>c10.lib;c10_cuda.lib;torch.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <SuppressStartupBanner>
-      </SuppressStartupBanner>
-    </Link>
-    <PostBuildEvent>
-      <Command>copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5\"</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="pytorch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pytorchcpp.h" />
   </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>pytorchcpp</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pytorchcpp</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(SolutionDir)</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">pytorchcpp</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>
+      </AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <DisableSpecificWarnings>4267;4251;4522;4838;4305;4244;4190;4101;4996;4275</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR="Release";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <CallingConvention>StdCall</CallingConvention>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR=\"Release\";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>D:\Projects\libtorch\lib\c10.lib;C:\Program Files\NVIDIA Corporation\NvToolsExt\lib\x64\nvToolsExt64_1.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cudart_static.lib;D:\Projects\libtorch\lib\caffe2_nvrtc.lib;D:\Projects\libtorch\lib\c10_cuda.lib;D:\Projects\libtorch\lib\torch.lib;D:\Projects\libtorch\lib\torch_cuda.lib;D:\Projects\libtorch\lib\torch_cpu.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cufft.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\curand.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cublas.lib;D:\Projects\libtorch\lib\cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(TargetName).lib</ImportLibrary>
+      <ProgramDataBaseFile>$(TargetName).pdb</ProgramDataBaseFile>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll "D:\Metatrader 5\"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>
+      </AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <DisableSpecificWarnings>4267;4251;4522;4838;4305;4244;4190;4101;4996;4275</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR="RelWithDebInfo";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <CallingConvention>StdCall</CallingConvention>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR=\"RelWithDebInfo\";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\libtorch\include;D:\Projects\libtorch\include\torch\csrc\api\include;C:\Program Files\NVIDIA Corporation\NvToolsExt\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>D:\Projects\libtorch\lib\c10.lib;C:\Program Files\NVIDIA Corporation\NvToolsExt\lib\x64\nvToolsExt64_1.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cudart_static.lib;D:\Projects\libtorch\lib\caffe2_nvrtc.lib;D:\Projects\libtorch\lib\c10_cuda.lib;D:\Projects\libtorch\lib\torch_cuda.lib;D:\Projects\libtorch\lib\torch_cpu.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cufft.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\curand.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\cublas.lib;D:\Projects\libtorch\lib\cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(TargetName).lib</ImportLibrary>
+      <ProgramDataBaseFile>$(TargetName).pdb</ProgramDataBaseFile>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll "D:\Metatrader 5\"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

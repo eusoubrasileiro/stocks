@@ -36,4 +36,6 @@
 *.TMP
 *.pch
 packages/
- # nuget packages
+# nuget packages
+*.iobj
+*.ipdb

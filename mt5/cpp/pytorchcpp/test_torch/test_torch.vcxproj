@@ -45,8 +45,8 @@
       <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>
       </ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(USERPROFILE)\Projects\libtorch\include\torch\csrc\api\include;$(USERPROFILE)\Projects\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir);D:\Projects\libtorch\include\torch\csrc\api\include;D:\Projects\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <CallingConvention>
       </CallingConvention>
@@ -63,10 +63,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir);$(USERPROFILE)\Projects\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>c10.lib;torch.lib;pytorchcpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir);D:\Projects\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>pytorchcpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner />
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\$(ProjectName).exe "D:\Metatrader 5\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="test_torch.cpp" />

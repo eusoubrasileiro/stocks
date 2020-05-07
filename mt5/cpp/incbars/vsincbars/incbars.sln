@@ -13,8 +13,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "..\tests\tests.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "datastruct", "..\datastruct\datastruct.vcxproj", "{83A400C8-03FA-4684-BC7F-D042CA4E86A7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "indicators", "..\indicators\indicators.vcxproj", "{0B2C577B-D5BD-421A-AB8F-E817D74902C9}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -33,10 +31,6 @@ Global
 		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Debug|x64.Build.0 = Debug|x64
 		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Release|x64.ActiveCfg = Release|x64
 		{83A400C8-03FA-4684-BC7F-D042CA4E86A7}.Release|x64.Build.0 = Release|x64
-		{0B2C577B-D5BD-421A-AB8F-E817D74902C9}.Debug|x64.ActiveCfg = Debug|x64
-		{0B2C577B-D5BD-421A-AB8F-E817D74902C9}.Debug|x64.Build.0 = Debug|x64
-		{0B2C577B-D5BD-421A-AB8F-E817D74902C9}.Release|x64.ActiveCfg = Release|x64
-		{0B2C577B-D5BD-421A-AB8F-E817D74902C9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

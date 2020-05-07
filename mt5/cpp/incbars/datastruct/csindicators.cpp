@@ -2,10 +2,6 @@
 #include "pytorchcpp.h"
 #include <algorithm>
 
-/////////////////////////////
-//// special indicators ////
-///////////////////////////
-
 void CFracDiffIndicator::Init(int window, double dfraction){
     m_dfraction = dfraction;
     CWindowIndicator::Init(window);
@@ -70,12 +66,6 @@ void CBandSignal::Calculate(double indata[], int size, int outdata[])
     }
 }
 
-
-/////////////////////////////
-//// special indicators ////
-///////////////////////////
-
-
 //
 // Windowed Augmented Dickey-Fuller test or SADF (supremum) ADF
 // SADF very optimized for GPU using Libtorch C++ Pytorch
@@ -133,6 +123,8 @@ void CCumSumIndicator::Init(double cum_reset) {
     IWindowIndicator::Init(2);
 }
 
+
+
 void CCumSumIndicator::Calculate(double indata[], int size, double outdata[]) {
 
     for (int i = 1; i < size; i++) {
@@ -152,3 +144,19 @@ void CCumSumIndicator::Calculate(double indata[], int size, double outdata[]) {
             outdata[i - 1] = 0;
     }
 }
+
+// CCumSum on SADF 
+
+//CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumSADFIndicator(buffersize) {
+//    
+//};
+//
+//void CCumSumSADFIndicator::Init(double cum_reset) {
+//    m_cum_reset = cum_reset;
+//    IWindowIndicator::Init(2);
+//}
+//
+//void CCumSumSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
+//
+//
+//}

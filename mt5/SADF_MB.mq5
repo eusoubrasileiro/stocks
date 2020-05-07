@@ -14,7 +14,7 @@ void CppGetSADFWindows(int &minwin, int &maxwin);
 #property indicator_buffers 3
 #property indicator_plots   2
 #property indicator_type1   DRAW_COLOR_ARROW
-#property indicator_color1  clrYellow, clrGreen, clrBlue, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
+#property indicator_color1  clrBlue, clrGreen, clrYellow, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
 #property indicator_type2   DRAW_LINE
 #property indicator_color2  clrLightGray
 #property indicator_width2  1

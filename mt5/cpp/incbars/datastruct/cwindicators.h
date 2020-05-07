@@ -1,4 +1,5 @@
 #include "buffers.h"
+#define NOMINMAX
 
 // an indicator the each sample calculated 
 // depends itself + window-1 samples before it
@@ -345,3 +346,18 @@ public:
 
     void Calculate(double indata[], int size, double outdata[]);
 };
+
+//// Cum Sum filter on SADF
+//class CCumSumSADFIndicator : public CCumSumIndicator
+//{
+//
+//public:
+//
+//    std::shared_ptr<CSADFIndicator> piSADF;
+//
+//    CCumSumSADFIndicator(int buffersize);
+//
+//    void Init(double cum_reset);
+//
+//    void Calculate(double indata[], int size, double outdata[]);
+//};

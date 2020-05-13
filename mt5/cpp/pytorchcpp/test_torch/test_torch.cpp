@@ -128,8 +128,8 @@ void test_sadf() {
         -1.2686000e+00, -1.8379117e+00, -1.6301438e+00, -3.0783081e-01,
         -1.1272501e+00, -1.2535882e+00, -1.2739995e+00 };
 
-// include test for 1 point SADF
-
+//  test for 1 point SADF
+    sadf(&data.data()[15], outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
 }
 
 

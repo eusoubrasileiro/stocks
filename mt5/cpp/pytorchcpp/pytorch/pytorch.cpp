@@ -1,10 +1,8 @@
 #pragma warning (disable : 4146)
 #include <iostream>
 #include <torch\torch.h>
-#include <torch/cuda.h>
 
 #include "pytorchcpp.h"
-#define PYTORCHCPP_DLL
 
 #include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
 std::ofstream debugfile("pytorchcpp.txt");
@@ -249,12 +247,7 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
     // working perfectly - only one GPU so only one thread can access it a time
     std::lock_guard<std::mutex> lock(m); 
 
-    if (th::cuda::is_available()) {
-        //std::cout << "CUDA is available! Running on GPU." << std::endl;
-        deviceifGPU = th::Device(th::kCUDA);
-    }
-
-#ifdef  DEBUG
+#ifdef  FILEDEBUG
     try {
 #endif //  DEBUG
         th::NoGradGuard guard; // same as with torch.no_grad(): block
@@ -308,6 +301,7 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
         // ignoring the first param columns already filled
         for (auto i = params - 1, j = 0; i >= 2 + 1 * drift; i--, j++) //X[:, 2+i] = dy[p-i:-i]
             X.select(1, i).copy_(dy.narrow(0, j, neq));
+
         //   i = params - 1
         //    for j in range(params - 3) :
         //       print(i, j)
@@ -322,7 +316,7 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
         auto sadft_GB = float(xsize * adfs_count / GIGABytes); // matrix storage for 1 sadf point
         auto nsadft = n - maxw; // number of sadf t's to calculate the entire SADF
 
-        if (nsadft == 0) // 1 point SADF, needed by Metatrader 5
+        if (nsadft == 0) // 1 point SADF, (possible) and needed by Metatrader 5
             nsadft = 1;
 
         auto batch_size = 1; // number of sadft points to calculate at once
@@ -402,8 +396,10 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto XcuT = Xcu.transpose(1, -1);
             auto L = Cholesky(XcuT.bmm(Xcu));
             auto xtz = XcuT.bmm(zcu);
-            auto Bhat = th::cholesky_solve(xtz, L);
-            auto Gi = th::cholesky_solve(eye, L); // (X ^ T.X) ^ -1
+            //auto Bhat = th::cholesky_solve(xtz, L, false);
+            //auto Gi = th::cholesky_solve(eye, L, false); // (X ^ T.X) ^ -1
+            auto Bhat = std::get<0>(th::triangular_solve(xtz, L, false));
+            auto Gi = std::get<0>(th::triangular_solve(eye, L, false)); // (X ^ T.X) ^ -1
             auto er = zcu - Xcu.bmm(Bhat);
             Bhat = Bhat.squeeze();
             auto s2 = (er * er).sum(1).squeeze().div(dgfreecu);
@@ -452,8 +448,10 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto XcuT = Xcu.transpose(1, -1);
             auto L = Cholesky(XcuT.bmm(Xcu));
             auto xtz = XcuT.bmm(zcu);
-            auto Bhat = th::cholesky_solve(xtz, L);
-            auto Gi = th::cholesky_solve(eye, L); // (X ^ T.X) ^ -1
+            //auto Bhat = th::cholesky_solve(xtz, L, false);
+            //auto Gi = th::cholesky_solve(eye, L, false); // (X ^ T.X) ^ -1
+            auto Bhat = std::get<0>(th::triangular_solve(xtz, L, false));
+            auto Gi = std::get<0>(th::triangular_solve(eye, L, false)); // (X ^ T.X) ^ -1
             auto er = zcu - Xcu.bmm(Bhat);
             Bhat = Bhat.squeeze();
             auto s2 = (er * er).sum(1).squeeze().div(dgfreecu);
@@ -483,8 +481,8 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
         memcpy(outadfmaxidx, adfmaxidx.data_ptr<float>(), sizeof(float) * nsadft);
 
         return nsadft;
-    
-#ifdef  DEBUG
+
+#ifdef  FILEDEBUG
         }
         catch (const std::exception& ex) {
             debugfile << "c++ exception: " << std::endl;
@@ -510,7 +508,7 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
 
     float last_valid = 0;
     int count_evalues = 0; // count of invalid values filled
-        
+
     try {
         // convert from double to float
         for (int i = 0; i < n; i++)
@@ -537,5 +535,3 @@ int sadfd_mt5(double* signal, double* outsadf, double* lagout, int n, int maxw, 
 
     return count_evalues;
 }
-
-

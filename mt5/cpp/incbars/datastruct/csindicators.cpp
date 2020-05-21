@@ -86,7 +86,7 @@ void CSADFIndicator::Init(int maxwindow, int minwindow, int order, bool usedrift
     m_minw = minwindow;
     m_maxw = maxwindow;
     m_order = order;
-    IWindowIndicator::Init(m_maxw+1);
+    IWindowIndicator::Init(m_maxw); // inside m_prev_data.resize(m_maxw+1-1) -> 1 output when == m_maxw
 };
 
 void CSADFIndicator::AddEmpty(int count) {
@@ -147,16 +147,17 @@ void CCumSumIndicator::Calculate(double indata[], int size, double outdata[]) {
 
 // CCumSum on SADF 
 
-//CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumSADFIndicator(buffersize) {
-//    
-//};
-//
-//void CCumSumSADFIndicator::Init(double cum_reset) {
-//    m_cum_reset = cum_reset;
-//    IWindowIndicator::Init(2);
-//}
-//
-//void CCumSumSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
-//
-//
-//}
+CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumIndicator(buffersize)
+{
+};
+
+void CCumSumSADFIndicator::Init(double cum_reset, CSADFIndicator *pSADF) {
+    m_cum_reset = cum_reset;
+    m_pSADF = pSADF;
+    IWindowIndicator::Init(m_pSADF->Window()+1); //1 + SADF window
+}
+
+void CCumSumSADFIndicator::Calculate(double indata[], int size, double outdata[]) {
+
+
+}

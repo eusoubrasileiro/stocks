@@ -4,6 +4,9 @@
 // an indicator the each sample calculated 
 // depends itself + window-1 samples before it
 // or u need window samples to produce 1 output
+// simplest example: z
+// - diff 1st order : window = 2 samples, out[t] = x[t]-x[t-1]
+// - m_prev_data.resize(2-1) only need 1 previous sample
 // TypeSt for storage
 // TypeIn for input
 template<typename TypeSt, typename TypeIn>
@@ -13,7 +16,8 @@ class IWindowIndicator
 protected:
 
   int m_buffersize;
-  int m_window;
+  int m_window; // minimum number of input samples to produce 1 output sample
+  int m_prev_needed;   // m_prev_need + 1 = 1  to produce 1 output sample
   // last data
   // used to make previous calculations size window
   // needed to calculate next batch of new samples
@@ -24,7 +28,7 @@ protected:
   int m_nprev; // size of already stored data previous
   int m_new; // size of recent call new data
   // where starts non EMPTY values
-  int m_count; // count added samples (like size()) but continues beyound BUFFERSIZE 
+  size_t m_count; // count added samples (like size()) but continues beyound BUFFERSIZE 
   // to check when first m_window-1 samples are overwritten
   // where starts non EMPTY values
   int m_valid_idx;
@@ -38,6 +42,7 @@ protected:
       m_count = 0;
       m_new = 0;
       m_nprev = 0;
+      m_prev_needed = 0;
       m_buffersize = buffersize;
       // max sized to avoid resizing during calls
       m_calculating.resize(m_buffersize);
@@ -49,7 +54,8 @@ protected:
 
   void Init(int window) {
       m_window = window;
-      m_prev_data.set_capacity(m_window - 1);
+      m_prev_needed = m_window - 1;
+      m_prev_data.set_capacity(m_prev_needed);
   }
 
 public:
@@ -68,9 +74,9 @@ public:
 
       if(count==0) // no data
         return 0;
-      // needs m_window-1 previous samples to calculate 1 output sample
+      // needs m_window-1 previous samples + count > 0 to calculate 1 output sample
       // check enough samples using previous
-      if(m_nprev < m_window-1){
+      if(m_nprev < m_prev_needed){ // m_prev_need + 1 = 1 output
         if(m_nprev + count < m_window){ // cannot calculate 1 output
           // not enough data now, but insert on previous data
           m_prev_data.addrange(newdata, count);
@@ -83,7 +89,7 @@ public:
         }
         else { // now can calculate 1 or more outputs
           // insert the missing EMPTY_VALUES
-          m_nempty = m_window - 1 - m_nprev;
+          m_nempty = m_prev_needed - m_nprev;
           AddEmpty(m_nempty);
           m_count += m_nempty;
           updatevalid();
@@ -96,7 +102,7 @@ public:
       // copy in sequence new data
       std::copy(newdata, newdata + m_new, m_calculating.begin() + m_nprev);
       // needs m_window-1 previous samples to calculate 1 output sample
-      m_ncalculated = (m_nprev + m_new) - (m_window -1);
+      m_ncalculated = (m_nprev + m_new) - m_prev_needed;
 
       Calculate(m_calculating.data(), (m_nprev + m_new), m_calculated.data());
       AddRange(m_calculated.begin(), m_calculated.begin() + m_ncalculated);
@@ -112,6 +118,9 @@ public:
 
     // -1 if size=0 or index of first valid sample (not empty value)
     int valididx() { return m_valid_idx; }
+
+    // samples needed to calculated 1 output sample
+    int Window() { return m_window;  }
 
 protected:
 
@@ -348,16 +357,16 @@ public:
 };
 
 //// Cum Sum filter on SADF
-//class CCumSumSADFIndicator : public CCumSumIndicator
-//{
-//
-//public:
-//
-//    std::shared_ptr<CSADFIndicator> piSADF;
-//
-//    CCumSumSADFIndicator(int buffersize);
-//
-//    void Init(double cum_reset);
-//
-//    void Calculate(double indata[], int size, double outdata[]);
-//};
+class CCumSumSADFIndicator : public CCumSumIndicator
+{
+
+public:
+
+    CSADFIndicator* m_pSADF; // will be taken care by somebody else
+
+    CCumSumSADFIndicator(int buffersize);
+
+    void Init(double cum_reset, CSADFIndicator *pSADF);
+
+    void Calculate(double indata[], int size, double outdata[]);
+};

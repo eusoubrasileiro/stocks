@@ -11,17 +11,22 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_torch", "..\test_torch
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_Libtorch|x64 = Debug_Libtorch|x64
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
 		RelWithDebInfo|x64 = RelWithDebInfo|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Debug_Libtorch|x64.ActiveCfg = Debug_Libtorch|x64
+		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Debug_Libtorch|x64.Build.0 = Debug_Libtorch|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Debug|x64.ActiveCfg = RelWithDebInfo|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Debug|x64.Build.0 = RelWithDebInfo|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Release|x64.ActiveCfg = Release|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.Release|x64.Build.0 = Release|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
 		{956B2E03-84F2-314E-8CB5-D4FD1691CD4E}.RelWithDebInfo|x64.Build.0 = RelWithDebInfo|x64
+		{D5209107-3148-44C5-84BE-C067A0D1DF0C}.Debug_Libtorch|x64.ActiveCfg = Debug_Libtorch|x64
+		{D5209107-3148-44C5-84BE-C067A0D1DF0C}.Debug_Libtorch|x64.Build.0 = Debug_Libtorch|x64
 		{D5209107-3148-44C5-84BE-C067A0D1DF0C}.Debug|x64.ActiveCfg = Debug|x64
 		{D5209107-3148-44C5-84BE-C067A0D1DF0C}.Debug|x64.Build.0 = Debug|x64
 		{D5209107-3148-44C5-84BE-C067A0D1DF0C}.Release|x64.ActiveCfg = Debug|x64

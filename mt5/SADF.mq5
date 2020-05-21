@@ -14,7 +14,7 @@ int sadfd_mt5(const double &signal[], double &outsadf[], double &idxadf[], int n
 #property indicator_buffers 3
 #property indicator_plots   2 // 2 plots, arrow and line
 #property indicator_type1   DRAW_COLOR_ARROW
-#property indicator_color1  clrYellow, clrGreen, clrBlue, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
+#property indicator_color1  clrBlue, clrGreen, clrYellow, clrOrange, clrRed // 0-4 Shorter or Wider ADF window with max value
 #property indicator_type2   DRAW_LINE
 #property indicator_color2  clrLightGray
 #property indicator_width2  1
@@ -25,7 +25,7 @@ input int            InpMaxWin=4*90;         // Maximum backward window (bars)
 input int            InpMinWin=2*60;         // Minimum backward window (bars)
 input int            InpArOrder=15;          // Order of AR model
 input bool           InpModelDrift=false;     // Include Drift Term on AR model
-input int            InpMaxBars=60*7*5;      // Max M1 Bars (1 week)
+input int            InpMaxBars=60*7;      // Max M1 Bars (1 week)
 
 //--- indicator buffers
 double               SadfLineBuffer[];
@@ -174,10 +174,10 @@ void OnInit(){
     ObjectSetString(0, label,OBJPROP_FONT,"Arial");
     
     ObjectCreate(0, vline, OBJ_VLINE, subwindow_index, 0, 0);     
-    
-    ObjectSetInteger(0, vline,OBJPROP_COLOR,clrAntiqueWhite);
+    ObjectSetInteger(0, label,OBJPROP_COLOR,clrPink);
+    ObjectSetInteger(0, vline,OBJPROP_COLOR,clrPink);
     //--- set line display style
-    ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_DOT);
+    ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_SOLID);
     //--- set line width
     ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
     //--- display in the foreground (false) or background (true)
@@ -208,6 +208,7 @@ int OnCalculate(const int rates_total,
      
    return(rates_total);
   }
+  
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {

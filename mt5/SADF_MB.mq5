@@ -73,10 +73,10 @@ void OnInit(){
   ObjectSetString(0, label,OBJPROP_FONT,"Arial");
 
   ObjectCreate(0, vline, OBJ_VLINE, subwindow_index, 0, 0);
-
-  ObjectSetInteger(0, vline,OBJPROP_COLOR,clrAntiqueWhite);
+  ObjectSetInteger(0, label,OBJPROP_COLOR,clrGreenYellow);
+  ObjectSetInteger(0, vline,OBJPROP_COLOR,clrGreenYellow);
   //--- set line display style
-  ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_DOT);
+  ObjectSetInteger(0, vline,OBJPROP_STYLE,STYLE_SOLID);
   //--- set line width
   ObjectSetInteger(0, vline,OBJPROP_WIDTH, 1 );
   //--- display in the foreground (false) or background (true)
@@ -102,7 +102,7 @@ int OnCalculate(const int rates_total,
   int ncalculated = CppSADFMoneyBars(SadfLineBuffer, SadfArrowBuffer, SadfColorArrowBuffer, last_maxadfidx, rates_total);
 
   double window_adfmax_length = last_maxadfidx+SADFminWin;
-  ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF max: %.2f", window_adfmax_length));
+  ObjectSetString(0, label, OBJPROP_TEXT, StringFormat("Last ADF_MB max: %.2f", window_adfmax_length));
   // vline for current last value
   ObjectSetInteger(0, vline, OBJPROP_TIME, TimeCurrent()-window_adfmax_length*60);
 

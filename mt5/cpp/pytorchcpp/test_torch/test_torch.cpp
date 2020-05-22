@@ -54,11 +54,14 @@ void test_fracdif() {
 	int insize = 100;
 	double eps = 0.0001; // error tolerance in comparison
 	double frac = 0.56; // fractional derivative
-
 	setFracDifCoefs(frac, fsize);
 	int outsize = FracDifApply(in, insize, in);
-	for(int i=0; i<outsize; i++)
-		printf(" %.5f", in[i]);
+    std::cout << "Fracdiff test" << std::endl;
+    float dist = 0;
+    for (int i = 0; i < outsize; i++) {
+        dist += pow(in[i] - in[i], 2);
+        printf("%+4.2f %+4.2f error: %+4.2lf\n", in[i], pyfractruth[i], std::abs(pyfractruth[i] - in[i]));
+    }
 }
 
 
@@ -127,6 +130,16 @@ void test_sadf() {
         -2.2981637e+00, -2.7850459e+00, -2.1055303e+00, -2.4616945e+00,
         -1.2686000e+00, -1.8379117e+00, -1.6301438e+00, -3.0783081e-01,
         -1.1272501e+00, -1.2535882e+00, -1.2739995e+00 };
+
+    std::cout << "SADF test" << std::endl;
+    float dist = 0;
+    for (int i = 0; i < outsadf.size(); i++) {
+        dist += pow(outsadf[i] - pytruth[i], 2);
+        printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[i], pytruth[i], std::abs(outsadf[i] - pytruth[i]));
+    }
+    dist = sqrt(dist);
+    printf("L2 distance between vectors: %+4.4lf \n", dist);
+    printf("L2 average distance between vectors: %+4.4lf \n", dist/outsadf.size());
 
 //  test for 1 point SADF
     sadf(&data.data()[15], outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);

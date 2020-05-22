@@ -1,6 +1,7 @@
 #pragma warning (disable : 4146)
 #include <iostream>
 #include <torch\torch.h>
+#include <torch\cuda.h>
 
 #include "pytorchcpp.h"
 
@@ -66,7 +67,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     {
         case DLL_PROCESS_ATTACH:
             if (th::cuda::is_available()) {
-              //std::cout << "CUDA is available! Running on GPU." << std::endl;
+            //  debugfile << "CUDA is available! Running on GPU." << std::endl;
                 deviceifGPU = th::Device(th::kCUDA);
             }
             //debugfile << "process attach" << std::endl;

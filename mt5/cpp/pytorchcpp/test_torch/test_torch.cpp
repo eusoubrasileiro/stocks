@@ -125,8 +125,8 @@ void test_sadf() {
     int maxw = 15;
     int minw = 12;
     int p = 3;
-    outsadf.resize(data.size() - maxw);
-    outlag.resize(data.size() - maxw);
+    outsadf.resize(1);
+    outlag.resize(1);
 
     //  test for 1 point SADF
     sadf(data.data(), outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
@@ -136,6 +136,8 @@ void test_sadf() {
     // test for SADF 135 points
     outsadf.clear();
     outlag.clear();
+    outsadf.resize(data.size() - maxw);
+    outlag.resize(data.size() - maxw);
     sadf(data.data(), outsadf.data(), outlag.data(), data.size(), maxw, minw, p, true, 0.1, true);
 
     std::cout << "SADF test" << std::endl;
@@ -149,9 +151,6 @@ void test_sadf() {
     printf("L2 average distance between vectors: %+4.4lf \n", dist/outsadf.size());
 
 }
-
-
-
 
 int main() {
 	test_fracdif();

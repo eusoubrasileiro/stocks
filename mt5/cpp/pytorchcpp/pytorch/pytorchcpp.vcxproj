@@ -96,7 +96,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>c10.lib;caffe2_nvrtc.lib;c10_cuda.lib;torch.lib;torch_cuda.lib;torch_cpu.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;nvToolsExt64_1.lib;cudart_static.lib;cufft.lib;curand.lib;cublas.lib;cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>c10.lib;caffe2_nvrtc.lib;c10_cuda.lib;torch.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;nvToolsExt64_1.lib;cudart_static.lib;cufft.lib;curand.lib;cublas.lib;cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\libtorch\lib\;C:\Program Files\NVIDIA Corporation\NvToolsExt\lib\x64\;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -125,13 +125,13 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <OpenMPSupport>true</OpenMPSupport>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>FILEDEBUG;PYTORCHCPP_DLL;WIN32;_WINDOWS;NDEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR="RelWithDebInfo";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FILEDEBUG;PYTORCHCPP_DLL;WIN32;_WINDOWS;DEBUG;NOMINMAX;AT_PARALLEL_OPENMP=1;CMAKE_INTDIR="RelWithDebInfo";pytorchcpp_dll_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <CallingConvention>StdCall</CallingConvention>
     </ClCompile>
@@ -148,10 +148,10 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>c10.lib;caffe2_nvrtc.lib;c10_cuda.lib;torch.lib;torch_cuda.lib;torch_cpu.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;nvToolsExt64_1.lib;cudart_static.lib;cufft.lib;curand.lib;cublas.lib;cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>c10.lib;caffe2_nvrtc.lib;c10_cuda.lib;torch.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;nvToolsExt64_1.lib;cudart_static.lib;cufft.lib;curand.lib;cublas.lib;cudnn.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\Projects\libtorch\lib\;C:\Program Files\NVIDIA Corporation\NvToolsExt\lib\x64\;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\lib\x64\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImportLibrary>$(TargetName).lib</ImportLibrary>
       <ProgramDataBaseFile>$(TargetName).pdb</ProgramDataBaseFile>
@@ -161,7 +161,7 @@
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)\$(ProjectName).dll "D:\Projects\libtorch-win-shared-with-deps-1.5.0\lib"</Command>
+      <Command>copy $(SolutionDir)\$(ProjectName).dll "D:\Metatrader 5\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

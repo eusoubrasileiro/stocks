@@ -142,7 +142,10 @@ void test_sadf() {
     printf("L2 average distance between vectors: %+4.4lf \n", dist/outsadf.size());
 
 //  test for 1 point SADF
-    sadf(&data.data()[15], outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
+    outsadf.clear();
+    sadf(data.data(), outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
+    std::cout << "SADF test 1 point" << std::endl;
+    printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[0], pytruth[0], std::abs(outsadf[0] - pytruth[0]));
 }
 
 

@@ -48,8 +48,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <CallingConvention>
-      </CallingConvention>
+      <CallingConvention>StdCall</CallingConvention>
       <AdditionalOptions>
       </AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

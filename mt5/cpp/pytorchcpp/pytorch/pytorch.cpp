@@ -1,4 +1,3 @@
-#pragma warning (disable : 4146)
 #include <iostream>
 #include <torch\torch.h>
 #include <torch\cuda.h>
@@ -239,6 +238,31 @@ inline th::Tensor Cholesky(th::Tensor &A){
 //        };
 //};
 
+#include <fstream>
+#include <iostream>
+
+
+inline void PrintMatrices(th::Tensor& A, std::ofstream& file) {
+    auto oncpu = A.to(deviceCPU); // in case is on GPU
+    auto a = oncpu.accessor<float, 3>();
+
+    char line[256];
+    // file << "       time_msc       |   last   |  r.volume |  volume  " << std::endl;
+
+    for (int i = 0; i < a.size(0); i++) { // number of matrices
+        file << std::endl; // new matrix skip line
+        for (int j = 0; j < a.size(1); j++) { // rows
+            file << std::endl; // new row skip line
+            for (int k = 0; k < a.size(2); k++) { // columns
+                sprintf(line, "  %+5.5E", a[i][j][k]);
+                file << std::string(line);
+            }
+        }
+    }
+}
+
+
+
 
 // supremum augmented dickey fuller test SADF
 // expands backward many adfs for each point
@@ -246,7 +270,7 @@ inline th::Tensor Cholesky(th::Tensor &A){
 // lag - which ADF backward lag gave the highest ADF
 int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, int minw, int order, bool drift, float gpumem_gb, bool verbose) {
     // working perfectly - only one GPU so only one thread can access it a time
-    std::lock_guard<std::mutex> lock(m); 
+    std::lock_guard<std::mutex> lock(m);
 
 #ifdef  FILEDEBUG
     try {
@@ -330,12 +354,18 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
         auto lst_batch_size = nsadft - nbatchs * batch_size; //last batch of adfs(integer%)
 
         if (verbose) {
-            std::cout << "adfs_count " << adfs_count << std::endl;
-            std::cout << "sadft_GB " << sadft_GB << std::endl;
-            std::cout << "batch_size " << batch_size << std::endl;
-            std::cout << "nsadft " << nsadft << std::endl;
-            std::cout << "nbatchs " << nbatchs << std::endl;
-            std::cout << "lst_batch_size " << lst_batch_size << std::endl;
+            std::cout << "maximum ADF window: " << maxw << std::endl;
+            std::cout << "minimum ADF window: " << minw << std::endl;
+            std::cout << "ADFs per SADF(t) point: " << adfs_count << std::endl;
+            std::cout << "one SADF(t) point - all ADF OLS systems storage (GB): " << sadft_GB << std::endl;
+            std::cout << "batch size (number of SADF(t) points): " << batch_size << std::endl;
+            std::cout << "total number of SADF(t) points: " << nsadft << std::endl;
+            std::cout << "number of batchs : " << nbatchs << std::endl;
+            std::cout << "last batch size(number of SADF(t) points): " << lst_batch_size << std::endl;
+            std::cout << "parameters : " << params << std::endl;
+            std::cout << "number of equations master ADF : " << neq << std::endl;
+            std::cout << "number of equations max ADF : " << neq_adf << std::endl;
+            std::cout << "total number of ADF tests per batch (solved at once): " << batch_size * adfs_count << std::endl;
         }
 
         // master X for a sadft (biggest adf OLS X matrix)
@@ -397,9 +427,15 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto XcuT = Xcu.transpose(1, -1);
             auto L = Cholesky(XcuT.bmm(Xcu));
             auto xtz = XcuT.bmm(zcu);
-            auto Bhat = th::cholesky_solve(xtz, L, false);
-            auto Gi = th::cholesky_solve(eye, L, false); // (X ^ T.X) ^ -1
-            //auto Bhat = std::get<0>(th::triangular_solve(xtz, L, false));
+            // auto fileout = std::ofstream("bug_cholesky_solve_L.txt", std::ofstream::out);
+            // PrintMatrices(L, fileout);
+            // fileout.close();
+            // fileout = std::ofstream("bug_cholesky_solve_v.txt", std::ofstream::out);
+            // PrintMatrices(xtz, fileout);
+            // fileout.close();
+            auto Bhat = th::cholesky_solve(xtz, L);
+            auto Gi = th::cholesky_solve(eye, L); // (X ^ T.X) ^ -1
+            //auto Bhat = std::get<0>(th::triangular_solve(XcuT.bmm(zcu), L, false));
             //auto Gi = std::get<0>(th::triangular_solve(eye, L, false)); // (X ^ T.X) ^ -1
             auto er = zcu - Xcu.bmm(Bhat);
             Bhat = Bhat.squeeze();
@@ -451,7 +487,7 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto xtz = XcuT.bmm(zcu);
             auto Bhat = th::cholesky_solve(xtz, L, false);
             auto Gi = th::cholesky_solve(eye, L, false); // (X ^ T.X) ^ -1
-            //auto Bhat = std::get<0>(th::triangular_solve(xtz, L, false));
+            //auto Bhat = std::get<0>(th::triangular_solve(XcuT.bmm(zcu), L, false));
             //auto Gi = std::get<0>(th::triangular_solve(eye, L, false)); // (X ^ T.X) ^ -1
             auto er = zcu - Xcu.bmm(Bhat);
             Bhat = Bhat.squeeze();

@@ -1,4 +1,3 @@
-#pragma warning (disable : 4146)
 #include "pytorchcpp.h"
 #include <windows.h>
 #include <iostream>
@@ -85,16 +84,6 @@ void test_sadf() {
        53805., 53837., 53109., 52652., 54355., 54693., 55780., 56077.,
        56379., 55394., 53706., 53569., 53421., 54331., 53402., 53909.,
        54583., 55347., 54195., 53034., 52639., 52608. };
-    std::vector<float> outsadf;
-    std::vector<float> outlag;
-
-    int maxw = 15;
-    int minw = 12;
-    int p = 3;
-    outsadf.resize(data.size() - maxw);
-    outlag.resize(data.size() - maxw);
-    sadf(data.data(), outsadf.data(), outlag.data(), data.size(), maxw, minw, p, true, 0.1, false);
-
     // to write assert here
     std::vector<float> pytruth = { -1.2095627e+00, -1.4402076e+00, -1.6808732e+00, -8.9917880e-01,
         -1.1911615e+00, -1.8827139e-01, -1.5914007e+00, -2.0884252e+00,
@@ -130,19 +119,35 @@ void test_sadf() {
         -2.2981637e+00, -2.7850459e+00, -2.1055303e+00, -2.4616945e+00,
         -1.2686000e+00, -1.8379117e+00, -1.6301438e+00, -3.0783081e-01,
         -1.1272501e+00, -1.2535882e+00, -1.2739995e+00 };
+    std::vector<float> outsadf;
+    std::vector<float> outlag;
+
+    int maxw = 15;
+    int minw = 12;
+    int p = 3;
+    outsadf.resize(data.size() - maxw);
+    outlag.resize(data.size() - maxw);
+
+    //  test for 1 point SADF
+    sadf(data.data(), outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
+    std::cout << "SADF test 1 point" << std::endl;
+    printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[0], pytruth[0], std::abs(outsadf[0] - pytruth[0]));
+
+    // test for SADF 135 points
+    outsadf.clear();
+    outlag.clear();
+    sadf(data.data(), outsadf.data(), outlag.data(), data.size(), maxw, minw, p, true, 0.1, true);
 
     std::cout << "SADF test" << std::endl;
     float dist = 0;
     for (int i = 0; i < outsadf.size(); i++) {
-        dist += pow(outsadf[i] - pytruth[i], 2);
-        printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[i], pytruth[i], std::abs(outsadf[i] - pytruth[i]));
+       dist += pow(outsadf[i] - pytruth[i], 2);
+       printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[i], pytruth[i], std::abs(outsadf[i] - pytruth[i]));
     }
     dist = sqrt(dist);
     printf("L2 distance between vectors: %+4.4lf \n", dist);
     printf("L2 average distance between vectors: %+4.4lf \n", dist/outsadf.size());
 
-//  test for 1 point SADF
-    sadf(&data.data()[15], outsadf.data(), outlag.data(), 15, maxw, minw, p, true, 0.1, false);
 }
 
 

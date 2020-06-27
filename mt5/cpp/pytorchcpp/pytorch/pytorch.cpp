@@ -339,10 +339,7 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
         // 1 sadf point requires at least GB (only matrix storage)
         auto xsize = (neq_adf * params) * 4; // 4 bytes float32
         auto sadft_GB = float(xsize * adfs_count / GIGABytes); // matrix storage for 1 sadf point
-        auto nsadft = n - maxw; // number of sadf t's to calculate the entire SADF
-
-        if (nsadft == 0) // 1 point SADF, (possible) and needed by Metatrader 5
-            nsadft = 1;
+        auto nsadft = n - maxw + 1; // number of sadf t's to calculate the entire SADF
 
         auto batch_size = 1; // number of sadft points to calculate at once
         if (sadft_GB < gpumem_gb) { // each batch will have at least 1GB in OLS matrixes

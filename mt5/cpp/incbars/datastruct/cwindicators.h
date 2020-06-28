@@ -323,8 +323,8 @@ protected:
     float m_gpumemgb; // how much GPU memory each batch of SADF(t) should have
     bool m_verbose; // wether show verbose messages when calculating 
     // for calculation using pytorchpp.dll
-    std::vector<float> m_sadf;
-    std::vector<float> m_imaxadf;
+    std::vector<float> m_sadf; // last calculation only
+    std::vector<float> m_imaxadf; // last calculation only
 
 public:
 

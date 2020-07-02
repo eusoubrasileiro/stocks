@@ -1,7 +1,7 @@
 ## Stocks Prediction
 System for Stock Inefficiency Identification and Movement Prediction
 
-Several tentatives by my head and experience on financial market.
+Several tentatives by my head, lots of learning and a little experience on financial market.
 Have used from sklearn, tensorflow to pytorch. Binary options, future contracts and stocks. 
 Pandas and written a bunch of code starting in April 2018. 
 Have used Metatrader 5 since I figure out my own backtest engine was too much risk and after too many failures. 

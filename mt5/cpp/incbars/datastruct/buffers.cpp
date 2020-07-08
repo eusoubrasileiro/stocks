@@ -13,4 +13,9 @@ void buffer<int>::addempty(int count) { // add count samples with EMPTY value
         add(INT_EMPTY_VALUE);
 }
 
+template<>
+void buffer<float>::addempty(int count) { // add count samples with EMPTY value
+    for (int i = 0; i < count; i++)
+        add(FLT_EMPTY_VALUE);
+}
 

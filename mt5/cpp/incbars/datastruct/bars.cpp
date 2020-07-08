@@ -8,8 +8,8 @@ double percentile(std::vector<double> data, double perc, bool sort) {
     // inplace using the input array
     if(sort)
         std::sort(data.begin(), data.end());
-    int asize = data.size();
-    int n = std::max(std::round(perc * asize + 0.5), 2.0);
+    size_t asize = data.size();
+    auto n = (size_t) std::max(std::round(perc * asize + 0.5), 2.0);
     return data[n - 2];
 }
 

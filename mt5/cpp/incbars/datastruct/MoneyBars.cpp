@@ -130,6 +130,7 @@ void RefreshIndicators() {
             int errvalue = 0;
             int i = 0;
             for (auto bar = m_bars->end()-m_bars->m_nnew; bar != m_bars->end(); bar++) {
+                // more of a debug clause
                 auto value = (*bar).wprice;
                 auto err = fpclassify(value);
                 if (err == FP_INFINITE || err == FP_NAN) {
@@ -144,7 +145,7 @@ void RefreshIndicators() {
 
             m_SADFi->Refresh(bar_values, m_bars->m_nnew);
             if(m_SADFi->m_ncalculated > 0)
-                debugfile << "number of bars " << m_bars->size() << " calculated SADF: " << m_SADFi->m_ncalculated << " Total SADF: " << m_SADFi->size() << std::endl;
+                debugfile << "number of bars " << m_bars->size() << " calculated SADF: " << m_SADFi->m_ncalculated << " Total SADF: " << m_SADFi->Count() << std::endl;
 
             delete [] bar_values;
         }
@@ -306,15 +307,15 @@ int CppSADFMoneyBars(double* mt5_SADFline, double* mt5_SADFdots, double* mt5_ima
         mbarsize = m_bars->size();
 
         // use only data available for plotting
-        maxbarsplot = min(m_SADFi->size(), (size_t)m_maxbars);
+        maxbarsplot = min(m_SADFi->Count(), (size_t)m_maxbars);
 
         if (maxbarsplot > 0) {
-            for (i = mt5ptsize - maxbarsplot, j = m_SADFi->size() - maxbarsplot; i < mt5ptsize; i++, j++) {
-                mt5_SADFline[i] = m_SADFi->at(j).sadf; // average weighted price of entire bar
-                mt5_SADFdots[i] = m_SADFi->at(j).sadf;
-                mt5_imaxadfcolor[i] = (int)((m_numcolors - 1) * (m_SADFi->at(j).imaxadf / m_adfscount));
+            for (i = mt5ptsize - maxbarsplot, j = m_SADFi->Count() - maxbarsplot; i < mt5ptsize; i++, j++) {
+                mt5_SADFline[i] = m_SADFi->SADFt(j); // average weighted price of entire bar
+                mt5_SADFdots[i] = m_SADFi->SADFt(j);
+                mt5_imaxadfcolor[i] = (int)((m_numcolors - 1) * (m_SADFi->MaxADFi(j) / m_adfscount));
             }
-            *mt5_imaxadflast = m_SADFi->at(m_SADFi->size() - 1).imaxadf;
+            *mt5_imaxadflast = m_SADFi->MaxADFi(m_SADFi->Count() - 1);
         }
 
 #ifdef  DEBUG

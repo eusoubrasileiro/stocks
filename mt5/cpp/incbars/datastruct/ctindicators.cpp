@@ -1,5 +1,6 @@
 #include "cwindicators.h"
 #include "ctalib.h"
+#include <array>
 
 
 // TaMA
@@ -19,9 +20,9 @@ void CTaMAIndicator::Init(int window, int tama_type){
     CWindowIndicator::Init(window);
 };
 
-void CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
+void CTaMAIndicator::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
 {
-    taMA(0, size, indata, m_window, m_tama_type, outdata);
+    taMA(0, size, indata, m_window, m_tama_type, outdata[0].data());
 }
 
 
@@ -29,27 +30,22 @@ void CTaMAIndicator::Calculate(double indata[], int size, double outdata[])
 
 void CTaSTDDEV::Init(int window){ CWindowIndicator::Init(window); };
 
-void CTaSTDDEV::Calculate(double indata[], int size, double outdata[])
+void CTaSTDDEV::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
 {
-    taSTDDEV(0,  size, indata, m_window, outdata);
+    taSTDDEV(0,  size, indata, m_window, outdata[0].data());
 }
 
 // BBANDS
-// triple buffer indicator
-// cleanear code with multiple inheritance and templates
+// triple buffer indicator, but only 2 used middle is trashed
+// cleanear code with templates
 
 void CTaBBANDS::Init(int window, double devs, int ma_type) {
     m_devs = devs;
     m_tama_type = ma_type;
-    IWindowIndicator::Init(window);
+    CWindowIndicator::Init(window);
 };
 
-void CTaBBANDS::AddEmpty(int count) {
-    for (int i = 0; i < count; i++)
-        add({ DBL_EMPTY_VALUE, DBL_EMPTY_VALUE });
-}
-
-void CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
+void CTaBBANDS::Calculate(double* indata, int size, std::array<std::vector<double>, 2> &outdata)
 {
     int ncalculated = taBBANDS(0, // start the calculation at index
         size, // end the calculation at index
@@ -57,12 +53,7 @@ void CTaBBANDS::Calculate(double indata[], int size, bands outdata[])
         m_window, // From 1 to 100000  - MA window
         m_devs,
         m_tama_type, // MA type
-        m_out_upper.data(),
-        m_out_middle.data(),
-        m_out_down.data());
-
-    for (int i = 0; i < ncalculated; i++) {
-        outdata[i].up = m_out_upper[i];
-        outdata[i].down = m_out_down[i];
-    }
+        outdata[0].data(),
+        m_out_middle.data(), // not used just trashed
+        outdata[1].data());
 }

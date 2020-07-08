@@ -1,5 +1,7 @@
 #include "buffers.h"
 #define NOMINMAX
+#include <functional>
+#include <array>
 
 // an indicator the each sample calculated 
 // depends itself + window-1 samples before it
@@ -9,12 +11,12 @@
 // - m_prev_data.resize(2-1) only need 1 previous sample
 // TypeSt for storage
 // TypeIn for input
-template<typename TypeSt, typename TypeIn>
-class IWindowIndicator
+template<typename TypeSt, typename TypeIn, int NumberBuffers>
+class CWindowIndicator
 {
 
 protected:
-
+  std::array<buffer<TypeSt>, NumberBuffers>  m_buffers; 
   int m_buffersize;
   int m_window; // minimum number of input samples to produce 1 output sample
   int m_prev_needed;   // m_prev_need + 1 = 1  to produce 1 output sample
@@ -23,33 +25,33 @@ protected:
   // needed to calculate next batch of new samples
   // true or false for existing previous values
   buffer<TypeIn> m_prev_data;
-  std::vector<TypeIn> m_calculating; // now m_calculating
-  std::vector<TypeSt> m_calculated; // just calculated
+  std::vector<TypeIn> m_calculating; // now calculating
+  // just calculated, can have multiple outputs due multiple buffers
+  std::array<std::vector<TypeIn>, NumberBuffers> m_calculated;
   int m_nprev; // size of already stored data previous
   int m_new; // size of recent call new data
   // where starts non EMPTY values
-  size_t m_count; // count added samples (like size()) but continues beyound BUFFERSIZE 
-  // to check when first m_window-1 samples are overwritten
-  // where starts non EMPTY values
-  int m_valid_idx;
-  bool m_all_valid; // when all samples are valid. No EMPTY_VALUES on buffer anymore
+  size_t m_total_count; // count added samples (like size()) but continues beyound BUFFERSIZE 
+    // Event on Refresh for Son indicator
+  std::function<void(int)> m_sonRefresh; // pass number of empty samples created or 0 for none
+  int m_ndummy; // total dummy/empty (same bellow) on buffer
+  int m_nempty; // number of empty samples added on last call
 
-  IWindowIndicator(int buffersize){
-      m_ncalculated = 0;
-      m_nempty = 0;
-      m_valid_idx = -1;
-      m_all_valid = false;
-      m_count = 0;
-      m_new = 0;
-      m_nprev = 0;
-      m_prev_needed = 0;
+public :
+
+  CWindowIndicator(int buffersize){
+      m_window = 1; // output is m_window -1 + 1
+      m_ncalculated = m_nempty = m_ndummy = m_total_count = m_new = m_nprev = m_prev_needed = 0;
       m_buffersize = buffersize;
       // max sized to avoid resizing during calls
       m_calculating.resize(m_buffersize);
-      m_calculated.resize(m_buffersize);
+      for (int i = 0; i < NumberBuffers; i++) {
+          m_calculated[i].resize(m_buffersize);
+          m_buffers[i].set_capacity(m_buffersize);
+      }
   }
 
-  IWindowIndicator() : IWindowIndicator(BUFFERSIZE)
+  CWindowIndicator() : CWindowIndicator(BUFFERSIZE)
   {};
 
   void Init(int window) {
@@ -58,13 +60,11 @@ protected:
       m_prev_data.set_capacity(m_prev_needed);
   }
 
-public:
-
-    int m_nempty; // number of empty samples added on last call
     int m_ncalculated; // number of samples being calculated or calculated on the last call
 
     // re-calculate indicator values based on array of new data
     // where new data has size count
+    // input must be c-style array because of metatrader 
     int Refresh(TypeIn newdata[], int count){
 
       m_ncalculated = 0;
@@ -82,21 +82,22 @@ public:
           m_prev_data.addrange(newdata, count);
           // add dummy samples to mainting allignment with time and buffers
           m_nempty = count;
-          AddEmpty(m_nempty);
-          m_count += m_nempty;
-          updatevalid();
+          m_total_count += m_nempty;
+          AddEmpty(m_nempty); 
+          m_ndummy += m_nempty;
+           if (m_sonRefresh)
+              m_sonRefresh(m_nempty);
           return 0;
         }
         else { // now can calculate 1 or more outputs
           // insert the missing EMPTY_VALUES
           m_nempty = m_prev_needed - m_nprev;
+          m_total_count += m_nempty;
           AddEmpty(m_nempty);
-          m_count += m_nempty;
-          updatevalid();
+          m_ndummy += m_nempty;
         }
       }
 
-      // if exists previous data include it
       // copy previous data 
       std::copy(m_prev_data.begin(), m_prev_data.end(), m_calculating.begin());
       // copy in sequence new data
@@ -104,23 +105,77 @@ public:
       // needs m_window-1 previous samples to calculate 1 output sample
       m_ncalculated = (m_nprev + m_new) - m_prev_needed;
 
-      Calculate(m_calculating.data(), (m_nprev + m_new), m_calculated.data());
-      AddRange(m_calculated.begin(), m_calculated.begin() + m_ncalculated);
+      Calculate(m_calculating.data(), (m_nprev + m_new), m_calculated);
+
+      AddLatest();
 
       // copy the now previous data for the subsequent call
       m_prev_data.addrange(newdata, m_new);
 
-      m_count += m_ncalculated;
-      updatevalid();
+      m_total_count += m_ncalculated;
+
+      // if exists son indicator you can 
+      // call its Refresh now          
+      if (m_sonRefresh)
+          m_sonRefresh(m_nempty);
 
       return m_ncalculated;
     }
 
-    // -1 if size=0 or index of first valid sample (not empty value)
-    int valididx() { return m_valid_idx; }
-
     // samples needed to calculated 1 output sample
     int Window() { return m_window;  }
+
+    // using vBegin() 
+    // you dont need to keep track of valid indexes etc.
+    // begin removing empty ==  first invalid samples
+    typename circular_buffer<TypeSt>::const_iterator  vBegin(int buffer_index) {
+        // this wont be called that many times
+        // correction wether circular buffer is full or not 
+        size_t offset = (m_total_count > m_buffersize) ? 0 : m_ndummy;
+        return m_buffers[buffer_index].begin() + offset;
+    }
+
+    typename circular_buffer<TypeSt>::const_iterator  Begin(int buffer_index) {
+        // this wont be called that many times
+        // correction wether circular buffer is full or not 
+        return m_buffers[buffer_index].begin();
+    }
+
+    typename circular_buffer<TypeSt>::const_iterator End(int buffer_index) {
+        return m_buffers[buffer_index].end();
+    }
+
+    // return the buffer by index
+    typename circular_buffer<TypeSt> & operator [](int buffer_index) {
+        return m_buffers[buffer_index];
+    }
+
+    // number of valid samples
+    size_t vCount() {
+        return std::distance(vBegin(0), End(0));
+    }
+
+    size_t Count() { // number of elements on buffer(s)/same
+        return m_buffers[0].size();
+    }
+
+    // add a son indicator 'refresh' function
+    void addSonRefresh(std::function<void(int)> son_indicator_refresh) {
+        m_sonRefresh = son_indicator_refresh;
+    }
+
+    // size 
+    size_t BufferSize() {
+        return m_buffersize;
+    }
+
+private:
+    // latest calculated data added on all buffers 
+     void AddLatest() {
+         for (int i = 0; i < NumberBuffers; i++) {
+             m_buffers[i].addrange(m_calculated[i].data(), m_ncalculated);
+         }
+     }
 
 protected:
 
@@ -128,67 +183,26 @@ protected:
     // will only be called with enough samples
     // number of new samples calculated is m_ncalculated
     // output on outdata
-    virtual void Calculate(TypeIn indata[], int size, TypeSt outdata[]) = 0;
+    virtual void Calculate(TypeIn *indata, int size, std::array<std::vector<TypeIn>, NumberBuffers> &outdata) = 0;
 
-    virtual void AddEmpty(int count) = 0;
-
-    virtual void AddRange(typename std::vector<TypeSt>::iterator start,
-        typename std::vector<TypeSt>::iterator end) = 0;
-
- private:
-
-    // calculate m_valid_idx and m_all_valid samples on buffer
-    inline void updatevalid(){
-        if (!m_all_valid) {
-            if (m_count >= m_buffersize + (m_window - 1)) {
-                m_valid_idx = 0; m_all_valid = true;
-            }
-            else
-                m_valid_idx = (m_count > m_window - 1) ? m_window - 1 : -1;
-        }
+    void AddEmpty(int count) {
+        for (int i = 0; i < NumberBuffers; i++) // empty value / dummy on all buffers
+            m_buffers[i].addempty(count);
     }
-    
-};
-
-template<typename TypeSt, typename TypeIn>
-class CWindowIndicator : public buffer<TypeSt>, public IWindowIndicator<TypeSt, TypeIn>
-{
-public:
-
-    CWindowIndicator(int buffersize) : IWindowIndicator<TypeSt, TypeIn>(buffersize) {
-        buffer<TypeSt>::set_capacity(buffersize);
-    };
-
-    CWindowIndicator(void) : CWindowIndicator(BUFFERSIZE) 
-    {};
-
-    void AddRange(typename std::vector<TypeSt>::iterator start, 
-        typename std::vector<TypeSt>::iterator end) override {
-        buffer<TypeSt>::addrange(start, end);
-    }
-
-    // number of valid samples
-    int nvalid() { 
-        int valid_idx = IWindowIndicator<TypeSt, TypeIn>::m_valid_idx;
-        return (valid_idx < 0) ? 0 : buffer<TypeSt>::size() - valid_idx;
-    }
-
 };
 
 
-class CWindowIndicatorDouble : public  CWindowIndicator<double, double> 
+
+class CWindowIndicatorDouble : public  CWindowIndicator<double, double, 1> 
 {
 public:
 
-    CWindowIndicatorDouble(int buffersize) : CWindowIndicator<double, double>(buffersize)
+    CWindowIndicatorDouble(int buffersize) : CWindowIndicator<double, double, 1>(buffersize)
     {};
 
     CWindowIndicatorDouble(void) : CWindowIndicatorDouble(BUFFERSIZE)
     {};
 
-    void AddEmpty(int count) override {
-        buffer<double>::addempty(count);
-    }
 };
 
 
@@ -198,13 +212,14 @@ public:
 
 
 class CTaSTDDEV : public CWindowIndicatorDouble {
+
 public:
 
     CTaSTDDEV(void) : CWindowIndicatorDouble() {};
 
     void Init(int window);
 
-    void Calculate(double indata[], int size, double outdata[]) override;
+    void Calculate(double *indata, int size, std::array<std::vector<double>, 1> &outdata) override;
 };
 
 
@@ -220,36 +235,33 @@ public:
 
     void Init(int window, int tama_type);
 
-    void Calculate(double indata[], int size, double outdata[]) override;
+    void Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata) override;
 };
 
-struct bands {
-    double up, down;
-};
 
-class CTaBBANDS : public CWindowIndicator<bands, double>
+//   double up, down; array - up[0], down[1]
+class CTaBBANDS : public CWindowIndicator<double, double, 2>
 {
 protected:
     int m_tama_type;
     double m_devs; // number of deviatons from the mean
-    // latest/newest calculated values
-    std::vector<double> m_out_upper;
+    // middle band calculated values needed for ctalib
     std::vector<double> m_out_middle;
-    std::vector<double> m_out_down;
 
 public:
 
     CTaBBANDS() {
-        m_out_upper.resize(m_buffersize);
         m_out_middle.resize(m_buffersize);
-        m_out_down.resize(m_buffersize);
     };
 
     void Init(int window, double devs, int ma_type);
 
-    void AddEmpty(int count) override;
+    void Calculate(double* indata, int size, std::array<std::vector<double>, 2> &outdata) override;
 
-    void Calculate(double indata[], int size, bands outdata[]) override;
+    // first buffer Upper Band
+    inline double Up(size_t index) { return m_buffers[0].at(index); }
+    // second buffer Lower Band
+    inline double Down(size_t index) { return m_buffers[1].at(index); }
 };
 
 
@@ -268,7 +280,7 @@ public:
 
     void Init(int window, double dfraction);
 
-    void Calculate(double indata[], int size, double outdata[]);
+    void Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata) override;
 
 };
 
@@ -282,24 +294,20 @@ public:
 // buy   1 : crossing down-outside it's buy
 // sell -1 : crossing up-outside it's sell
 // hold  0 : nothing usefull happend
-class CBandSignal : public CWindowIndicator<int, double>
-{
-protected:
-    CTaBBANDS bands;
-
-public:
-    CBandSignal() {};
-
-    void Init(int window, double devs, int ma_type);
-
-    void Calculate(double indata[], int size, int outdata[]);
-
-    int Refresh(double newdata[], int count);
-
-    void AddEmpty(int count) override {
-        buffer<int>::addempty(count);
-    }
-};
+//class CBandSignal : public CWindowIndicator<int, double, 1>
+//{
+//protected:
+//    CTaBBANDS bands;
+//
+//public:
+//    CBandSignal() {};
+//
+//    void Init(int window, double devs, int ma_type);
+//
+//    void Calculate(double* indata, int size, std::array<std::vector<int>, 1> outdata) override;
+//
+//    int Refresh(double newdata[], int count);
+//};
 
 //
 // Windowed Augmented Dickey-Fuller test or SADF (supremum) ADF
@@ -309,12 +317,8 @@ public:
 
 
 // must be double because of MT5
-struct SADFt { // each SADF(t) point have two values associated
-    double sadf; // SADF(t) value
-    double imaxadf; // index of ADF on backward expanding window with maximum value [0, maxw-minw[
-};
-
-class CSADFIndicator : public CWindowIndicator<SADFt, float>
+// each SADF(t) point have two values associated
+class CSADFIndicator : public CWindowIndicator<float, float, 2>
 {
 protected:
     int m_minw, m_maxw; // minimum and maximum backward window
@@ -323,8 +327,6 @@ protected:
     float m_gpumemgb; // how much GPU memory each batch of SADF(t) should have
     bool m_verbose; // wether show verbose messages when calculating 
     // for calculation using pytorchpp.dll
-    std::vector<float> m_sadf; // last calculation only
-    std::vector<float> m_imaxadf; // last calculation only
 
 public:
 
@@ -332,10 +334,12 @@ public:
 
     void Init(int maxwindow, int minwindow, int order, bool usedrift=false, float gpumemgb=2.0, bool verbose=false);
 
-    void AddEmpty(int count) override;
+    void Calculate(float* indata, int size, std::array<std::vector<float>, 2> &outdata) override;
 
-    void Calculate(float indata[], int size, SADFt outdata[]) override;
-
+    // SADF(t) value - first buffer
+    inline float SADFt(size_t index) { return m_buffers[0].at(index); }
+    // index of ADF on backward expanding window with maximum value [0, maxw-minw[ - second buffer
+    inline float MaxADFi(size_t index) { return m_buffers[1].at(index); }
 };
 
 
@@ -353,20 +357,17 @@ public:
 
     void Init(double cum_reset);
 
-    void Calculate(double indata[], int size, double outdata[]);
+    void Calculate(double* indata, int size, std::array<std::vector<double>, 1> & outdata) override;
 };
 
 //// Cum Sum filter on SADF
 class CCumSumSADFIndicator : public CCumSumIndicator
 {
 
-public:
-
-    CSADFIndicator* m_pSADF; // will be taken care by somebody else
+public:    
 
     CCumSumSADFIndicator(int buffersize);
 
     void Init(double cum_reset, CSADFIndicator *pSADF);
 
-    void Calculate(double indata[], int size, double outdata[]);
 };

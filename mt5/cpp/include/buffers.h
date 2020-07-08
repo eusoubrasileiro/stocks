@@ -10,6 +10,7 @@
 
 #define DBL_EMPTY_VALUE DBL_MAX
 #define INT_EMPTY_VALUE INT_MAX
+#define FLT_EMPTY_VALUE FLT_MAX
 
 // indicators, bars etc. buffer needed all must respect this to compatibility of indexes between DLL's
 #define BUFFERSIZE       1000000      

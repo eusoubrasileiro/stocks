@@ -285,30 +285,6 @@ public:
 };
 
 
-// a window indicator of size
-// each sample only depends on the current and previous
-// values on the bollinger bands 
-
-// Based on a bollinger band defined by upper-band and lower-band
-// calculate signals:
-// buy   1 : crossing down-outside it's buy
-// sell -1 : crossing up-outside it's sell
-// hold  0 : nothing usefull happend
-//class CBandSignal : public CWindowIndicator<int, double, 1>
-//{
-//protected:
-//    CTaBBANDS bands;
-//
-//public:
-//    CBandSignal() {};
-//
-//    void Init(int window, double devs, int ma_type);
-//
-//    void Calculate(double* indata, int size, std::array<std::vector<int>, 1> outdata) override;
-//
-//    int Refresh(double newdata[], int count);
-//};
-
 //
 // Windowed Augmented Dickey-Fuller test or SADF (supremum) ADF
 // SADF very optimized for GPU using Libtorch C++ Pytorch

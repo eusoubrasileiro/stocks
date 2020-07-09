@@ -217,41 +217,6 @@ TEST(Indicators, CTaBBANDS){
     delete[] down;
 }
 
-// TODO: re-write if neeeded
-// Python code - base for test
-//x = np.array([1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1,  8, 5, 5], dtype = np.double)
-//up, med, down = ta.BBANDS(x, 5, 1.5, 1.5, matype=2)
-//plt.figure(figsize = (10, 4))
-//plt.plot(x, '-k.')
-//plt.plot(up, '-b.', lw = 0.5)
-//plt.plot(down, '-r.', lw = 0.5)
-//plt.grid()
-//TEST(Indicators, CBandSignal) {
-//    double in[14] = { 1, 1, 1, 2, 5, 5, 5, 5, 1, 1, 1, 8, 5, 5};
-//    std::vector<int> truth_band_signal = { INT_EMPTY_VALUE, INT_EMPTY_VALUE,
-//                                        INT_EMPTY_VALUE, INT_EMPTY_VALUE,
-//                                        INT_EMPTY_VALUE,   0,   0,   0,
-//                                         1,   0,   0,  -1,  0,  0};
-//    int window = 5;
-//    int bfsize = 20;
-//    CBandSignal cbsignal;
-//    cbsignal.Init(window, 1.5, 2); // 1.5 deviations + WeightedMA=2
-//
-//    // partial calls until total array calculated
-//    double a[] = { 1 };
-//    double b[] = { 1 };
-//    double c[] = { 1, 2, 5, 5, 5};
-//    double d[] = { 5, 1, 1, 1};
-//    double e[] = { 8, 5, 5 };
-//    cbsignal.Refresh(a, 1);
-//    cbsignal.Refresh(b, 1);
-//    cbsignal.Refresh(c, 5);
-//    cbsignal.Refresh(d, 4);
-//    cbsignal.Refresh(e, 3);
-//
-//    EXPECT_FLOATS_NEARLY_EQ(truth_band_signal, cbsignal.begin(), 14, 0.0001);
-//}
-
 #include <iostream>
 #include <fstream>
 #include <databuffers.h>

@@ -321,3 +321,6 @@ Is not the same thing as training the model with all data but might be useful.
        - [x] Use adasyn or smote for correcting for class inbalance seem too much for now (overkill).
    Lets use Lopez suggestion and use `class_weight='balanced_subsample'`. The 'subsample' is due the bootstrap process to created each random tree.
        - [x] Also use `max_features` smaller than the `xdim` to fight overfitting.      
+
+
+09/07/2019 - All above is in here as a memorial. Trying to make use of finance_advances_in_financial_machine_learning_wiley(2018) book.

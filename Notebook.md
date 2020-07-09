@@ -53,3 +53,7 @@ https://en.wikipedia.org/wiki/Walk_forward_optimization
 ### About learning
 
 Aewsome course and reference.
+
+### 09/07/2019 - All above is in here as a memorial.
+
+Trying to make use of finance_advances_in_financial_machine_learning_wiley(2018) book.

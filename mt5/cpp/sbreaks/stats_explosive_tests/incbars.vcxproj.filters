@@ -1,17 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="buffers.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="indicators\ctindicators.cpp">
-      <Filter>indicators</Filter>
-    </ClCompile>
-    <ClCompile Include="datastruct\ticks.cpp">
-      <Filter>datastruct</Filter>
-    </ClCompile>
-    <ClCompile Include="datastruct\bars.cpp">
-      <Filter>datastruct</Filter>
-    </ClCompile>
     <ClCompile Include="pymodule.cpp">
       <Filter>python</Filter>
     </ClCompile>
@@ -22,28 +12,13 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>pch</Filter>
     </ClCompile>
-    <ClCompile Include="indicators\csindicators.cpp">
-      <Filter>indicators</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\dll.h" />
-    <ClInclude Include="include\buffers.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\bars.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\callpython.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\cwindicators.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="include\eincbands.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ticks.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\xypair.h">
@@ -56,12 +31,6 @@
   <ItemGroup>
     <Filter Include="include">
       <UniqueIdentifier>{1f90b608-98d1-46ee-bcd6-3bb78d2ac3de}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="indicators">
-      <UniqueIdentifier>{dceb7b10-28f5-4a72-a4b5-642995e14a98}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="datastruct">
-      <UniqueIdentifier>{810333d1-5368-4006-9777-31b843f145d0}</UniqueIdentifier>
     </Filter>
     <Filter Include="python">
       <UniqueIdentifier>{4f886974-f59c-4881-8a5f-44064c7470e1}</UniqueIdentifier>

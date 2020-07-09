@@ -24,7 +24,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>vspythondll</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>incbars</ProjectName>
+    <ProjectName>pyclassifier</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -334,31 +334,12 @@ copy $(SolutionDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
     <ClInclude Include="include\callpython.h" />
     <ClInclude Include="include\dll.h" />
     <ClInclude Include="include\eincbands.h" />
-    <ClInclude Include="include\bars.h" />
-    <ClInclude Include="include\buffers.h" />
-    <ClInclude Include="include\cwindicators.h" />
-    <ClInclude Include="include\ticks.h" />
     <ClInclude Include="include\xypair.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="buffers.cpp">
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h</ForcedIncludeFiles>
-      <ForcedUsingFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ForcedUsingFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h</ForcedIncludeFiles>
-      <ForcedUsingFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </ForcedUsingFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'">stdafx.h</ForcedIncludeFiles>
-      <ForcedUsingFiles Condition="'$(Configuration)|$(Platform)'=='ReleaseMeta5|x64'">
-      </ForcedUsingFiles>
-    </ClCompile>
     <ClCompile Include="callpython.cpp" />
-    <ClCompile Include="datastruct\bars.cpp" />
-    <ClCompile Include="datastruct\ticks.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="indicators\csindicators.cpp" />
-    <ClCompile Include="indicators\ctindicators.cpp" />
     <ClCompile Include="eincbands.cpp" />
     <ClCompile Include="pymodule.cpp" />
     <ClCompile Include="stdafx.cpp">

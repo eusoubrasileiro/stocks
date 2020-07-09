@@ -1,7 +1,7 @@
 #property copyright "Andre"
 #property description "Supremum Augmented Dickey Fuller Test - limited backward window"
 
-#import "datastruct.dll"
+#import "mt5indicators.dll"
 int CppSADFMoneyBars(double& mt5_SADFline[], double& mt5_SADFdots[], double& mt5_imaxadfcolor[],double &mt5_imaxadflast, int mt5ptsize);
 void CppGetSADFWindows(int &minwin, int &maxwin);
 #import
@@ -39,7 +39,7 @@ int SADFminWin, SADFmaxWin;
 //+------------------------------------------------------------------+
 void OnInit(){
 
-  
+
   CppGetSADFWindows(SADFminWin, SADFmaxWin);
   idwindow_short_name  = "SADF_MB"+ "("+string(SADFmaxWin)+"/"+string(SADFminWin)+")";
   label = idwindow_short_name+"_lbl1";

@@ -10,9 +10,24 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\datastruct\buffers.h" />
+    <ClInclude Include="..\..\include\datastruct\moneybars.h" />
+    <ClInclude Include="..\..\include\datastruct\ticks.h" />
+    <ClInclude Include="..\..\include\indicators\cwindicators.h" />
+    <ClInclude Include="databuffers.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\include\datastruct\buffers.cpp" />
+    <ClCompile Include="..\..\include\datastruct\moneybars.cpp" />
+    <ClCompile Include="..\..\include\datastruct\ticks.cpp" />
+    <ClCompile Include="..\..\include\indicators\csindicators.cpp" />
+    <ClCompile Include="..\..\include\indicators\ctindicators.cpp" />
+    <ClCompile Include="mt5indicators.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{83A400C8-03FA-4684-BC7F-D042CA4E86A7}</ProjectGuid>
+    <ProjectGuid>{F7FACBD9-2509-4745-81A2-580F61186456}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>datastruct</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
@@ -68,7 +83,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks />
       <PrecompiledHeaderOutputFile />
@@ -103,7 +118,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UserProfile)\Projects\boost_1_71_0;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib</AdditionalIncludeDirectories>
       <LanguageStandard>Default</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>

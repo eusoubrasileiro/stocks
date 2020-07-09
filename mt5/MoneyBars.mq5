@@ -1,7 +1,7 @@
 #property copyright "Andre"
 #property description "MoneyBars"
 
-#import "datastruct.dll"
+#import "mt5indicators.dll"
 int CppMoneyBarMt5Indicator(double &mt5_ptO[], double &mt5_ptH[], double &mt5_ptL[], double &mt5_ptC[],
         double &mt5_ptM[], datetime &mt5_ptE[], double &mt5_Color[], int mt5ptsize);
 

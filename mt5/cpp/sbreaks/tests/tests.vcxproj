@@ -80,7 +80,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\incbars\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>Default</LanguageStandard>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -90,7 +90,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ticks.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\datastruct.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\ticks.obj;$(UserProfile)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\mt5indicators.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>
@@ -121,7 +121,7 @@
       </ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\incbars\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <DebugInformationFormat />
       <SupportJustMyCode />
@@ -168,7 +168,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>
       </GenerateDebugInformation>
-      <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\ticks.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\incbars\datastruct\datastruct.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\csindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\ctindicators.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\buffers.obj;$(USERPROFILE)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\ticks.obj;$(UserProfile)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators\mt5indicators.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\ctalib\ctalib.lib;$(USERPROFILE)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch\pytorchcpp.lib</AdditionalDependencies>
       <SuppressStartupBanner />
       <RegisterOutput />
       <PerUserRedirection />
@@ -203,20 +203,20 @@
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="pch.h">
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\vsincbars\packages\gmock.1.10.0\build\native\gmock.targets" Condition="Exists('..\vsincbars\packages\gmock.1.10.0\build\native\gmock.targets')" />
+    <Import Project="..\stats_explosive_tests\packages\gmock.1.10.0\build\native\gmock.targets" Condition="Exists('..\stats_explosive_tests\packages\gmock.1.10.0\build\native\gmock.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\vsincbars\packages\gmock.1.10.0\build\native\gmock.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\vsincbars\packages\gmock.1.10.0\build\native\gmock.targets'))" />
+    <Error Condition="!Exists('..\stats_explosive_tests\packages\gmock.1.10.0\build\native\gmock.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\stats_explosive_tests\packages\gmock.1.10.0\build\native\gmock.targets'))" />
   </Target>
 </Project>

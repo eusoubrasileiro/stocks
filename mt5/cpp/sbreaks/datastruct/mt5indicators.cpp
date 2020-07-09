@@ -50,8 +50,8 @@ bool m_usedrift;
 int m_numcolors; // number of colors to plot max
 int m_adfscount; // to define color of indicator dots
 // Indicator Cum Sum
-//double m_reset = 0.5;
-//std::shared_ptr<CCumSumIndicator> m_CumSumi;
+double m_reset = 0.5;
+std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
 
 
 void CppDataBuffersInit(double ticksize, double tickvalue,
@@ -91,7 +91,9 @@ void CppDataBuffersInit(double ticksize, double tickvalue,
             m_usedrift = usedrift;
             m_SADFi->Init(maxwindow, minwindow, order, usedrift);
             m_adfscount = m_maxw - m_minw;
-            //m_CumSumi.reset(new CCumSumIndicator(m_bars->capacity()));
+            m_CumSumi.reset(new CCumSumSADFIndicator(m_bars->capacity()));
+            // automatically refreshed when m_SADFi is refreshed
+            m_CumSumi->Init(m_reset, &(*m_SADFi)); 
         }
 #ifdef  DEBUG
         }
@@ -157,19 +159,8 @@ void RefreshIndicators() {
     }
     catch (...) {
         debugfile << "Weird no idea exception" << std::endl;
-        //cmpbegin_time = -1;<
     }
 #endif //  DEBUG
-
-        //// I dont care for if first value is EMPTY, cumsum will be also EMPTY?
-        //// to think about...
-        //double* sadfv = new double[m_bars->m_nnew];
-        //for (int i = m_SADFi->size()-m_bars->m_nnew, j=0; i < m_SADFi->size(); i++, j++)
-        //    sadfv[j] = m_SADFi->at(i).sadf;
-
-        //m_CumSumi->Refresh(sadfv, m_bars->m_nnew);
-
-        //delete[] sadfv;
     
 }
 
@@ -216,22 +207,14 @@ int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double *lost_ticks){
         // I suspect that on periods of high volatility
         // or internet connection problems
         // many more ticks are dropped (also commented on MT5 forums)
-        // so for those days would have to write some work around
-        // to make money bars restart from MT5 side
-        //cmpbegin_time = -1;
-        // when iceberg orders show up
-        // just saw iceberg orders on history
-
+        // solved by accepting losses
     }
     catch (...) {
         debugfile << "Weird no idea exception" << std::endl;
         debugfile << "mt5_nticks " << mt5_nticks << std::endl;
         debugfile << "ticks_left " << mt5_nticks << std::endl;
-        //cmpbegin_time = -1;<
     }
 #endif //  DEBUG
-
-
 
     return next_bgticktime;
 }

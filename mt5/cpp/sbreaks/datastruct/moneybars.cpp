@@ -1,5 +1,5 @@
 
-#include "bars.h"
+#include "moneybars.h"
 #include <algorithm>    // std::max
 #include <ctime>
 

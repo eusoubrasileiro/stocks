@@ -89,7 +89,7 @@
       <UACUIAccess />
     </Link>
     <PostBuildEvent>
-      <Command>copy $(ProjectDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+      <Command>copy $(ProjectDir)$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,21 +126,21 @@
       </IgnoreAllDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(ProjectDir)\$(ProjectName).dll  "D:\Metatrader 5"</Command>
+      <Command>copy $(ProjectDir)$(ProjectName).dll  "D:\Metatrader 5"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="bars.h" />
     <ClInclude Include="cwindicators.h" />
     <ClInclude Include="databuffers.h" />
+    <ClInclude Include="moneybars.h" />
     <ClInclude Include="ticks.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bars.cpp" />
     <ClCompile Include="buffers.cpp" />
     <ClCompile Include="csindicators.cpp" />
     <ClCompile Include="ctindicators.cpp" />
-    <ClCompile Include="MoneyBars.cpp" />
+    <ClCompile Include="moneybars.cpp" />
+    <ClCompile Include="mt5indicators.cpp" />
     <ClCompile Include="ticks.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

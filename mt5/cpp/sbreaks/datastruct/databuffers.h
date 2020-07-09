@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bars.h"
+#include "moneybars.h"
 
 #ifdef BUILDING_DLL
 #define EXPORT

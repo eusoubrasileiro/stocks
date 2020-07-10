@@ -135,6 +135,7 @@ size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start,
     for (auto element = start; element != end; element++)
         nnew += AddTick(*element);
     m_nnew = nnew; // overwrite internal added increment
+    if (m_nnew > 0) OnNewBars();
     return m_nnew;
 }
 
@@ -145,6 +146,7 @@ size_t MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
     for (int i =0; i<size; i++)
         nnew += AddTick(cticks[i]);
     m_nnew = nnew; // overwrite internal added increment
+    if (m_nnew > 0) OnNewBars();
     return m_nnew;
 }
 

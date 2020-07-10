@@ -1,8 +1,10 @@
 #pragma once
 #include <time.h>
 #include <array>
+#include <functional>
 #include "buffers.h"
 #include "ticks.h"
+
 
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
@@ -40,7 +42,7 @@ struct MoneyBar
 
 class MoneyBarBuffer : public buffer<MoneyBar>
 {
-protected:
+
     double m_count_money;
     double m_point_value;
     double m_moneybarsize;
@@ -57,8 +59,15 @@ protected:
     // start tm time the bar being formed
     // if a day is crossed the data for this bar is ignored
     tm ctime;
+    std::vector<std::function<void(void)>> m_event_newbars;
 
     //BufferMqlTicks m_ticks; // ticks used to build bars from mt5
+
+    // call all event callback functions subscribed
+    void OnNewBars() {
+        for (auto& callbackfunc : m_event_newbars) // access by reference to avoid copying        
+            callbackfunc();
+    }
 
 public:
     size_t m_hash; // unique identifier of this money bar instance
@@ -67,6 +76,7 @@ public:
     buffer<uint64_t> uidtimes;
 
     MoneyBarBuffer();
+
     MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor 
 
     void Init(double tickvalue, double ticksize, double moneybarsize);
@@ -79,7 +89,16 @@ public:
     // add ticks for python support
     size_t AddTicks(const MqlTick* cticks, int size);
 
-    //MoneyBar* BeginNewBars();
+    // iterator begin of new bars
+    auto BeginNewBars() {
+        return end() - m_nnew;
+    }
+
+    // on new bars call back function
+    void AddOnNewBars(std::function<void(void)> onnewbars) {
+        m_event_newbars.push_back(onnewbars);
+    }
+
     size_t BeginNewBarsIdx();
 
     // return buffer index position

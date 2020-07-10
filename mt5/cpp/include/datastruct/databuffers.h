@@ -1,5 +1,5 @@
 #pragma once
-
+#include <fstream>
 #include "moneybars.h"
 
 #ifdef BUILDING_DLL
@@ -9,9 +9,13 @@
 #else // Google Tests only
 #define IMPORT
 #define DLL_EXPORT extern "C" __declspec(dllimport)
-
 #endif
 
+#ifdef DEBUG
+extern std::ofstream debugfile;
+#else
+#define debugfile std::cout
+#endif
 
 #include <string>
 #include <iostream>

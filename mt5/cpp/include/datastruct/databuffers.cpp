@@ -1,8 +1,8 @@
 #include "databuffers.h"
+#include <fstream>
 
 #ifdef DEBUG
-#include <fstream>
-std::ofstream debugfile("databuffer_log.txt");
+std::ofstream debugfile("debug_log.txt");
 #else
 #define debugfile std::cout
 #endif

@@ -34,6 +34,7 @@ int m_adfscount; // to define color of indicator dots
 double m_reset = 0.5;
 std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
 
+void RefreshIndicators();
 
 // can only be called after CppDataBuffersInit
 void CppMoneyIndicatorsInit(int maxwindow,
@@ -68,7 +69,7 @@ void CppGetSADFWindows(int *minwin, int *maxwin){
     }
 }
 
-void RefreshIndicators() {
+void RefreshIndicators(){
     try
     {
         // copying average weighted price from money bars

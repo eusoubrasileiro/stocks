@@ -7,14 +7,7 @@
 #include "databuffers.h"
 
 
-#ifdef DEBUG
-#include <fstream>
-extern std::ofstream debugfile("mt5indicators_log.txt");
-#else
-#define debugfile std::cout
-#endif
-
-DLL_EXPORT void  CppMoneyIndicatorsInit(int maxwindow,
+DLL_EXPORT void CppMoneyIndicatorsInit(int maxwindow,
                                         int minwindow,
                                         int order,
                                         bool usedrift,

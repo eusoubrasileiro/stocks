@@ -4,10 +4,10 @@
 #include <windows.h>
 #include <algorithm>
 #include <cmath>
-#include "databuffers.h"
+#include "indicators.h"
 
 
-DLL_EXPORT void CppMoneyIndicatorsInit(int maxwindow,
+DLL_EXPORT void CppIndicatorsInit(int maxwindow,
                                         int minwindow,
                                         int order,
                                         bool usedrift,

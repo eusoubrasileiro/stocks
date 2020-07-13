@@ -1,6 +1,6 @@
 #include "pch.h"
 #include <array>
-#include "cwindicators.h"
+#include "mt5indicators.h"
 
 // Since I just want to test the code
 // and I dont want to put all code in the export table of the main dll
@@ -224,12 +224,14 @@ TEST(Indicators, CTaBBANDS){
 TEST(MoneyBars, InitializeNoSADF) {
     char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
 
-    CppDataBuffersInit(0.01, 0.01, 25E6, symbol, false, 250,
-        200, 15, false, 200, 5);
+    CppDataBuffersInit(0.01, 0.01, 25E6, symbol);
+    // false, 250, 200, 15, false, 200, 5);
 }
 
-
-TEST(MoneyBars, OnTicks) {
+// TODO
+// re-write since 
+// tick losses are acceptable
+TEST(MoneyBars, CppOnTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
@@ -241,7 +243,6 @@ TEST(MoneyBars, OnTicks) {
     double lost_ticks;
 
     // Read a file and simulate CopyTicksRange
-
     int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 1e6); // 1MM
     BufferMqlTicks* pticks = GetBufferMqlTicks();
     // send in chunck of 250k ticks
@@ -272,6 +273,9 @@ TEST(MoneyBars, OnTicks) {
 
 }
 
+// TODO
+// re-write since 
+// tick losses are acceptable
 TEST(MoneyBars, OnTicksSADF) {
     std::fstream fh;
     std::streampos begin, end;
@@ -280,7 +284,8 @@ TEST(MoneyBars, OnTicksSADF) {
     double lost_ticks; // qc for real time
 
     // load SADF indicator
-    CppDataBuffersInit(0.01, 0.01, 25E6, symbol, true, 250, 200, 15, false, 200, 5);
+    CppDataBuffersInit(0.01, 0.01, 25E6, symbol);
+    CppIndicatorsInit(250, 200, 15, false, 200, 5);
 
     // calculate number of ticks on file
     std::string user_data = std::string(std::getenv("USERPROFILE")) +

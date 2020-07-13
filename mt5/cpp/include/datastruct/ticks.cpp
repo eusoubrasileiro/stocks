@@ -260,9 +260,9 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, dou
         // secury check and get begin
         // fix nonsense last, ask, bid empty
         fixArrayTicks(m_mt5ticks, m_nnew);
-        // if on back-test use every tick based on real ticks
+        // if on back-test use : "every tick based on real ticks"
         addrange(m_mt5ticks, m_nnew);
-        // get begin time for next call by Metatrader 5 to CopyTicks}
+        // get begin time for next call by Metatrader 5 to CopyTicks
         m_request = this->back().time_msc;
     }
 

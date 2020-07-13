@@ -18,7 +18,7 @@ struct MqlTick
     double       ask;           // Current Ask price
     double       last;          // Price of the last deal (Last)
     int64_t      volume;        // Volume for the current Last price
-    unixtime_ms  time_msc;      // Time of a price last update in milliseconds == 1. but with milliseconds precision
+    unixtime_ms  time_msc;      // Time of a price last update in milliseconds (1). But with milliseconds precision.
     int          flags;         // Tick flags
     double       volume_real;   // Volume for the current Last price with greater accuracy
 }; // sizeof is 60 bytes to avoid auto alignment to 64 by compiler #pragma pack(2) above is needed
@@ -30,7 +30,7 @@ struct MqlTick
 //#define TICK_FLAG_VOLUME 16  // � a tick has changed a volume
 //#define TICK_FLAG_BUY 32     // � a tick is a result of a buy deal
 //#define TICK_FLAG_SELL 64    // � a tick is a result of a sell deal
-// redifinition for my own use
+// redifinition for my own use - seams useless so far
 #define TICK_FLAG_BUY 1     // � a tick is a result of a buy deal
 #define TICK_FLAG_SELL -1    // � a tick is a result of a sell deal
 

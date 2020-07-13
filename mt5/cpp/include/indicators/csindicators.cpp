@@ -1,5 +1,4 @@
 #include "cwindicators.h"
-#include "pytorchcpp.h"
 #include <algorithm>
 #include <array>
 

@@ -1,5 +1,4 @@
 #include "cwindicators.h"
-#include "ctalib.h"
 #include <array>
 
 

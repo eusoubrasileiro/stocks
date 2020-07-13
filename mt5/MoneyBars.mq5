@@ -3,26 +3,26 @@
 
 #import "mt5indicators.dll"
 
-int CppMoneyBarMt5Indicator(double &mt5_ptO[], 
-                            double &mt5_ptH[], 
-                            double &mt5_ptL[], 
+int CppMoneyBarMt5Indicator(double &mt5_ptO[],
+                            double &mt5_ptH[],
+                            double &mt5_ptL[],
                             double &mt5_ptC[],
-                            double &mt5_ptM[], 
-                            datetime &mt5_ptE[], 
-                            double &mt5_Color[], 
+                            double &mt5_ptM[],
+                            datetime &mt5_ptE[],
+                            double &mt5_Color[],
                             int mt5ptsize);
 
-datetime CppOnTicks(MqlTick &mt5_pticks[], 
-                    int mt5_nticks, 
+datetime CppOnTicks(MqlTick &mt5_pticks[],
+                    int mt5_nticks,
                     double &ticks_lost);
 
-void CppDataBuffersInit(double ticksize, 
+void CppDataBuffersInit(double ticksize,
                         double tickvalue,
                         double moneybar_size,  // R$ to form 1 money bar
                         char& cs_symbol[]);  // cs_symbol is a char[] null terminated string (0) value at end
 
 // SADF part
-void CppMoneyIndicatorsInit(int maxwindow, // to load sadf indicator or not in bakground
+void CppIndicatorsInit(int maxwindow, // to load sadf indicator or not in bakground
                             int minwindow,
                             int order,
                             bool usedrift,
@@ -47,8 +47,8 @@ void CppMoneyIndicatorsInit(int maxwindow, // to load sadf indicator or not in b
 #property indicator_width1  3
 
 //--- input parameters
-input double         InpMoneyBarSize=400;         // in MM BRL
-input int            InpMaxBars=400;      // Max Bars
+input double         InpMoneyBarSize=300;         // in MM BRL
+input int            InpMaxBars=600;      // Max Bars
 //--- input parameters
 input bool           InpSADF=true;
 input int            InpMaxWin=350;         // Maximum backward window (bars)
@@ -215,7 +215,7 @@ int OnCalculate(const int rates_total,
         m_cmpbegin_time = time[rates_total-InpMaxBars-1];
         CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol);
         if(InpSADF)
-           CppMoneyIndicatorsInit(InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
+           CppIndicatorsInit(InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
         m_cmpbegin_time*=1000; // to ms next CopyTicksRange call
         m_ncopied = 0;
         Print("Last Bar Open Time: ", time[rates_total-1]);

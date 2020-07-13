@@ -16,6 +16,7 @@
     <ClInclude Include="..\..\include\datastruct\moneybars.h" />
     <ClInclude Include="..\..\include\datastruct\ticks.h" />
     <ClInclude Include="..\..\include\indicators\cwindicators.h" />
+    <ClInclude Include="..\..\include\indicators\indicators.h" />
     <ClInclude Include="mt5indicators.h" />
   </ItemGroup>
   <ItemGroup>
@@ -25,6 +26,7 @@
     <ClCompile Include="..\..\include\datastruct\ticks.cpp" />
     <ClCompile Include="..\..\include\indicators\csindicators.cpp" />
     <ClCompile Include="..\..\include\indicators\ctindicators.cpp" />
+    <ClCompile Include="..\..\include\indicators\indicators.cpp" />
     <ClCompile Include="mt5indicators.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

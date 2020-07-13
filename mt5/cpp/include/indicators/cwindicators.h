@@ -1,7 +1,10 @@
-#include "..\datastruct\buffers.h"
 #define NOMINMAX
 #include <functional>
 #include <array>
+#include "buffers.h"
+#include "ctalib.h"
+#include "pytorchcpp.h"
+
 
 // an indicator the each sample calculated 
 // depends itself + window-1 samples before it

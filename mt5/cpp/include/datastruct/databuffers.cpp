@@ -37,11 +37,11 @@ void CppDataBuffersInit(double ticksize,
 #endif //  DEBUG
 }
 
-int64_t next_bgticktime = 0; // if an exception occour will
+unixtime_ms next_bgticktime = 0; // if an exception occour will
 
 
 // returns the next cmpbegin_time
-int64_t CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
+unixtime_ms CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
     
 #ifdef  DEBUG
     try {
@@ -96,14 +96,14 @@ size_t SearchMoneyBars(buffer<MoneyBar> mbars, uint64_t uid) {
 //
 //
 
-void CppTicksToFile(char* cs_filename) {
+BufferMqlTicks* GetBufferMqlTicks() {
+    return &*m_ticks;
+}
+
+void TicksToFile(char* cs_filename) {
     SaveTicks(&*m_ticks, std::string(cs_filename));
 }
 
-bool CppisInsideFile(char* cs_filename) {
+bool isInsideFile(char* cs_filename) {
     return isInFile(&*m_ticks, std::string(cs_filename));
-}
-
-BufferMqlTicks* GetBufferMqlTicks() {
-    return &*m_ticks;
 }

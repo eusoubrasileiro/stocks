@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="pymodule.cpp" />
+    <ClCompile Include="..\..\include\datastruct\buffers.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\datastruct\databuffers.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\datastruct\moneybars.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\datastruct\ticks.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\indicators\ctindicators.cpp">
+      <Filter>external\indicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\indicators\csindicators.cpp">
+      <Filter>external\indicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\indicators\indicators.cpp">
+      <Filter>external\indicators</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="external">
+      <UniqueIdentifier>{88f71218-df49-417c-844f-94dbed0541c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\indicators">
+      <UniqueIdentifier>{cd88ee5e-7cfb-4bbb-a135-3416fd573694}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\datastruct\buffers.h">
+      <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\datastruct\databuffers.h">
+      <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\datastruct\moneybars.h">
+      <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\datastruct\ticks.h">
+      <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\indicators\cwindicators.h">
+      <Filter>external\indicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\indicators\indicators.h">
+      <Filter>external\indicators</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

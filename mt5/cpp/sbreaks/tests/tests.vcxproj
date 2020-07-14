@@ -81,9 +81,9 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\sbreaks\mt5indicators;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\gmock.1.10.0\lib\native\include;$(USERPROFILE)\Projects\boost_1_71_0;$(UserProfile)\Projects\pybind11-master\include;$(UserProfile)\Anaconda3\include;$(UserProfile)\Projects\stocks\mt5\cpp\include\indicators;$(UserProfile)\Projects\stocks\mt5\cpp\include\datastruct;$(UserProfile)\Projects\stocks\mt5\cpp\ctalib;$(UserProfile)\Projects\stocks\mt5\cpp\pytorchcpp\pytorch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck />
       <CallingConvention>StdCall</CallingConvention>

@@ -1,6 +1,6 @@
 #include "pch.h"
 #include <array>
-#include "mt5indicators.h"
+#include "indicators.h"
 
 // Since I just want to test the code
 // and I dont want to put all code in the export table of the main dll

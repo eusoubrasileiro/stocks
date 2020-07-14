@@ -12,7 +12,7 @@ std::shared_ptr<BufferMqlTicks> m_ticks; // buffer of ticks w. control to downlo
 
 std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
 
-void CppDataBuffersInit(double ticksize, 
+void DataBuffersInit(double ticksize, 
                      double tickvalue,
                      double moneybar_size,  // R$ to form 1 money bar
                      char* cs_symbol)  // cs_symbol is a char[] null terminated string (0) value at end
@@ -41,7 +41,7 @@ unixtime_ms next_bgticktime = 0; // if an exception occour will
 
 
 // returns the next cmpbegin_time
-unixtime_ms CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
+unixtime_ms OnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
     
 #ifdef  DEBUG
     try {
@@ -107,3 +107,8 @@ void TicksToFile(char* cs_filename) {
 bool isInsideFile(char* cs_filename) {
     return isInFile(&*m_ticks, std::string(cs_filename));
 }
+
+
+size_t BufferSize(){ return m_bars->capacity(); }
+
+size_t BufferTotal(){ return m_bars->size(); }

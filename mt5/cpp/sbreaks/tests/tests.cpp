@@ -14,12 +14,13 @@
 // 4. pytorchcpp.lib - dlls required
 // 5. ctalib.lib - dll required
 
-#ifdef DEBUG
-#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
-std::ofstream debugfile("testing_file.txt");
-#else
-#define debugfile std::cout
-#endif
+
+//#ifdef DEBUG
+//#include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
+//std::ofstream debugfile("testing_file.txt");
+//#else
+//#define debugfile std::cout
+//#endif
 
 // also remember that Python3 (python3.dll and others) is a dependency due
 // python interpreter embedding
@@ -224,14 +225,14 @@ TEST(Indicators, CTaBBANDS){
 TEST(MoneyBars, InitializeNoSADF) {
     char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
 
-    CppDataBuffersInit(0.01, 0.01, 25E6, symbol);
+    DataBuffersInit(0.01, 0.01, 25E6, symbol);
     // false, 250, 200, 15, false, 200, 5);
 }
 
 // TODO
 // re-write since 
 // tick losses are acceptable
-TEST(MoneyBars, CppOnTicks) {
+TEST(MoneyBars, OnTicks) {
     std::fstream fh;
     std::streampos begin, end;
 
@@ -242,32 +243,35 @@ TEST(MoneyBars, CppOnTicks) {
     std::vector<MqlTick> ticks;
     double lost_ticks;
 
+    char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
+    DataBuffersInit(0.01, 0.01, 25E6, symbol);
+
     // Read a file and simulate CopyTicksRange
     int64_t nticks = ReadTicks(&ticks, user_data, (size_t) 1e6); // 1MM
     BufferMqlTicks* pticks = GetBufferMqlTicks();
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
-    auto next_timebg = CppOnTicks(ticks.data(), chunck_s, &lost_ticks);
+    auto next_timebg = OnTicks(ticks.data(), chunck_s, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s);
 
     // get allowed overlapping of 1ms
     // get idx first tick with time >= next_timebg
     auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     auto overlap = chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s*2);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 2*chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data()+ next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s*3);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 3*chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
 
     EXPECT_EQ(pticks->size(), chunck_s*4);
 
@@ -284,8 +288,8 @@ TEST(MoneyBars, OnTicksSADF) {
     double lost_ticks; // qc for real time
 
     // load SADF indicator
-    CppDataBuffersInit(0.01, 0.01, 25E6, symbol);
-    CppIndicatorsInit(250, 200, 15, false, 200, 5);
+    DataBuffersInit(0.01, 0.01, 25E6, symbol);
+    IndicatorsInit(250, 200, 15, false);
 
     // calculate number of ticks on file
     std::string user_data = std::string(std::getenv("USERPROFILE")) +
@@ -300,26 +304,26 @@ TEST(MoneyBars, OnTicksSADF) {
     // send in chunck of 250k ticks
     size_t chunck_s = (size_t)250e3;
 
-    auto next_timebg = CppOnTicks(ticks.data(), chunck_s, &lost_ticks);
+    auto next_timebg = OnTicks(ticks.data(), chunck_s, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s);
 
     // get allowed overlapping of 1ms
     // get idx first tick with time >= next_timebg
     auto next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     auto overlap = chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s * 2);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 2 * chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s * 3);
 
     // get allowed overlapping of 1ms
     next_idx = MqltickTimeGtEqIdx(ticks, next_timebg);
     overlap = 3 * chunck_s - next_idx;
-    next_timebg = CppOnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
+    next_timebg = OnTicks(ticks.data() + next_idx, chunck_s + overlap, &lost_ticks);
 
     EXPECT_EQ(pticks->size(), chunck_s * 4);
 

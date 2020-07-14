@@ -19,15 +19,16 @@ datetime CppOnTicks(MqlTick &mt5_pticks[],
 void CppDataBuffersInit(double ticksize,
                         double tickvalue,
                         double moneybar_size,  // R$ to form 1 money bar
-                        char& cs_symbol[]);  // cs_symbol is a char[] null terminated string (0) value at end
+                        char& cs_symbol[],
+                        int maxbars);  // cs_symbol is a char[] null terminated string (0) value at end
 
 // SADF part
 void CppIndicatorsInit(int maxwindow, // to load sadf indicator or not in bakground
-                            int minwindow,
-                            int order,
-                            bool usedrift,
-                            int maxbars,
-                            int numcolors);
+                        int minwindow,
+                        int order,
+                        bool usedrift,
+                        int maxbars,
+                        int numcolors);
 
 #import
 
@@ -43,7 +44,7 @@ void CppIndicatorsInit(int maxwindow, // to load sadf indicator or not in bakgro
 #property indicator_type2   DRAW_ARROW
 #property indicator_color2  clrRed
 #property indicator_width2  1
-#property indicator_color1  clrRed,clrOrange,clrGray,clrGreen,clrBlue // 0,4 from bear to bull
+#property indicator_color1  clrRed,clrOrange,clrGray,clrGreen,clrBlue // 0,4 shorter to wider
 #property indicator_width1  3
 
 //--- input parameters
@@ -213,7 +214,7 @@ int OnCalculate(const int rates_total,
         // will come from C++
         // time now is in seconds unix timestamp
         m_cmpbegin_time = time[rates_total-InpMaxBars-1];
-        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol);
+        CppDataBuffersInit(tick_size, tick_value, InpMoneyBarSize*1E6, csymbol, InpMaxBars);
         if(InpSADF)
            CppIndicatorsInit(InpMaxWin, InpMinWin, InpArOrder, InpModelDrift, InpMaxBars, 5);
         m_cmpbegin_time*=1000; // to ms next CopyTicksRange call

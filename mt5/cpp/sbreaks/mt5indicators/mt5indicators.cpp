@@ -23,6 +23,23 @@ int m_maxbars; // maximum values to copy to indicator buffer pointer passed by M
 int m_numcolors; // number of colors to plot max
 int m_adfscount; // to define color of indicator dots
 
+
+// for mt5 call
+unixtime_ms CppOnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks)
+{
+    return OnTicks(mt5_pticks, mt5_nticks, lost_ticks);
+}
+
+void CppDataBuffersInit(double ticksize,
+                        double tickvalue,
+                        double moneybar_size,  // R$ to form 1 money bar
+                        char* cs_symbol, // cs_symbol is a char[] null terminated string (0) value at end
+                        int maxbars)
+{
+    DataBuffersInit(ticksize, tickvalue, moneybar_size, cs_symbol);
+    m_maxbars = maxbars;
+}
+
 // can only be called after CppDataBuffersInit
 void CppIndicatorsInit(int maxwindow,
                        int minwindow,
@@ -37,6 +54,7 @@ void CppIndicatorsInit(int maxwindow,
 
     m_numcolors = numcolors;
     m_adfscount = maxwindow - minwindow;
+    m_maxbars = maxbars;
 }
 
 // for use on SADF Money Bars plot only indicator
@@ -81,15 +99,15 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
 
 
 #ifdef  DEBUG
-}
-catch (const std::exception& ex) {
-    debugfile << mt5ptsize << maxbarsplot << mbarsize << i << j << std::endl;
-    debugfile << "c++ exception: " << std::endl;
-    debugfile << ex.what() << std::endl;
-}
-catch (...) {
-    debugfile << "Weird no idea exception" << std::endl;
-}
+    }
+    catch (const std::exception& ex) {
+        debugfile << mt5ptsize << maxbarsplot << mbarsize << i << j << std::endl;
+        debugfile << "c++ exception: " << std::endl;
+        debugfile << ex.what() << std::endl;
+    }
+    catch (...) {
+        debugfile << "Weird no idea exception" << std::endl;
+    }
 #endif //  DEBUG
     return maxbarsplot;
 }

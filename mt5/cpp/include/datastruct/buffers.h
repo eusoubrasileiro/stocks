@@ -29,6 +29,11 @@ class buffer : public circular_buffer<Type>
 {
 
 public:
+
+    // ring-buffer iterator
+    typedef typename circular_buffer<Type>::iterator iterator;
+    // ring-buffer const iterator
+    typedef typename circular_buffer<Type>::const_iterator const_iterator;
         
     buffer() : circular_buffer<Type>::circular_buffer(BUFFERSIZE) {};
 
@@ -38,19 +43,21 @@ public:
         circular_buffer<Type>::push_back(element);
     }
 
+    // addrange from c style array
+    void addrange(Type values[], int count) {
+        for (int i = 0; i < count; i++)
+            circular_buffer<Type>::push_back(values[i]);
+    }
+
     // you may want to insert a range smaller than 
     // the full size of elements array 
     // e. g. AddRange(v.begin()+2, v.end());
-    void addrange(typename std::vector<Type>::iterator start,
-        typename std::vector<Type>::iterator end) {
-        for (auto element = start; element != end; ++element)
-            circular_buffer<Type>::push_back(*element);
-    }
-
-    // addrange from c style array
-    void addrange(Type values[], int count) {
-        for (int i=0; i<count; i++)
-            circular_buffer<Type>::push_back(values[i]);
+    template<class iterator_type>
+    void addrange(iterator_type start,
+        iterator_type end) {
+        //for (auto element = start; element != end; ++element)
+        //    circular_buffer<Type>::push_back(*element);
+        circular_buffer<Type>::insert(this->end(), start, end);
     }
 
     void removelast(void) {

@@ -53,8 +53,8 @@
 //ENUM_DEFINE(TA_MAType_MAMA, Mama) = 7,
 //ENUM_DEFINE(TA_MAType_T3, T3) = 8
 TEST(Indicators, CFracDiffIndicator){
-    // from Python
-    double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
+    // from Python size 100
+    std::vector<double> in = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
                    0.02537023, 0.7332872 , 0.4622992 , 0.96278162, 0.33838066,   // a
                    0.89851506, 0.90982346, 0.54238173, 0.68145741, 0.95061314,  // b
                    0.93442722, 0.2614748 , 0.00405999, 0.75008525, 0.64118048,  // b
@@ -75,8 +75,8 @@ TEST(Indicators, CFracDiffIndicator){
                    0.40697238, 0.11326645, 0.43511667, 0.96272681, 0.60386761, // d
                    0.01621923, 0.04200219, 0.93858386, 0.88837139, 0.20881766, // d
                    0.77023781, 0.30574534, 0.74073346, 0.62654889, 0.64183077 }; // d
-
-    double pyfractruth[91] = { -0.35131172,
+    // size 91
+    std::vector<double> pyfractruth = { -0.35131172,
                     0.49928454,  0.25017423, -0.17289674,  0.15147366,
                     0.37461599,  0.1987023 , -0.49814806, -0.39431162,  0.57265172,
                     0.10862605, -0.19898058,  0.42240801, -0.4724218 ,  0.28296601,
@@ -103,27 +103,24 @@ TEST(Indicators, CFracDiffIndicator){
         c_fdiff.Init(fsize, 0.56);
 
         // partial calls until total array calculated
-        double a[7];
+        std::vector<double> a(7), b(33), c(11), d(49);
         // dst, src, dst_idx_srt, src_idx_srt, count_to_copy
-        ArrayCopy<double>(a, in, 0, 0, 7);
-        double b[33];
-        ArrayCopy<double>(b, in, 0, 7, 33); // 7:40 [left open - not included
-        double c[11];
-        ArrayCopy<double>(c, in, 0, 40, 11); // 40:51
-        double d[49];
-        ArrayCopy<double>(d, in, 0, 51, 49); // 51:100 = 49
+        std::copy_n(in.begin(), 7, a.begin());
+        std::copy_n(in.begin()+7, 33, b.begin()); // 7:40 [left open - not included
+        std::copy_n(in.begin() + 40, 11, c.begin()); // 40:51
+        std::copy_n(in.begin() + 51, 49, d.begin());  // 51:100 = 49
 
-        c_fdiff.Refresh(a, 7);
-        c_fdiff.Refresh(b, 33);
-        c_fdiff.Refresh(c, 11);
-        c_fdiff.Refresh(d, 49);
+        c_fdiff.Refresh<vec_iterator<double>>(a.begin(), a.end());
+        c_fdiff.Refresh<vec_iterator<double>>(b.begin(), b.end());
+        c_fdiff.Refresh<vec_iterator<double>>(c.begin(), c.end());
+        c_fdiff.Refresh<vec_iterator<double>>(d.begin(), d.end());
 
         std::vector<double> pyfractruth_indicator;
         pyfractruth_indicator.resize(100);
         // prepend (size - 1) EMPTY_VALUES of indicator
         std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), DBL_EMPTY_VALUE);
 
-        ArrayCopy<double>(pyfractruth_indicator.data(), pyfractruth, fsize - 1, 0, 100-(fsize-1));
+        std::copy_n(pyfractruth.begin(), 91, pyfractruth_indicator.begin() + fsize - 1);
 
         EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.Begin(0), 100, 0.001);
  }
@@ -136,19 +133,18 @@ TEST(Indicators, CTaMAIndicator){
     cta_MA.Init(window, 0);	 // simple MA
 
     // partial calls until total array calculated
-    double a[] = { 1 };
-    double b[] = { 1 };
-    double c[] = { 2, 3, 4, 5, 5 };
-    double d[] = { 3, 1 };
-    cta_MA.Refresh(a, 1);
-    cta_MA.Refresh(b, 1);
-    cta_MA.Refresh(c, 5);
-    cta_MA.Refresh(d, 2);
+    std::vector<double> a = { 1 };
+    std::vector<double> b = { 1 };
+    std::vector<double> c = { 2, 3, 4, 5, 5 };
+    std::vector<double> d = { 3, 1 };
+    cta_MA.Refresh<vec_iterator<double>>(a.begin(), a.end());
+    cta_MA.Refresh<vec_iterator<double>>(b.begin(), b.end());
+    cta_MA.Refresh<vec_iterator<double>>(c.begin(), c.end());
+    cta_MA.Refresh<vec_iterator<double>>(d.begin(), d.end());
 
     std::vector<double> ta_truth = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
 
     EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.Begin(0), 9, 0.01);
-
 }
 
 
@@ -158,18 +154,18 @@ TEST(Indicators, vBegin) {
     CTaMAIndicator cta_MA;
     cta_MA.Init(window, 0);	 // simple MA
 
-    double a[] = { 1 };
-    double c[] = { 3, 4, 5, 5 };
-    cta_MA.Refresh(a, 1);
+    std::vector<double> a = { 1 };
+    std::vector<double> c = { 3, 4, 5, 5 };
+    cta_MA.Refresh<vec_iterator<double>>(a.begin(), a.end());
     //EXPECT_EQ(cta_MA.valididx(), -1);
-    cta_MA.Refresh(a, 1);
+    cta_MA.Refresh<vec_iterator<double>>(a.begin(), a.end());
     //EXPECT_EQ(cta_MA.valididx(), 1);
-    cta_MA.Refresh(c, 4);
+    cta_MA.Refresh<vec_iterator<double>>(c.begin(), c.end());
     //EXPECT_EQ(cta_MA.valididx(), 1);
 
     // fills the buffer
     for(int i=0; cta_MA.Count()<cta_MA.BufferSize(); i++)
-        cta_MA.Refresh(c, 1);
+        cta_MA.Refresh<vec_iterator<double>>(c.begin(), c.begin()+1);
 
     double last = *(cta_MA.End(0)-1);
 
@@ -177,7 +173,7 @@ TEST(Indicators, vBegin) {
 
     // overwrites the first
     for (int i = 0; i < window-1; i++)
-        cta_MA.Refresh(a, 1);
+        cta_MA.Refresh<vec_iterator<double>>(a.begin(), a.end());
 
     // EXPECT_EQ(cta_MA.valididx(), 0);
 }
@@ -194,18 +190,17 @@ TEST(Indicators, CTaBBANDS){
     cta_BBANDS.Init(window, 2.5, 0); // simple MA + 2.5 deviations
 
     // partial calls until total array calculated
-    double a[] = { 1 };
-    double b[] = { 1 };
-    double c[] = { 2, 3, 4, 5, 5 };
-    double d[] = { 3, 1 };
-    cta_BBANDS.Refresh(a, 1);
-    cta_BBANDS.Refresh(b, 1);
-    cta_BBANDS.Refresh(c, 5);
-    cta_BBANDS.Refresh(d, 2);
+    std::vector<double> a = { 1 };
+    std::vector<double> b = { 1 };
+    std::vector<double> c = { 2, 3, 4, 5, 5 };
+    std::vector<double> d = { 3, 1 };
+    cta_BBANDS.Refresh<vec_iterator<double>>(a.begin(), a.end());
+    cta_BBANDS.Refresh(b.begin(), b.end());
+    cta_BBANDS.Refresh(c.begin(), c.end());
+    cta_BBANDS.Refresh(d.begin(), d.end());
 
-    double *up, *down;
-    up = new double[cta_BBANDS.Count()];
-    down = new double[cta_BBANDS.Count()];
+    std::vector<double> up(cta_BBANDS.Count());
+    std::vector<double> down(cta_BBANDS.Count());    
     for (int i = 0; i < cta_BBANDS.Count(); i++) {
         up[i] = cta_BBANDS.Up(i);
         down[i] = cta_BBANDS.Down(i);
@@ -213,9 +208,6 @@ TEST(Indicators, CTaBBANDS){
 
     EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, up, 9, 0.001);
     EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, down, 9, 0.001);
-
-    delete[] up;
-    delete[] down;
 }
 
 #include <iostream>
@@ -364,11 +356,12 @@ TEST(Indicators, CSADFIndicator) {
     // from it was sent entirely 150 at once
     // small batches have same degrees of freedom
     // but matrices solved on GPU are assemblied differently
-    iSADF->Refresh(data.data(), 15);
-    iSADF->Refresh(data.data()+15, 2);
-    iSADF->Refresh(data.data()+17, 53);
-    iSADF->Refresh(data.data()+70, 50);
-    iSADF->Refresh(data.data()+120, 30);
+    auto idata = data.begin();
+    iSADF->Refresh<vec_iterator<float>>(idata, idata + 15); idata += 15;
+    iSADF->Refresh<vec_iterator<float>>(idata, idata + 2); idata += 2;
+    iSADF->Refresh<vec_iterator<float>>(idata, idata + 53); idata += 53;
+    iSADF->Refresh<vec_iterator<float>>(idata, idata + 50); idata += 50;
+    iSADF->Refresh<vec_iterator<float>>(idata, idata + 30);
     //sadf(, outsadf.data(), outlag.data(), data.size(), maxw, minw, p, true, 0.1, false);
 
     // to write assert here

@@ -14,7 +14,7 @@ std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
 
 void RefreshIndicators();
 
-// can only be called after CppDataBuffersInit
+// can only be called after DataBuffersInit
 void IndicatorsInit(int maxwindow,
                     int minwindow,
                     int order,
@@ -42,12 +42,8 @@ void RefreshIndicators() {
     try
     {
         // copying average weighted price from money bars
-        // std::vector<float> bar_wprices(m_bars->BeginNewBars(), m_bars->end());
-        std::vector<float> bar_wprices(m_bars->m_nnew);
-        for (auto bar = m_bars->BeginNewBars(); bar != m_bars->end(); bar++) {
-            bar_wprices.push_back((float) bar->wprice);
-        }
-        // should accept an stl iterator instead on ctyle array
+        auto bar_wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, *m_bars);
+        // altough nice and cool, If I need multiple members so... I loop is imperative
         m_SADFi->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
         if (m_SADFi->nCalculated() > 0)
             debugfile << "number of bars " << m_bars->size()

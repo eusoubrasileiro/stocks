@@ -23,7 +23,9 @@ void DataBuffersInit(
     double ticksize,
     double tickvalue,
     double moneybar_size,  // R$ to form 1 money bar
-    char*  cs_symbol);     // cs_symbol is a char[] null terminated string (0) value at end
+    char* cs_symbol,     // cs_symbol is a char[] null terminated string (0) value at end
+    float start_hour=10.5, // valid operational window
+    float end_hour=16.5);
 
 BufferMqlTicks* GetBufferMqlTicks();
 

@@ -63,17 +63,16 @@ void CCumSumIndicator::Init(double cum_reset) {
     CWindowIndicator::Init(2);
 }
 
-void CCumSumIndicator::Calculate(std::tuple<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) {
-
+void CCumSumIndicator::Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) {
 
     for (int i = 1; i < size; i++) {
         // guarantee that cum sum is calculated only on of hours that are valid operationally
         // only calculate cum sum if second param (int) is True/Valid Sample (1 or 0)
-        if (std::get<1>(indata[i]) && std::get<1>(indata[i - 1])) 
+        if (indata[i].second && indata[i - 1].second) 
         {
-            auto diff = std::get<0>(indata[i]) - std::get<0>(indata[i - 1]);
+            auto diff = indata[i].first - indata[i - 1].first;
             m_cum_up = std::max((double)0, m_cum_up + diff);
-            m_cum_up = std::min((double)0, m_cum_up + diff);
+            m_cum_down = std::min((double)0, m_cum_down + diff);
             if (m_cum_up > m_cum_reset) {
                 m_cum_up = 0;
                 outdata[0][i - 1] = +1;
@@ -85,6 +84,11 @@ void CCumSumIndicator::Calculate(std::tuple<float, int>* indata, int size, std::
                 }
                 else
                     outdata[0][i - 1] = 0;
+        }
+        else { // reset on this area, cannot be calculated
+            // a new day starting
+            m_cum_up = m_cum_down = 0; 
+            outdata[0][i - 1] = 0;
         }
     }
 }
@@ -116,25 +120,25 @@ void CCumSumIndicator::Calculate(std::tuple<float, int>* indata, int size, std::
 CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumIndicator(buffersize)
 {};
 
-// need to know previous bar to see when crossed to new day to 
-// reset cum_sum 
-//if (bar[i].time.tm_yday != bar[i-1].time.tm_yday)
-//    m_cum
 void CCumSumSADFIndicator::Init(double cum_reset, CSADFIndicator *pSADF, MoneyBarBuffer *pBars) {
     m_cum_reset = cum_reset;
     // initialize cum sum filter
     CWindowIndicator::Init(pSADF->Window()+1); //1 + SADF window due 1st diff
 
-    // check boundaries of valid data intra-day
-    pSADF->nCalculated();
-
     // this the custom refresh function (lambda)
     // using the SADF(t) just calculated data to call the CumSum this->Refresh
     // also taking care of empties
+    // region where I dont want cumsum computed (outside valid intraday)   
     auto thisrefresh = [this, pSADF, pBars](int nempty) {
         this->AddEmpty(nempty);
-        std::vector<double> new_data(pSADF->vLastBegin(0), pSADF->End(0));
-        //this->Refresh(new_data.data(), new_data.size());
+        // make pairs from new data where second indicate wether
+        // the value should be used or not on cum_sum
+        std::vector<std::pair<float, int>> sadf_pair;
+        auto bar = pBars->LastBegin();
+        auto sadf = pSADF->vLastBegin(0);
+        for (; bar != pBars->end() && sadf != pSADF->End(0); bar++, sadf++)                        
+            sadf_pair.push_back(std::make_pair(*sadf, bar->inday));        
+        this->Refresh(sadf_pair.begin(), sadf_pair.end());
     };
 
     pSADF->addSonRefresh(std::function<void(int)>(thisrefresh));

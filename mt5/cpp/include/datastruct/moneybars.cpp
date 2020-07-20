@@ -26,28 +26,39 @@ MoneyBarBuffer::MoneyBarBuffer() {
     m_moneybarsize = DBL_EMPTY_VALUE;
     m_point_value = 0;
     m_bar.smsc = m_bar.emsc = 0;
-    m_bar.time.tm_yday = -1;  // first dtp calc. needs this
+    m_bar.time.tm_yday = -1;  // first dtp calc. needs this    
     // so first dtp gets zeroed as if crossing to a new day
+    m_bar.inday = -1; // inside operational day information undef at first
+    // default operational window
+    m_start_hour = 10;
+    m_end_hour = 16.5;
+    // ctime = 0;
     m_bar.netvol = 0;
     m_bar.min = m_bar.max = DBL_EMPTY_VALUE;
     // m_ticks // has a default constructor that uses MAX_TICKS
 }
 
-  // copy constructor, incomplete
-MoneyBarBuffer::MoneyBarBuffer(const MoneyBarBuffer &moneybars) {
-    m_nnew = moneybars.m_nnew;
-    m_hash = moneybars.m_hash;
-    *this = moneybars; // copy circular buffer of money bars using inner copy constructor
-    uidtimes = moneybars.uidtimes;
-    /// need to change design probably
-    // something messyy here
-}
+// copy constructor, incomplete
+//MoneyBarBuffer::MoneyBarBuffer(const MoneyBarBuffer &moneybars) {
+//    m_nnew = moneybars.m_nnew;
+//    m_hash = moneybars.m_hash;
+//    *this = moneybars; // copy circular buffer of money bars using inner copy constructor
+//    uidtimes = moneybars.uidtimes;
+//    /// need to change design probably
+//    // something messyy here
+//}
 
 void MoneyBarBuffer::Init(double tickvalue, double ticksize, double moneybarsize){
     m_point_value = tickvalue / ticksize;
     m_moneybarsize = moneybarsize;
     auto hasher = std::hash<std::string>(); // to create a unique hash for this money bar
     m_hash = hasher(std::to_string(m_point_value) + std::to_string(m_moneybarsize) + std::to_string(std::time(0)));
+}
+
+// set operational window for flag '.inday' inside money bars
+void MoneyBarBuffer::SetHours(float start_hour, float end_hour) {
+    m_start_hour = start_hour;
+    m_end_hour = end_hour;
 }
 
 // add one tick and create as many money bars as needed (or 0)
@@ -59,12 +70,14 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
     if (tick.volume > 0) { // there was a deal
         // control to not have bars with ticks of different days
         gmtime_s(&ctime, &tick.time);
+        auto day_hour = (float) ctime.tm_hour + ctime.tm_min / 60. + ctime.tm_sec / 3600.;
         // crossed to a new day (comparing with previous)
         if (ctime.tm_yday != m_bar.time.tm_yday) {
             // clean up (ignore) previous data
             // for starting a new bar
             m_bar.nticks = 0;
             m_bar.time = ctime;
+            m_bar.inday = (day_hour > m_start_hour && day_hour < m_end_hour)? 1 : 0;
             m_bar.smsc = tick.time_msc;
             m_bar.dtp = 0; // no previous bar
             m_count_money = 0;
@@ -77,6 +90,7 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
         else // same day
         if (m_bar.nticks == 0) { // new bar
             m_bar.time = ctime; // entry time for this bar
+            m_bar.inday = (day_hour > m_start_hour && day_hour < m_end_hour) ? 1 : 0;
             m_bar.smsc = tick.time_msc;
             // time difference in seconds to previous bar
             m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);

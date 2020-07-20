@@ -15,7 +15,9 @@ std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everyth
 void DataBuffersInit(double ticksize, 
                      double tickvalue,
                      double moneybar_size,  // R$ to form 1 money bar
-                     char* cs_symbol)  // cs_symbol is a char[] null terminated string (0) value at end
+                     char* cs_symbol,
+                     float start_hour,
+                     float end_hour)  // cs_symbol is a char[] null terminated string (0) value at end
 {
 
 #ifdef DEBUG
@@ -25,6 +27,8 @@ void DataBuffersInit(double ticksize,
         m_bars.reset(new MoneyBarBuffer());
         m_ticks->Init(std::string(cs_symbol));
         m_bars->Init(tickvalue, ticksize, moneybar_size);
+        // for setting all moneybars `.inday` flag
+        m_bars->SetHours(start_hour, end_hour);
 #ifdef  DEBUG
     }
     catch (const std::exception& ex) {

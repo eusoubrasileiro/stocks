@@ -62,12 +62,15 @@ py::array_t<MoneyBar> GetMoneyBars() {
     return pymoney_bars;
 }
 
-//py::array GetSADF(){
-//
-//    m_SADFi->
-//    for (size_t idx = 0; idx < m_bars->size(); idx++)
-//       pbuf[idx] = m_bars->at(idx);
-//}
+py::array GetSADF(){
+    auto vec = std::vector<float>(m_SADFi->Begin(0), m_SADFi->End(0));
+    return py::array(vec.size(), vec.data());
+}
+
+py::array GetCumSum() {
+    auto vec = std::vector<float>(m_CumSumi->Begin(0), m_CumSumi->End(0));
+    return py::array(vec.size(), vec.data());
+}
 
 
 
@@ -102,13 +105,14 @@ PYBIND11_MODULE(explotest, m){
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    PYBIND11_NUMPY_DTYPE(MoneyBar, wprice, wprice90, wprice10, nticks, time, smsc, min, max, uid, dtp, netvol);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, wprice, wprice90, wprice10, nticks, time, smsc, min, max, uid, dtp, netvol, inday);
 
     // optional module docstring
     m.doc() = "explosiveness tests - python api pybind11";
 
     m.def("initmoneybars", &DataBuffersInit, "Initialize Money Bar and MqlTicks buffers",
-        py::arg("ticksize"), py::arg("tickvalue"), py::arg("moneybar_size"), py::arg("symbol"));
+        py::arg("ticksize"), py::arg("tickvalue"), py::arg("moneybar_size"), py::arg("symbol"),
+        py::arg("start_hour"), py::arg("end_hour"));
 
     m.def("initindicators", &IndicatorsInit, "Initialize Indicators", 
         py::arg("maxwindow"), py::arg("minwindow"), py::arg("order"), py::arg("usedrift"));
@@ -123,7 +127,11 @@ PYBIND11_MODULE(explotest, m){
 
     //m.def("newdataidx", &NewDataIdx, "start index on buffers of new bars after AddTicks > 0");
 
-    m.def("moneybars", &GetMoneyBars, "get MoneyBar buffer as is");
+    m.def("mbars", &GetMoneyBars, "get MoneyBar buffer as is");
+
+    m.def("mbars_sadf", &GetSADF, "get SADF MoneyBar buffer as is");
+
+    m.def("mbars_sadf_csum", &GetCumSum, "get CumSum on SADF MoneyBar buffer as is");
 
     //m.def("createxyvectors", &CreateXyVectors, "label b.signals and fill out X & y pair vectors");
 

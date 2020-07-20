@@ -12,7 +12,6 @@
 typedef  int64_t unixtime;
 typedef  int64_t unixtime_ms;
 
-
 // Money Bar solves many problems of analysis of stocks data
 // - stationarity first
 // - tick with no volume
@@ -25,7 +24,7 @@ struct MoneyBar
     double       wprice90; // volume weighted price from all ticks on this bar -  percentile 90
     double       wprice10; // volume weighted price from all ticks on this bar -  percentile 10
     int          nticks;  // number ticks to form this bar
-    tm time; // start time of this bar ... datetime tm struct
+    tm time; // start time of this bar ... datetime tm struct    
     unixtime_ms    smsc; // start time of this bar - first tick time - timestamp ms
     unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms
     double min; // min and maximum value negotiated on this bar p0, p100
@@ -35,10 +34,10 @@ struct MoneyBar
     uint64_t uid; // emsc and smsc might repeat on different bars
     double dtp; // time difference to previous bar in seconds (only inside a day)
     double netvol; // number of buy ticks * volume bought + number of sell ticks * volume sold (sell/buy) power (net-volume)
-    // last high  - to calculate volatility in this bar
-    // last low
+    int inday; // inside operational day information (intra-day) 1 True or False, -1 for undefined
 };
 #pragma pack(pop)
+
 
 class MoneyBarBuffer : public buffer<MoneyBar>
 {
@@ -61,6 +60,9 @@ class MoneyBarBuffer : public buffer<MoneyBar>
     tm ctime;
     std::vector<std::function<void(void)>> m_event_newbars;
 
+    // operational window for being a valid entry ... etc
+    float m_start_hour, m_end_hour;
+
     //BufferMqlTicks m_ticks; // ticks used to build bars from mt5
 
     // call all event callback functions subscribed
@@ -77,9 +79,12 @@ public:
 
     MoneyBarBuffer();
 
-    MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor 
+    //MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor 
 
     void Init(double tickvalue, double ticksize, double moneybarsize);
+
+    void SetHours(float start_hour, float end_hour);
+
     // add one tick and create as many money bars as needed (or 0)
     // return number created
     size_t AddTick(MqlTick tick);
@@ -90,7 +95,7 @@ public:
     size_t AddTicks(const MqlTick* cticks, int size);
 
     // iterator begin of new bars
-    auto BeginNewBars() {
+    buffer<MoneyBar>::iterator LastBegin() {
         return end() - m_nnew;
     }
 
@@ -120,6 +125,24 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
     return a.uid < uid;
 }
 
+// 'Project' element (type T) of  MoneyBar buffer on vector of type Out
+// cast to (type Out) or not
+// usage:
+// auto wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, *m_bars);
+// only Last Bars added on last Refresh() call
+template<typename T, typename Out = T>
+std::vector<Out> vecMoneyBarBufferLast(T MoneyBar::* f, MoneyBarBuffer &v) {
+    std::vector<Out> output;
+    //for (auto const& elem : v) {
+    //    output.push_back((Out)elem.*f);
+    //}
+    for(auto elem = v.LastBegin(); elem != v.end(); elem++)
+        output.push_back((Out)(*elem.*f));
+    return output;
+}
+
+
+
 
 // standar 1 minute bar since it's easier
 // to do everythin with this first
@@ -142,3 +165,5 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
 //{
 //
 //};
+
+

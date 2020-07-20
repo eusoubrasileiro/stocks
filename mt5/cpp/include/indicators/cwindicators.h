@@ -22,6 +22,7 @@ class CWindowIndicator
 {
 
 protected:
+
   std::array<buffer<TypeSt>, NumberBuffers>  m_buffers;
   int m_buffersize;
   int m_window; // minimum number of input samples to produce 1 output sample
@@ -404,7 +405,7 @@ public:
 
 
 // Cum Sum filter
-class CCumSumIndicator : public CWindowIndicator<int, std::tuple<float,int>,  1>
+class CCumSumIndicator : public CWindowIndicator<int, std::pair<float,int>,  1>
 {
 protected:
     double m_cum_reset; // cumsum increment and reset level
@@ -417,7 +418,7 @@ public:
 
     void Init(double cum_reset);
 
-    void Calculate(std::tuple<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) override;
+    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) override;
 };
 
 

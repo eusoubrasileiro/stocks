@@ -290,7 +290,6 @@ TEST(MoneyBars, OnTicksSADF) {
     std::vector<MqlTick> ticks;
 
     // Read a file and simulate CopyTicksRange
-
     int64_t nticks = ReadTicks(&ticks, user_data, (size_t)1e6); // 1MM
     BufferMqlTicks* pticks = GetBufferMqlTicks();
     // send in chunck of 250k ticks
@@ -416,5 +415,46 @@ TEST(Indicators, CSADFIndicator) {
     EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->vCount(), 0.01);
 }
 
+
+TEST(Indicators, CCumSumSADFIndicator) {
+
+    //std::vector<float> data = { 56097., 55298., 56865., 56653., 57348., 57701., 57669., 58005.,
+    //   56534., 56754., 57829., 59265., 59365., 58546., 58600., 59083.,
+    //   59806., 59962., 59921., 59147., 59956., 60646., 61723., 61927.,
+    //   62312., 62386., 62486., 62953., 62904., 62770., 63072., 64567.,
+    //   64593., 65217., 65224., 65917., 65831., 65530., 63998., 65692.,
+    //   65039., 65368., 66142., 66204., 65820., 65943., 65241., 65959.,
+    //   65812., 66810., 67782., 66964., 65114., 66017., 66908., 66704.,
+    //   66385., 68394., 68257., 67749., 67684., 67730., 67296., 66860.,
+    //   65828., 65813., 66685., 66037., 65079., 64872., 64511., 65216.,
+    //   64284., 63529., 63691., 62923., 61738., 61293., 63058., 62106.,
+    //   61955., 62699., 63010., 62618., 62494., 61539., 61971., 61750.,
+    //   62198., 61691., 61820., 62424., 62104., 60821., 61220., 60365.,
+    //   59786., 59702., 59445., 57540., 56238., 55888., 54038., 54513.,
+    //   56590., 55039., 54619., 54063., 54463., 55213., 54633., 53798.,
+    //   54490., 53403., 53417., 52481., 54156., 54430., 54001., 55049.,
+    //   55651., 55352., 56105., 56195., 57195., 57167., 55505., 55440.,
+    //   53805., 53837., 53109., 52652., 54355., 54693., 55780., 56077.,
+    //   56379., 55394., 53706., 53569., 53421., 54331., 53402., 53909.,
+    //   54583., 55347., 54195., 53034., 52639., 52608. };
+    //std::vector<float> outsadf;
+
+    //int maxw = 15;
+    //int minw = 12;
+    //int p = 3;
+    //CSADFIndicator iSADF(BUFFERSIZE);
+
+    //iSADF.Init(maxw, minw, p, true);
+    //iSADF.Refresh<vec_iterator<float>>(data.begin(), data.end());
+
+    CCumSumSADFIndicator iCumSum(BUFFERSIZE);
+    // automatically refreshed when m_SADFi is refreshed
+    //iCumSum.Init(m_reset, &(*m_SADFi), &(*m_bars));
+
+
+    // avg distance (CPU) 0.00xxxxxxxxxxxxxx ~ avg. error <0.9%
+    // avg distance (GPU) 0.0090092499264706 ~ avg. error 0.9%
+    //EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->vCount(), 0.01);
+}
 // need to use DLL Load to Deal with
 // more reallistic enviorment of mt5

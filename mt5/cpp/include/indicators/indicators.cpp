@@ -42,7 +42,7 @@ void RefreshIndicators() {
     try
     {
         // copying average weighted price from money bars
-        auto bar_wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, *m_bars);
+        auto bar_wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, &(*m_bars));
         // altough nice and cool, If I need multiple members so... I loop is imperative
         m_SADFi->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
         if (m_SADFi->nCalculated() > 0)

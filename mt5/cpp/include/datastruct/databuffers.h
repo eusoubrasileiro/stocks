@@ -17,7 +17,7 @@ extern std::ofstream debugfile;
 // buffer of money bars base for everything
 extern std::shared_ptr<MoneyBarBuffer> m_bars;
 
-int64_t OnTicks(MqlTick* mt5_pticks, int mt5_nticks, double *lost_ticks);
+int64_t OnTicks(MqlTick* mt5_pticks, int64_t mt5_nticks, double *lost_ticks);
 
 void DataBuffersInit(
     double ticksize,

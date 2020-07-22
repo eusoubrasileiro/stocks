@@ -41,8 +41,8 @@ protected:
   size_t m_total_count; // count added samples (like size()) but continues beyound BUFFERSIZE
     // Event on Refresh for Son indicator
   std::function<void(int)> m_sonRefresh; // pass number of empty samples created or 0 for none
-  int m_ndummy; // total dummy/empty (same bellow) on buffer
-  int m_nempty; // number of empty samples added on last call
+  int m_nempty; // number of dummy/empty samples added on last call
+  int m_ndummy; // total dummy/empty on buffer
   int m_ncalculated; // number of samples being calculated or calculated on the last call
 
 public :
@@ -151,7 +151,6 @@ public :
                 m_nempty = count;
                 m_total_count += m_nempty;
                 AddEmpty(m_nempty);
-                m_ndummy += m_nempty;
                 if (m_sonRefresh)
                     m_sonRefresh(m_nempty);
                 return 0;
@@ -161,7 +160,6 @@ public :
                 m_nempty = m_prev_needed - m_nprev;
                 m_total_count += m_nempty;
                 AddEmpty(m_nempty);
-                m_ndummy += m_nempty;
             }
         }
 
@@ -268,6 +266,7 @@ protected:
     //    std::array<std::vector<TypeSt>, NumberBuffers>& outdata) = 0;
 
     void AddEmpty(int count) {
+        m_ndummy += count;
         for (int i = 0; i < NumberBuffers; i++) // empty value / dummy on all buffers
             m_buffers[i].addempty(count);
     }

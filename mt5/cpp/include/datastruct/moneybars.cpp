@@ -18,7 +18,8 @@ size_t MoneyBarBuffer::BeginNewBarsIdx() {
     return size()-m_nnew;
 }
 
-MoneyBarBuffer::MoneyBarBuffer() {
+MoneyBarBuffer::MoneyBarBuffer(){
+    MoneyBarBuffer(BUFFERSIZE);
     cuid = 0;
     m_count_money = 0; // count_money amount to form 1 money bar
     m_nnew = 0;
@@ -143,8 +144,8 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
 }
 
 // add ticks for metatrader support?
-size_t MoneyBarBuffer::AddTicks(boost::circular_buffer<MqlTick>::iterator start,
-    boost::circular_buffer<MqlTick>::iterator end) {
+size_t MoneyBarBuffer::AddTicks(buffer<MqlTick>::iterator start,
+    buffer<MqlTick>::iterator end) {
     size_t nnew = 0;
     for (auto element = start; element != end; element++)
         nnew += AddTick(*element);
@@ -163,7 +164,6 @@ size_t MoneyBarBuffer::AddTicks(const MqlTick *cticks, int size)
     if (m_nnew > 0) OnNewBars();
     return m_nnew;
 }
-
 
 // or if it comes after that uid
 //inline bool CmpMoneyBarGreaterUid(const MoneyBar& a, const unsigned long long uid) {

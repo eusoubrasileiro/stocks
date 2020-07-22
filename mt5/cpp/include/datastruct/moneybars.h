@@ -39,6 +39,7 @@ struct MoneyBar
 #pragma pack(pop)
 
 
+// Metatrader 5 based ticks Money Bar
 class MoneyBarBuffer : public buffer<MoneyBar>
 {
 
@@ -77,6 +78,8 @@ public:
 
     buffer<uint64_t> uidtimes;
 
+    MoneyBarBuffer(size_t size) : buffer<MoneyBar>(size) {};
+
     MoneyBarBuffer();
 
     //MoneyBarBuffer(const MoneyBarBuffer &moneybars); // copy constructor 
@@ -97,6 +100,16 @@ public:
     // iterator begin of new bars
     buffer<MoneyBar>::iterator LastBegin() {
         return end() - m_nnew;
+    }
+
+    // debugging and testing use only
+    // insert money bars directly on buffer
+    template<class iterator>
+    void AddBars(iterator start, iterator end) {
+        addrange<iterator>(start, end);
+        m_nnew = std::distance(start, end);
+        if(m_nnew > 0)
+            OnNewBars();
     }
 
     // on new bars call back function
@@ -131,12 +144,12 @@ inline bool cmpMoneyBarSmallUid(const MoneyBar& a, uint64_t uid) {
 // auto wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, *m_bars);
 // only Last Bars added on last Refresh() call
 template<typename T, typename Out = T>
-std::vector<Out> vecMoneyBarBufferLast(T MoneyBar::* f, MoneyBarBuffer &v) {
+std::vector<Out> vecMoneyBarBufferLast(T MoneyBar::* f, MoneyBarBuffer *pbar) {
     std::vector<Out> output;
     //for (auto const& elem : v) {
     //    output.push_back((Out)elem.*f);
     //}
-    for(auto elem = v.LastBegin(); elem != v.end(); elem++)
+    for(auto elem = pbar->LastBegin(); elem != pbar->end(); elem++)
         output.push_back((Out)(*elem.*f));
     return output;
 }

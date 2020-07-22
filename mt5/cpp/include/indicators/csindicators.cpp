@@ -123,14 +123,14 @@ CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumIndicator(bu
 void CCumSumSADFIndicator::Init(double cum_reset, CSADFIndicator *pSADF, MoneyBarBuffer *pBars) {
     m_cum_reset = cum_reset;
     // initialize cum sum filter
-    CWindowIndicator::Init(pSADF->Window()+1); //1 + SADF window due 1st diff
+    CWindowIndicator::Init(2); //2 due 1st diff
 
     // this the custom refresh function (lambda)
     // using the SADF(t) just calculated data to call the CumSum this->Refresh
     // also taking care of empties
     // region where I dont want cumsum computed (outside valid intraday)   
     auto thisrefresh = [this, pSADF, pBars](int nempty) {
-        this->AddEmpty(nempty);
+        this->AddEmpty(nempty); // allign buffers
         // make pairs from new data where second indicate wether
         // the value should be used or not on cum_sum
         std::vector<std::pair<float, int>> sadf_pair;

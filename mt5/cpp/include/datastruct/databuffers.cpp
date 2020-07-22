@@ -29,6 +29,12 @@ void DataBuffersInit(double ticksize,
         m_bars->Init(tickvalue, ticksize, moneybar_size);
         // for setting all moneybars `.inday` flag
         m_bars->SetHours(start_hour, end_hour);
+        // callback function for on new ticks event -> send
+        // those to create money-bars
+        auto onnewticks = [pbars = &(*m_bars)](BufferMqlTicks *pticks){
+            pbars->AddTicks(pticks->LastBegin(), pticks->End());
+        };
+        m_ticks->AddOnNewTicks(onnewticks);
 #ifdef  DEBUG
     }
     catch (const std::exception& ex) {
@@ -45,7 +51,7 @@ unixtime_ms next_bgticktime = 0; // if an exception occour will
 
 
 // returns the next cmpbegin_time
-unixtime_ms OnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
+unixtime_ms OnTicks(MqlTick* mt5_pticks, int64_t mt5_nticks, double* lost_ticks) {
     
 #ifdef  DEBUG
     try {
@@ -54,20 +60,10 @@ unixtime_ms OnTicks(MqlTick* mt5_pticks, int mt5_nticks, double* lost_ticks) {
         //m.lock(); // causes
         // c++ exception: 
         // device or resource busy : device or resource busy
-        int ticks_left = mt5_nticks;
-        // send ticks on 'batches' of MAX_TICKS
-        // changed to this to avoid needing a HUGE buffer for ticks
-        while (ticks_left > 0) {
 
-            next_bgticktime = m_ticks->Refresh(mt5_pticks, std::min(ticks_left, MAX_TICKS), lost_ticks);
-            ticks_left -= MAX_TICKS;
-
-            if (m_ticks->nNew() > 0) {
-                m_bars->AddTicks(m_ticks->end() - m_ticks->nNew(), m_ticks->end());
-                // m_bars call-backs all subscribed to OnNewBars
-            }
-        }
-
+        next_bgticktime = m_ticks->Refresh(mt5_pticks, mt5_nticks, lost_ticks);
+        // bars call-back subscribed to OnNewTicks
+        // indicators etc. all subscribed to OnNewBars
 #ifdef  DEBUG
     }
     catch (const std::exception& ex) {

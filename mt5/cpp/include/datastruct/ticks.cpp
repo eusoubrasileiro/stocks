@@ -1,6 +1,6 @@
-#include "ticks.h"
 #include <fstream>
 #include <iostream>
+#include "ticks.h"
 
 #ifdef DEBUG
 extern std::ofstream debugfile;
@@ -231,10 +231,6 @@ bool BufferMqlTicks::seekBeginMt5Ticks(){
     return m_scheck;
 }
 
-// number of new ticks added on last call to Refresh(...)
-int BufferMqlTicks::nNew(){ // you may add more data than the buffer
-    return (m_nnew > capacity() ) ? capacity() : m_nnew;
-}
 
 void BufferMqlTicks::Init(std::string symbol){
     m_symbol = symbol;
@@ -242,13 +238,7 @@ void BufferMqlTicks::Init(std::string symbol){
     m_request = 0; // 1/1/1970 first request begin if 
 }
 
-// int64_t same as long for Mql5
-// will be called by Metatrader 5 after
-// m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
-// COPY_TICKS_ALL, m_cmpbegin_time, 0)
-// passing m_copied_ticks as *pmt5_mqlticks
-// will compare with ticks
-unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, double *perc_lost){
+unixtime_ms BufferMqlTicks::innerRefresh(MqlTick *mt5_pmqlticks, int64_t mt5_ncopied, double *perc_lost){
 
     m_mt5ticks = mt5_pmqlticks;
     m_mt5ncopied = mt5_ncopied;
@@ -264,9 +254,33 @@ unixtime_ms BufferMqlTicks::Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, dou
         addrange(m_mt5ticks, m_nnew);
         // get begin time for next call by Metatrader 5 to CopyTicks
         m_request = this->back().time_msc;
+
+        if(m_nnew > 0)
+            OnNewTicks(); // event callback new ticks
     }
 
     return m_request;
+}
+
+
+// int64_t same as long for Mql5
+// will be called by Metatrader 5 after
+// m_ncopied = CopyTicksRange(m_symbol, m_copied_ticks,
+// COPY_TICKS_ALL, m_cmpbegin_time, 0)
+// passing m_copied_ticks as *pmt5_mqlticks
+// will compare with ticks
+// int64_t for mt5_ncopied because size_t is unsigned
+// and I need decrease it to send in batchs
+unixtime_ms BufferMqlTicks::Refresh(MqlTick* mt5_pmqlticks, int64_t mt5_ncopied, double* perc_lost) {
+    int64_t ticks_left = mt5_ncopied;
+    unixtime_ms next_begin_ticktime = 0;
+    // send ticks in 'batches' of MAX_TICKS
+    // changed to this to avoid needing a HUGE buffer for ticks
+    while (ticks_left > 0) {
+        next_begin_ticktime = innerRefresh(mt5_pmqlticks, (std::min)(ticks_left, (int64_t) MAX_TICKS), perc_lost);
+        ticks_left -= MAX_TICKS;
+    }
+    return next_begin_ticktime;
 }
 
 

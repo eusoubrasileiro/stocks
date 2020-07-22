@@ -1,9 +1,13 @@
 #pragma once
 
-#include "buffers.h"
 #include <string>
 #include <iostream>
 #include <time.h>
+#include <algorithm>
+#include <functional>
+#include "buffers.h"
+#define NOMINMAX
+
 
 #define MAX_TICKS 20000000
 
@@ -71,6 +75,19 @@ protected:
   bool seekBeginMt5Ticks();
 
 public:
+    // only one callback
+    std::function<void(BufferMqlTicks*)> m_event_newticks;
+
+    // call all event callback functions subscribed
+    void OnNewTicks() {
+        if (m_event_newticks)
+            m_event_newticks(this);
+    }
+
+    // on new ticks call back function
+    void AddOnNewTicks(std::function<void(BufferMqlTicks*)> onnewticks) {
+        m_event_newticks = onnewticks;
+    }
 
   // Buffer size for MqlTicks is the only that can be different from the rest
   // if it is small for example when operating Money Bars as a indicator
@@ -89,12 +106,21 @@ public:
       m_perc_lost = 0; 
   };
 
-  int nNew(); // number of new ticks added
+  // new ticks added recently
+  buffer<MqlTick>::iterator LastBegin() {
+      return this->end() - m_nnew;
+  }
+
+  buffer<MqlTick>::iterator End() {
+      return this->end();
+  }
 
   void Init(std::string symbol);
 
   // will be called somehow by mt5
-  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int mt5_ncopied, double *perc_lost); 
+  unixtime_ms Refresh(MqlTick *mt5_pmqlticks, int64_t mt5_ncopied, double *perc_lost); 
+
+  unixtime_ms innerRefresh(MqlTick* mt5_pmqlticks, int64_t mt5_ncopied, double* perc_lost);
 
 };
 

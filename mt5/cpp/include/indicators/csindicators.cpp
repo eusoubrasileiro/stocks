@@ -48,6 +48,9 @@ void CSADFIndicator::Calculate(float* indata, int size, std::array<std::vector<f
 
     int ncalculated = sadf(indata, sadf_out->data(), imaxadf_out->data(), size,
         m_maxw, m_minw, m_order, m_usedrift, m_gpumemgb, m_verbose);
+
+    // convert ADF_ERROR to FLT_NAN, so all NANS are consistent FLT_NAN
+    std::replace(sadf_out->begin(), sadf_out->end(), ADF_ERROR, FLT_NAN);
 }
 
 
@@ -63,13 +66,20 @@ void CCumSumIndicator::Init(double cum_reset) {
     CWindowIndicator::Init(2);
 }
 
-void CCumSumIndicator::Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) {
+void CCumSumIndicator::Calculate(std::pair<float, float>* indata, int size, std::array<std::vector<float>, 1> & outdata) {
 
     for (int i = 1; i < size; i++) {
         // guarantee that cum sum is calculated only on of hours that are valid operationally
         // only calculate cum sum if second param (int) is True/Valid Sample (1 or 0)
-        if (indata[i].second && indata[i - 1].second) 
+        if (indata[i].second && indata[i - 1].second)            
         {
+            // check for nans on sadf - due colinearity causing singular matrices on ADF calculation
+            // in that case dont calculate - but do not reset cum_sums
+            if ( std::isnan<float>(indata[i].first) || std::isnan<float>(indata[i - 1].first) ) {
+                outdata[0][i - 1] = 0;
+                continue;
+            }
+
             auto diff = indata[i].first - indata[i - 1].first;
             m_cum_up = std::max((double)0, m_cum_up + diff);
             m_cum_down = std::min((double)0, m_cum_down + diff);

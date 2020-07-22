@@ -92,6 +92,7 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
             mt5_ptH[i] = m_bars->at(j).max; // max value negotiated
             mt5_ptL[i] = m_bars->at(j).min; // min value negotiated
             mt5_ptM[i] = m_bars->at(j).wprice; // average weighted price of entire bar
+            // needed to replace if existent ? NANs to DBL_NAN_MT5 ...  
             mt5_petimes[i] = (unixtime)(m_bars->at(j).emsc * 0.001);
             mt5_bearbull[i] = (int)((m_numcolors - 1) * (1+m_bars->at(j).netvol)/2.); // from -1/+1 to 0/1 where 0.5 is no bear no bull
         }
@@ -111,6 +112,9 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
 #endif //  DEBUG
     return maxbarsplot;
 }
+
+
+
 
 // SADF on MoneyBars
 // metatrader 5 buffer arrays for plotting
@@ -139,8 +143,8 @@ int CppSADFMoneyBars(double* mt5_SADFline, double* mt5_SADFdots, double* mt5_ima
 
         if (maxbarsplot > 0) {
             for (i = mt5ptsize - maxbarsplot, j = m_SADFi->Count() - maxbarsplot; i < mt5ptsize; i++, j++) {
-                mt5_SADFline[i] = m_SADFi->SADFt(j); // average weighted price of entire bar
-                mt5_SADFdots[i] = m_SADFi->SADFt(j);
+                mt5_SADFline[i] = MT5_NAN_REPLACE(float, m_SADFi->SADFt(j)); // sadf on average weighted price of entire bar
+                mt5_SADFdots[i] = mt5_SADFline[i];
                 mt5_imaxadfcolor[i] = (int)((m_numcolors - 1) * (m_SADFi->MaxADFi(j) / m_adfscount));
             }
             *mt5_imaxadflast = m_SADFi->MaxADFi(m_SADFi->Count() - 1);

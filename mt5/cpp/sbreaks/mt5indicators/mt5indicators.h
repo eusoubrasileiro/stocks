@@ -15,6 +15,10 @@
 #define DLL_EXPORT extern "C" __declspec(dllimport)
 #endif
 
+// replace float/double nans to DBL_EMPTY_VALUE Metatrader 5 not plotting
+#define MT5_NAN_REPLACE(type, value) ( (std::isnan<type>(value))? DBL_NAN_MT5 : value ) 
+
+
 DLL_EXPORT void CppIndicatorsInit(int maxwindow,
                                         int minwindow,
                                         int order,

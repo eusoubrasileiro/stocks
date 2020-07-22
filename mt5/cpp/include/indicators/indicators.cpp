@@ -8,7 +8,6 @@ int m_minw, m_maxw, m_order;
 bool m_usedrift;
 
 // Indicator Cum Sum
-double m_reset = 0.5;
 std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
 
 
@@ -18,7 +17,8 @@ void RefreshIndicators();
 void IndicatorsInit(int maxwindow,
                     int minwindow,
                     int order,
-                    bool usedrift)
+                    bool usedrift,
+                    float cum_reset)
 {
     if (m_bars == nullptr)
         return;
@@ -33,7 +33,7 @@ void IndicatorsInit(int maxwindow,
 
     m_CumSumi.reset(new CCumSumSADFIndicator(m_bars->capacity()));
     // automatically refreshed when m_SADFi is refreshed
-    m_CumSumi->Init(m_reset, &(*m_SADFi), &(*m_bars));
+    m_CumSumi->Init(cum_reset, &(*m_SADFi), &(*m_bars));
     // subscribe to OnNewBars event
     m_bars->AddOnNewBars(RefreshIndicators);
 }

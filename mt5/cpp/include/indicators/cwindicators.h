@@ -68,66 +68,6 @@ public :
       m_prev_data.set_capacity(m_prev_needed);
   }
 
-    //// re-calculate indicator values based on array of new data
-    //// where new data has size count
-    //// input must be c-style array because of metatrader
-    //int Refresh(TypeIn newdata[], int count){
-
-    //  m_ncalculated = 0;
-    //  m_nempty = 0;
-    //  m_new = count;
-    //  m_nprev = m_prev_data.size(); // number of previous data
-
-    //  if(count==0) // no data
-    //    return 0;
-    //  // needs m_window-1 previous samples + count > 0 to calculate 1 output sample
-    //  // check enough samples using previous
-    //  if(m_nprev < m_prev_needed){ // m_prev_need + 1 = 1 output
-    //    if(m_nprev + count < m_window){ // cannot calculate 1 output
-    //      // not enough data now, but insert on previous data
-    //      m_prev_data.addrange(newdata, count);          
-    //      // add dummy samples to mainting allignment with time and buffers
-    //      m_nempty = count;
-    //      m_total_count += m_nempty;
-    //      AddEmpty(m_nempty);
-    //      m_ndummy += m_nempty;
-    //       if (m_sonRefresh)
-    //          m_sonRefresh(m_nempty);
-    //      return 0;
-    //    }
-    //    else { // now can calculate 1 or more outputs
-    //      // insert the missing EMPTY_VALUES
-    //      m_nempty = m_prev_needed - m_nprev;
-    //      m_total_count += m_nempty;
-    //      AddEmpty(m_nempty);
-    //      m_ndummy += m_nempty;
-    //    }
-    //  }
-
-    //  // copy previous data
-    //  std::copy(m_prev_data.begin(), m_prev_data.end(), m_calculating.begin());
-    //  // copy in sequence new data
-    //  std::copy(newdata, newdata + m_new, m_calculating.begin() + m_nprev);
-    //  // needs m_window-1 previous samples to calculate 1 output sample
-    //  m_ncalculated = (m_nprev + m_new) - m_prev_needed;
-
-    //  Calculate(m_calculating.data(), (m_nprev + m_new), m_calculated);
-
-    //  AddLatest();
-
-    //  // copy the now previous data for the subsequent call
-    //  m_prev_data.addrange(newdata, m_new);
-
-    //  m_total_count += m_ncalculated;
-
-    //  // if exists son indicator you can
-    //  // call its Refresh now
-    //  if (m_sonRefresh)
-    //      m_sonRefresh(m_nempty);
-
-    //  return m_ncalculated;
-    //}
-
     // overload better than break everything
     template<class iterator_type>
     int Refresh(iterator_type start,
@@ -404,7 +344,8 @@ public:
 
 
 // Cum Sum filter
-class CCumSumIndicator : public CWindowIndicator<int, std::pair<float,int>,  1>
+// due numpy/mt5 NAN's usage better use float as storage instead of int
+class CCumSumIndicator : public CWindowIndicator<float, std::pair<float,float>,  1>
 {
 protected:
     double m_cum_reset; // cumsum increment and reset level
@@ -417,7 +358,7 @@ public:
 
     void Init(double cum_reset);
 
-    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<int>, 1> & outdata) override;
+    void Calculate(std::pair<float, float>* indata, int size, std::array<std::vector<float>, 1> & outdata) override;
 };
 
 

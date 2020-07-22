@@ -8,9 +8,10 @@
 #include <memory>
 #include <boost/circular_buffer.hpp>
 
-#define DBL_EMPTY_VALUE DBL_MAX
-#define INT_EMPTY_VALUE INT_MAX
-#define FLT_EMPTY_VALUE FLT_MAX
+#define FLT_NAN      std::numeric_limits<float>::quiet_NaN() // quiet NAN dont raise exceptions
+#define INT_NAN      INT_MAX // there no nan for ints
+#define DBL_NAN      std::numeric_limits<double>::quiet_NaN() // quiet NAN dont raise exceptions
+#define DBL_NAN_MT5  DBL_MAX // only seeing by Metatrader 5 as NAN - DBL_EMPTY_VALUE
 
 // indicators, bars etc. buffer needed all must respect this to compatibility of indexes between DLL's
 #define BUFFERSIZE       1000000      

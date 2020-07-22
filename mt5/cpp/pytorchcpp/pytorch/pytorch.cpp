@@ -1,11 +1,11 @@
 #include <iostream>
 #include <torch\torch.h>
 #include <torch\cuda.h>
-
 #include "pytorchcpp.h"
 
 #include <fstream> // debugging dll load by metatrader 5 output to txt file -> located where it started
 std::ofstream debugfile("pytorchcpp.txt");
+
 
 namespace th = torch;
 
@@ -439,8 +439,9 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto s2 = (er * er).sum(1).squeeze().div(dgfreecu);
             // tstats = Bhat[:, 2] / th.sqrt(s2 * Gi[:, 2, 2]) - for params = 3 // bellow generic
             auto adfstats = Bhat.select(-1, 2 - !drift).div(th::sqrt(Gi.select(-2, 2 - !drift).select(-1, 2 - !drift) * s2));
-            //adfstats[th.isnan(adfstats)] = -3.4e+38
-            adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), -3.4e+38); // in case colinearity causes singular matrices
+            // in case colinearity causes singular matrices, set -FLT_MAX for those ADF values
+            // so in comparison it is allways the smallest value
+            adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), ADF_ERROR);
             auto max = adfstats.view({ batch_size, adfs_count }).max(-1);
 
             sadf.narrow(0, tline - batch_size, batch_size).copy_(std::get<0>(max));
@@ -491,14 +492,20 @@ int sadf(float* signal, float* outsadf, float* outadfmaxidx, int n, int maxw, in
             auto s2 = (er * er).sum(1).squeeze().div(dgfreecu);
             // tstats = Bhat[:, 2] / th.sqrt(s2 * Gi[:, 2, 2]) - for params = 3 // bellow generic
             auto adfstats = Bhat.select(-1, 2 - !drift).div(th::sqrt(Gi.select(-2, 2 - !drift).select(-1, 2 - !drift) * s2));
-            //adfstats[th.isnan(adfstats)] = -3.4e+38
-            adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), -3.4e+38); // in case colinearity causes singular matrices
+            // in case colinearity causes singular matrices, set -FLT_MAX for those ADF values
+            // so in comparison it is allways the smallest value
+            adfstats.index_fill_(0, th::nonzero(th::isnan(adfstats)).view(-1), ADF_ERROR);
 
             auto max = adfstats.view({ lst_batch_size, adfs_count }).max(-1);
 
             sadf.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<0>(max));
             adfmaxidx.narrow(0, tline - lst_batch_size, lst_batch_size).copy_(std::get<1>(max));
         }
+        
+        //set to qNan those values
+        // not here because MT5 uses DBL_MAX as nan
+        // and python uses qNAN?
+        //sadf[sadf == ADF_ERROR] = qNAN;
 
         sadf = sadf.to(deviceCPU);
         adfmaxidx = th::_cast_Float(adfmaxidx.to(deviceCPU));

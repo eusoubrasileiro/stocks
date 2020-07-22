@@ -17,6 +17,7 @@
 #pragma once
 
 #define BUILDING_DLL
+#include <limits> // std::numeric_limits
 #include "pybind11/embed.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
@@ -61,6 +62,9 @@ py::array_t<MoneyBar> GetMoneyBars() {
     
     return pymoney_bars;
 }
+
+// only for doubles needs to convert to real NANS
+// std::replace(vec.begin(), vec.end(), DBL_NAN_MT5, FLT_NAN);
 
 py::array GetSADF(){
     auto vec = std::vector<float>(m_SADFi->Begin(0), m_SADFi->End(0));
@@ -115,7 +119,8 @@ PYBIND11_MODULE(explotest, m){
         py::arg("start_hour"), py::arg("end_hour"));
 
     m.def("initindicators", &IndicatorsInit, "Initialize Indicators", 
-        py::arg("maxwindow"), py::arg("minwindow"), py::arg("order"), py::arg("usedrift"));
+        py::arg("maxwindow"), py::arg("minwindow"), py::arg("order"), py::arg("usedrift"),
+        py::arg("cum_reset"));
 
     // signature with py::array_t for AddTicks
     m.def("sendticks", &SendTicks, "Send ticks to expert",

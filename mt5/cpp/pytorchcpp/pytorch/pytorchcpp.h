@@ -13,10 +13,12 @@
 #include <windows.h>
 #include <iostream>
 
+#define ADF_ERROR -FLT_MAX  // in case there is singular matrix in a ADF set its result to -FLT_MAX
 
 /*  To use this exported function of dll, include this header
  *  in your project.
  */
+
 
 extern "C" // removes decoration of functions __stdcall would mess up but in x64 it is ignored
 {

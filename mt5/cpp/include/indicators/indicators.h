@@ -12,10 +12,10 @@ extern int m_minw, m_maxw, m_order;
 extern bool m_usedrift;
 
 // Indicator Cum Sum
-extern double m_reset;
 extern std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
 
 void IndicatorsInit(int maxwindow,
     int minwindow,
     int order,
-    bool usedrift);
+    bool usedrift,
+    float cum_reset=1.0);

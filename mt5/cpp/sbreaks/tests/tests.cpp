@@ -27,12 +27,19 @@
 // so you must use `vs2019_py37.bat` script or `setpy37.bat` prior to launch vstudio
 // when debugging
 
-#define EXPECT_FLOATS_NEARLY_EQ(expected, actual, size, thresh) \
+#define EXPECT_FLOATS_NEARLY_EQ(type, expected, actual, size, thresh) \
         for(size_t idx = 0; idx < size; ++idx) \
         { \
-            EXPECT_NEAR(expected[idx], actual[idx], thresh) << "at index: " << idx;\
+            auto first = expected[idx]; auto second = actual[idx]; \
+            if (std::isnan<type>(second)){ \
+                second = std::isnan<type>(second); \
+                first = std::isnan<type>(first);  \
+                EXPECT_EQ(second == first, true) <<  "at index: " << idx; \
+                continue; \
+            }\
+            EXPECT_NEAR(first, second, thresh) << "at index: " << idx;\
         }
-        //EXPECT_EQ(expected.size(), actual.size()) << "Array sizes differ."; \
+        
 
 // average distance between arrays/vectors
 #define EXPECT_FLOATS_AVG_DIST_NEARLY(expected, actual, size, thresh) \
@@ -118,11 +125,11 @@ TEST(Indicators, CFracDiffIndicator){
         std::vector<double> pyfractruth_indicator;
         pyfractruth_indicator.resize(100);
         // prepend (size - 1) EMPTY_VALUES of indicator
-        std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), DBL_EMPTY_VALUE);
+        std::fill(pyfractruth_indicator.begin(), pyfractruth_indicator.end(), DBL_NAN);
 
         std::copy_n(pyfractruth.begin(), 91, pyfractruth_indicator.begin() + fsize - 1);
 
-        EXPECT_FLOATS_NEARLY_EQ(pyfractruth_indicator, c_fdiff.Begin(0), 100, 0.001);
+        EXPECT_FLOATS_NEARLY_EQ(double, pyfractruth_indicator, c_fdiff.Begin(0), 100, 0.001);
  }
 
 TEST(Indicators, CTaMAIndicator){
@@ -142,9 +149,9 @@ TEST(Indicators, CTaMAIndicator){
     cta_MA.Refresh<vec_iterator<double>>(c.begin(), c.end());
     cta_MA.Refresh<vec_iterator<double>>(d.begin(), d.end());
 
-    std::vector<double> ta_truth = { DBL_EMPTY_VALUE, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
+    std::vector<double> ta_truth = { DBL_NAN, 1. , 1.5, 2.5, 3.5, 4.5, 5. , 4. , 2. };
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth, cta_MA.Begin(0), 9, 0.01);
+    EXPECT_FLOATS_NEARLY_EQ(double, ta_truth, cta_MA.Begin(0), 9, 0.01);
 }
 
 
@@ -181,8 +188,8 @@ TEST(Indicators, vBegin) {
 
 TEST(Indicators, CTaBBANDS){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
-    std::vector<double> ta_truth_upper = { DBL_EMPTY_VALUE,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
-    std::vector<double> ta_truth_down = { DBL_EMPTY_VALUE, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
+    std::vector<double> ta_truth_upper = { DBL_NAN,  1.  , 2.75, 3.75, 4.75, 5.75, 5.  , 6.5 , 4.5 };
+    std::vector<double> ta_truth_down = { DBL_NAN, 1.  ,  0.25,  1.25,  2.25,  3.25,  5.  ,  1.5 , -0.5 };
 
     int size = 8;
     int window = 2;
@@ -206,8 +213,8 @@ TEST(Indicators, CTaBBANDS){
         down[i] = cta_BBANDS.Down(i);
     }
 
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_upper, up, 9, 0.001);
-    EXPECT_FLOATS_NEARLY_EQ(ta_truth_down, down, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(double, ta_truth_upper, up, 9, 0.001);
+    EXPECT_FLOATS_NEARLY_EQ(double, ta_truth_down, down, 9, 0.001);
 }
 
 #include <iostream>
@@ -462,7 +469,7 @@ TEST(Indicators, CCumSumSADFIndicator) {
 
     CCumSumSADFIndicator iCumSum(BUFFERSIZE);
     // automatically refreshed when m_SADFi is refreshed
-    iCumSum.Init(m_reset, &(iSADF), &(mbars));
+    iCumSum.Init(1.0, &(iSADF), &(mbars));
 
     mbars.AddBars<vec_iterator<MoneyBar>>(fake_bars.begin(), fake_bars.end());
 

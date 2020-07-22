@@ -24,7 +24,7 @@ MoneyBarBuffer::MoneyBarBuffer(){
     m_count_money = 0; // count_money amount to form 1 money bar
     m_nnew = 0;
     m_pvs = m_vs = 0; // current v. weighted price for this bar
-    m_moneybarsize = DBL_EMPTY_VALUE;
+    m_moneybarsize = 0;
     m_point_value = 0;
     m_bar.smsc = m_bar.emsc = 0;
     m_bar.time.tm_yday = -1;  // first dtp calc. needs this    
@@ -35,7 +35,7 @@ MoneyBarBuffer::MoneyBarBuffer(){
     m_end_hour = 16.5;
     // ctime = 0;
     m_bar.netvol = 0;
-    m_bar.min = m_bar.max = DBL_EMPTY_VALUE;
+    m_bar.min = m_bar.max = 0;
     // m_ticks // has a default constructor that uses MAX_TICKS
 }
 

@@ -66,39 +66,42 @@ void CCumSumIndicator::Init(double cum_reset) {
     CWindowIndicator::Init(2);
 }
 
-void CCumSumIndicator::Calculate(std::pair<float, float>* indata, int size, std::array<std::vector<float>, 1> & outdata) {
+void CCumSumIndicator::Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1> & outdata) {
 
-    for (int i = 1; i < size; i++) {
+    // i=0 input is the previous value needed to calculate 
+    // i=0 on output
+    for (int i = 0; i < size-1; i++) { // output size-1, fill starts i=0
         // guarantee that cum sum is calculated only on of hours that are valid operationally
         // only calculate cum sum if second param (int) is True/Valid Sample (1 or 0)
-        if (indata[i].second && indata[i - 1].second)            
+        if (indata[i+1].second && indata[i].second)            
         {
-            // check for nans on sadf - due colinearity causing singular matrices on ADF calculation
+            // check for nans on input, set 0 in that case
+            // sadf - due colinearity causing singular matrices on ADF calculation
             // in that case dont calculate - but do not reset cum_sums
-            if ( std::isnan<float>(indata[i].first) || std::isnan<float>(indata[i - 1].first) ) {
-                outdata[0][i - 1] = 0;
+            if ( std::isnan<float>(indata[i+1].first) || std::isnan<float>(indata[i].first) ) {
+                outdata[0][i] = 0;
                 continue;
             }
 
-            auto diff = indata[i].first - indata[i - 1].first;
-            m_cum_up = std::max((double)0, m_cum_up + diff);
-            m_cum_down = std::min((double)0, m_cum_down + diff);
+            auto diff = indata[i+1].first - indata[i].first;
+            m_cum_up = std::max(0.0, m_cum_up + diff);
+            m_cum_down = std::min(0.0, m_cum_down + diff);
             if (m_cum_up > m_cum_reset) {
                 m_cum_up = 0;
-                outdata[0][i - 1] = +1;
+                outdata[0][i] = +1;
             }
             else
                 if (m_cum_down < -m_cum_reset) {
                     m_cum_down = 0;
-                    outdata[0][i - 1] = -1;
+                    outdata[0][i] = -1;
                 }
                 else
-                    outdata[0][i - 1] = 0;
+                    outdata[0][i] = 0;
         }
         else { // reset on this area, cannot be calculated
             // a new day starting
             m_cum_up = m_cum_down = 0; 
-            outdata[0][i - 1] = 0;
+            outdata[0][i] = 0;
         }
     }
 }
@@ -128,28 +131,47 @@ void CCumSumIndicator::Calculate(std::pair<float, float>* indata, int size, std:
 // CCumSum on SADF(t) values
 
 CCumSumSADFIndicator::CCumSumSADFIndicator(int buffersize) : CCumSumIndicator(buffersize)
-{};
+{
+    m_sadf_prevn = 0;
+};
 
 void CCumSumSADFIndicator::Init(double cum_reset, CSADFIndicator *pSADF, MoneyBarBuffer *pBars) {
     m_cum_reset = cum_reset;
+    m_sadf_prevn = pSADF->Window()-1;
     // initialize cum sum filter
-    CWindowIndicator::Init(2); //2 due 1st diff
+    CWindowIndicator::Init(pSADF->Window()+1); // due 1st diff
+    // will also take care of empties
+    // there will be valids only after 2 SADF samples
+    // are calculated, all the rest will be empties
+
+    // if I use window of 2 (correct for cumsum)
+    // i must deal with empties
+    // if I use window of sadf+1
+    // I must deal with sadf window-1 additional samples in onCalculate
 
     // this the custom refresh function (lambda)
     // using the SADF(t) just calculated data to call the CumSum this->Refresh
-    // also taking care of empties
     // region where I dont want cumsum computed (outside valid intraday)   
-    auto thisrefresh = [this, pSADF, pBars](int nempty) {
-        this->AddEmpty(nempty); // allign buffers
+    auto thisrefresh = [this, pSADF, pBars](int nempties) {
+        // mnew == empties + calculated
+        // this->AddEmpty(nempties); // this doesnt insert int's ... of valid day!
+
         // make pairs from new data where second indicate wether
         // the value should be used or not on cum_sum
         std::vector<std::pair<float, int>> sadf_pair;
         auto bar = pBars->LastBegin();
-        auto sadf = pSADF->vLastBegin(0);
-        for (; bar != pBars->end() && sadf != pSADF->End(0); bar++, sadf++)                        
-            sadf_pair.push_back(std::make_pair(*sadf, bar->inday));        
+        auto sadf = pSADF->LastBegin(0);
+        for (; bar != pBars->end() && sadf != pSADF->End(0); bar++, sadf++)
+            sadf_pair.push_back(std::make_pair(*sadf, bar->inday));
         this->Refresh(sadf_pair.begin(), sadf_pair.end());
     };
 
     pSADF->addSonRefresh(std::function<void(int)>(thisrefresh));
+}
+
+void CCumSumSADFIndicator::Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1>& outdata) {
+    // TODO: think a better way of doing this
+    // will arrive here with pSADF->Window() previous samples --> sadf prev samples + 1 previous samples 
+    // but CumSum uses only 1 previous samples 
+    CCumSumIndicator::Calculate(indata+m_sadf_prevn, size-m_sadf_prevn, outdata);
 }

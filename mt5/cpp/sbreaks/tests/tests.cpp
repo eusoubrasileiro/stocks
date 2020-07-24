@@ -423,8 +423,111 @@ TEST(Indicators, CSADFIndicator) {
 }
 
 
+// Pytho code for test bellow
+//import numpy
+//
+//@jit(nopython=True)
+//def cum_sum_entries(y, cum_reset, valid):
+//    cumsum = np.zeros(len(y)-1)
+//    sumup = 0.
+//    sumdw = 0.    
+//    for i in range(len(y)-1):        
+//        if valid[i+1] and valid[i]:            
+//            if np.isnan(y[i]) or np.isnan(y[i+1]):
+//                cumsum[i] = 0 # set to np.nan to make it like cpp code
+//            else:
+//                diff = y[i+1]-y[i]
+//                sumup = max(0, sumup + diff)
+//                sumdw = min(0, sumdw + diff)
+//                if sumup > cum_reset:
+//                    sumup = 0
+//                    cumsum[i] = 1
+//                elif sumdw < -cum_reset:
+//                    sumdw = 0
+//                    cumsum[i]= -1
+//                else:
+//                    cumsum[i] = 0
+//        else:
+//            cumsum[i] = 0
+//            sumup = 0
+//            sumdw = 0
+//    return cumsum
+
+TEST(Indicators, CCumSumIndicator) {
+
+    std::vector<float> data = { 1.29018739e-01, -3.72868106e-02,  8.03665072e-02,  1.13388896e-01,
+        2.11405158e-01, -1.87389302e+00, -1.49298251e+00, -3.67588133e-01,
+        1.85023010e-01,  1.37755489e+00,  1.94471419e+00,  2.02779365e+00,
+        7.79438198e-01,  8.75312984e-01, -8.91449675e-02, -7.51767457e-01,
+       -2.68092918e+00, -1.24713015e-02, -8.06056380e-01,  1.11172998e+00,
+        1.50093794e+00,  1.06444263e+00,  6.12410843e-01, -4.11053836e-01,
+       -1.16459882e+00, -9.15333807e-01, -1.59840739e+00, -1.95039451e+00,
+       -1.77875793e+00, -1.48031354e+00, -1.43630040e+00, -1.08606124e+00,
+       -1.35706651e+00, -1.29983497e+00, -1.34431458e+00, -1.09004354e+00,
+       -2.36512214e-01, -8.22312891e-01, -1.58157325e+00, -9.23010170e-01,
+       -1.04412234e+00, -1.25493813e+00, -1.41527200e+00, -9.57051098e-01,
+       -9.96711016e-01, -1.90293401e-01, -2.74390996e-01, -5.56135952e-01,
+       -8.43288779e-01, -1.51556408e+00, -8.95729721e-01, -1.02896595e+00,
+       -1.08858490e+00, -5.15372515e-01,  2.27763373e-02,  1.25832170e-01,
+        3.26305062e-01, -3.77074569e-01, -4.83075708e-01,  1.08749524e-01,
+        2.94588685e-01,  1.06928301e+00,  1.70731950e+00,  1.29427803e+00,
+        2.49867584e-03,  4.28516775e-01, -5.38754463e-01, -9.09344018e-01,
+       -1.67661929e+00, -1.83686483e+00, -2.01971841e+00, -2.11905456e+00,
+       -1.26595163e+00, -8.61423373e-01, -1.05872786e+00, -9.03169811e-01,
+       -5.58466256e-01, -1.28801656e+00, -1.26653564e+00, -7.97035813e-01,
+       -1.05585408e+00,  2.44350776e-01,  9.81386125e-01,  5.81563473e-01,
+        4.13042367e-01,  1.43541145e+00,  1.77149022e+00,  1.82967317e+00,
+        2.26690030e+00,  4.83456701e-01, -1.44588661e+00, -9.57962990e-01,
+       -1.20314801e+00, -9.91502404e-01, -1.55784547e+00, -2.15295100e+00,
+       -2.38276124e+00, -1.00244188e+00, -6.05904102e-01,  6.41168980e-03,
+        2.03695863e-01,  4.15354103e-01, -3.80860180e-01, -7.26542890e-01,
+       -8.11517417e-01, -1.23697770e+00, -6.92515969e-01, -7.93053448e-01,
+       -1.41065717e-01, -5.08833416e-02,  4.70857143e-01,  4.71359283e-01,
+       -1.10454559e+00, -1.36302245e+00, -1.26677775e+00, -1.39578390e+00,
+       -1.35328066e+00, -9.65200126e-01, -2.13306904e+00, -2.48041272e+00,
+       -2.66801286e+00, -2.98874855e+00, -2.97862577e+00, -2.77002382e+00,
+       -2.92133570e+00, -3.24340367e+00, -3.59914637e+00, -2.41213465e+00,
+       -1.13178456e+00, -1.09764194e+00, -1.41129303e+00, -1.51124787e+00,
+       -1.39209521e+00, -1.41107309e+00, -1.35771084e+00, -9.28762376e-01};
+
+    std::vector<float> pytruth = { FLT_NAN, 0.,  0.,  0.,  0., -1.,  0.,  1.,  0.,  1.,  0.,  0.,  0.,  0.,
+       -1.,  0., -1.,  1.,  0.,  1.,  0.,  0.,  0., -1.,  0.,  0.,  0.,
+       -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,
+       -1.,  0.,  0.,  0.,  0.,  1.,  0., -1.,  0.,  0.,  0.,  0.,  0.,
+        0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0. };
+
+    CCumSumIndicator iCumSum(BUFFERSIZE);
+
+    std::vector<std::pair<float,int>> pairs(data.size());
+
+    for (int i = 0; i < data.size(); i++) {
+        pairs[i].first = data[i];
+        pairs[i].second = 1;
+    }
+    for (int i = 55; i < 95; i++) // no calculation region
+        pairs[i].second = 0;
+
+    iCumSum.Init(1.5);
+
+    iCumSum.Refresh<std::vector<std::pair<float,int>>::iterator>(pairs.begin(), pairs.end());
+
+    std::vector<float> cumsum(iCumSum.Begin(0), iCumSum.End(0));
+    EXPECT_FLOATS_NEARLY_EQ(float, cumsum, pytruth, 9, 1e-9);
+
+}
+
+
 TEST(Indicators, CCumSumSADFIndicator) {
 
+    // different from above since 
+    // the valid region is set on the input data
+    // not on the input for the CCumSum
     std::vector<float> data = { 56097., 55298., 56865., 56653., 57348., 57701., 57669., 58005.,
        56534., 56754., 57829., 59265., 59365., 58546., 58600., 59083.,
        59806., 59962., 59921., 59147., 59956., 60646., 61723., 61927.,
@@ -445,45 +548,53 @@ TEST(Indicators, CCumSumSADFIndicator) {
        56379., 55394., 53706., 53569., 53421., 54331., 53402., 53909.,
        54583., 55347., 54195., 53034., 52639., 52608. };
 
+    std::vector<float> pytruth = { FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN, 
+        FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN, 
+        FLT_NAN, FLT_NAN, FLT_NAN, FLT_NAN,  
+        0.,  0.,  0.,  0., -1.,  0.,  1.,  0.,  1.,  0.,  0., 0.,   0., 
+       -1.,  0., -1.,  1.,  0.,  1.,  0.,  0.,  0., -1.,  0.,
+        0.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0., -1.,
+       -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,
+        0.,  0., -1.,  0.,  0.,  0.,  0.,  1.,  0., -1.,  0.,  0.,  0.,
+        0.,  0.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0. };
+
     MoneyBarBuffer mbars(BUFFERSIZE);
+    CSADFIndicator iSADF(BUFFERSIZE);
+    CCumSumSADFIndicator iCumSum(BUFFERSIZE);
     int maxw = 15;
     int minw = 12;
     int p = 3;
-    CSADFIndicator iSADF(BUFFERSIZE);
-
-    iSADF.Init(maxw, minw, p, true);
     
-    auto sadf_refresh = [pSADF=&iSADF, pbars = &mbars]() {
+    auto sadf_refresh = [pSADF = &iSADF, pbars = &mbars]() {
         auto bar_wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, pbars);
         // altough nice and cool, If I need multiple members so... I loop is imperative
         pSADF->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
     };
 
-    mbars.AddOnNewBars(sadf_refresh);
-
     std::vector<MoneyBar> fake_bars(data.size());
-    for (int i=0; i<data.size();i++){
+    
+    for (int i = 0; i < data.size(); i++) {
         fake_bars[i].wprice = data[i];
-        fake_bars[i].inday = 1; // calculate all cumsum values
-    }   
+        fake_bars[i].inday = 1;
+    }
+    for (int i = 55; i < 95; i++) // no calculation region
+        fake_bars[i].inday = 0;
 
-    CCumSumSADFIndicator iCumSum(BUFFERSIZE);
+    iSADF.Init(maxw, minw, p, false);       
+    mbars.AddOnNewBars(sadf_refresh);
     // automatically refreshed when m_SADFi is refreshed
-    iCumSum.Init(1.0, &(iSADF), &(mbars));
+    iCumSum.Init(1.5, &(iSADF), &(mbars));
+    mbars.AddBars<vec_iterator<MoneyBar>>(fake_bars.begin(), fake_bars.begin()+50);
+    mbars.AddBars<vec_iterator<MoneyBar>>(fake_bars.begin()+50, fake_bars.end());
 
-    mbars.AddBars<vec_iterator<MoneyBar>>(fake_bars.begin(), fake_bars.end());
+    std::vector<float> cumsum(iCumSum.Begin(0), iCumSum.End(0));
+    EXPECT_FLOATS_NEARLY_EQ(float, cumsum, pytruth, 9, 1e-9);
 
-    //for (int i = 0; i < outsadf.size(); i++) {
-    //    dist += pow(outsadf[i] - pytruth[i], 2);
-    //    printf("%+4.2f %+4.2f error: %+4.2lf\n", outsadf[i], pytruth[i], std::abs(outsadf[i] - pytruth[i]));
-    //}
-
-    for (auto csum = iCumSum.Begin(0); csum != iCumSum.End(0); csum++)
-        std::cout << *csum << std::endl;
-
-    // avg distance (CPU) 0.00xxxxxxxxxxxxxx ~ avg. error <0.9%
-    // avg distance (GPU) 0.0090092499264706 ~ avg. error 0.9%
-    //EXPECT_FLOATS_AVG_DIST_NEARLY(pytruth, sadf.begin(), iSADF->vCount(), 0.01);
 }
 // need to use DLL Load to Deal with
 // more reallistic enviorment of mt5

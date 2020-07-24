@@ -164,6 +164,12 @@ public :
         return m_buffers[buffer_index].end() - m_ncalculated;
     }
 
+    // last calculated samples begin
+    typename buffer<TypeSt>::const_iterator  LastBegin(int buffer_index) {
+        return m_buffers[buffer_index].end() - m_new;
+    }
+
+
     // number of valid samples
     size_t vCount() {
         return std::distance(vBegin(0), End(0));
@@ -345,7 +351,7 @@ public:
 
 // Cum Sum filter
 // due numpy/mt5 NAN's usage better use float as storage instead of int
-class CCumSumIndicator : public CWindowIndicator<float, std::pair<float,float>,  1>
+class CCumSumIndicator : public CWindowIndicator<float, std::pair<float,int>,  1>
 {
 protected:
     double m_cum_reset; // cumsum increment and reset level
@@ -358,7 +364,7 @@ public:
 
     void Init(double cum_reset);
 
-    void Calculate(std::pair<float, float>* indata, int size, std::array<std::vector<float>, 1> & outdata) override;
+    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1> & outdata) override;
 };
 
 
@@ -385,11 +391,12 @@ public:
 //// Cum Sum filter on SADF
 class CCumSumSADFIndicator : public CCumSumIndicator
 {
-
+    int m_sadf_prevn;
 public:
 
     CCumSumSADFIndicator(int buffersize);
 
     void Init(double cum_reset, CSADFIndicator* pSADF, MoneyBarBuffer* pBars);
 
+    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
 };

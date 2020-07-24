@@ -81,7 +81,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IntrinsicFunctions>
+      </IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;DEBUG;DATASTRUCT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);BUILDING_DLL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -92,6 +93,8 @@
       <BasicRuntimeChecks />
       <PrecompiledHeaderOutputFile />
       <CallingConvention>StdCall</CallingConvention>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

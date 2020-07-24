@@ -113,8 +113,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>
       </WarningLevel>
-      <Optimization>
-      </Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <SDLCheck>
       </SDLCheck>
       <PreprocessorDefinitions>_CONSOLE;_CRT_SECURE_NO_WARNINGS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

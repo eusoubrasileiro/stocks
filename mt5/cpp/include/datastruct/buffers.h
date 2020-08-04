@@ -21,7 +21,7 @@ typedef  int64_t unixtime_ms;
 // must only not explode memory 
 // sizeof(MoneyBar) ~ 96 bytes
 // BUFFERSIZE x sizeof(MoneyBar) = 2x96MB = 192MB
-#define MB 2<<20
+#define MB (2<<20)
 #define BUFFERSIZE       (size_t (2*MB) )
 
 // FIFO first in first out

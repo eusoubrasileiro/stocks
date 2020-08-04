@@ -60,6 +60,8 @@ public:
         ctime.tm_sec = 0; // quiet stupid warning
     };
 
+    StdBarBuffer() : StdBarBuffer(BUFFERSIZE) {};
+
     // add one tick and create or not stdbars
      // return number created
     size_t AddTick(MqlTick tick);

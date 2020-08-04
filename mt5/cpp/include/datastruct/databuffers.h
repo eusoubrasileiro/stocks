@@ -18,6 +18,8 @@ extern std::ofstream debugfile;
 // buffer of money bars base for everything
 extern std::shared_ptr<MoneyBarBuffer> m_bars;
 
+extern std::shared_ptr<StdBarBuffer> m_tbars; // 1M bars H/L for tripple barrier labelling
+
 int64_t OnTicks(MqlTick* mt5_pticks, int64_t mt5_nticks, double *lost_ticks);
 
 void DataBuffersInit(

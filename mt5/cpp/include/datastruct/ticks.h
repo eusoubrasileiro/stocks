@@ -68,25 +68,23 @@ protected:
   int m_nnew; // number of new ticks added
   double m_perc_lost; // lost ticks in percentage (number of lost)/(number received) - last 
 
-//////////////////////////////////////////////
-
   // secury check of sync with server of ticks
   // and seek to begin of new ticks
   bool seekBeginMt5Ticks();
 
 public:
     // only one callback
-    std::function<void(BufferMqlTicks*)> m_event_newticks;
+    std::vector<std::function<void(BufferMqlTicks*)>> m_event_newticks;
 
     // call all event callback functions subscribed
     void OnNewTicks() {
-        if (m_event_newticks)
-            m_event_newticks(this);
+        for (auto& callbackfunc : m_event_newticks) // access by reference to avoid copying        
+            callbackfunc(this);
     }
 
     // on new ticks call back function
     void AddOnNewTicks(std::function<void(BufferMqlTicks*)> onnewticks) {
-        m_event_newticks = onnewticks;
+        m_event_newticks.push_back(onnewticks);
     }
 
   // Buffer size for MqlTicks is the only that can be different from the rest

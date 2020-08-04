@@ -12,6 +12,8 @@ std::shared_ptr<BufferMqlTicks> m_ticks; // buffer of ticks w. control to downlo
 
 std::shared_ptr<MoneyBarBuffer> m_bars; // buffer of money bars base for everything
 
+std::shared_ptr<StdBarBuffer> m_tbars; // 1M bars only H/L for tripple barrier labelling
+
 void DataBuffersInit(double ticksize, 
                      double tickvalue,
                      double moneybar_size,  // R$ to form 1 money bar
@@ -25,14 +27,17 @@ void DataBuffersInit(double ticksize,
 #endif
         m_ticks.reset(new BufferMqlTicks());
         m_bars.reset(new MoneyBarBuffer());
+        m_tbars.reset(new StdBarBuffer());
         m_ticks->Init(std::string(cs_symbol));
         m_bars->Init(tickvalue, ticksize, moneybar_size);
         // for setting all moneybars `.inday` flag
         m_bars->SetHours(start_hour, end_hour);
         // callback function for on new ticks event -> send
         // those to create money-bars
-        auto onnewticks = [pbars = &(*m_bars)](BufferMqlTicks *pticks){
+        // and time bars for tripple barrier labelling
+        auto onnewticks = [pbars = &(*m_bars), ptbars = &(*m_tbars)](BufferMqlTicks *pticks){
             pbars->AddTicks(pticks->LastBegin(), pticks->End());
+            ptbars->AddTicks(pticks->LastBegin(), pticks->End());
         };
         m_ticks->AddOnNewTicks(onnewticks);
 #ifdef  DEBUG

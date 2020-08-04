@@ -142,7 +142,8 @@ void fixArrayTicks(MqlTick *ticks, size_t nticks) {
         // try to get who is attacking who
         // TICK BUY or TICK SELL == most time not set
         // very predictive power information?? or Market Makers?
-        // used by net_vol buy//sell power
+        // used by net_vol buy//sell power -- seams useless 
+        // faked by Market Makers
         ticks[i].flags = 0; // not sure NA
         if (ticks[i].last == ticks[i].bid)
             ticks[i].flags = TICK_FLAG_SELL;

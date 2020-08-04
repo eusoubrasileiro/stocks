@@ -5,6 +5,7 @@
 #include <time.h>
 #include "cwindicators.h"
 #include "moneybars.h"
+#include "stdbars.h"
 
 #ifdef DEBUG
 extern std::ofstream debugfile;

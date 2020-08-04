@@ -9,8 +9,6 @@
 // ask and bid prices are not present on summary symbols like WIN@ WDO@ WIN$
 // but are present on WINV19 etc. stocks PETR4 etc...
 
-typedef  int64_t unixtime;
-typedef  int64_t unixtime_ms;
 
 // Money Bar solves many problems of analysis of stocks data
 // - stationarity first
@@ -37,6 +35,8 @@ struct MoneyBar
     int inday; // inside operational day information (intra-day) 1 True or False, -1 for undefined
 };
 #pragma pack(pop)
+
+
 
 
 // Metatrader 5 based ticks Money Bar
@@ -153,30 +153,5 @@ std::vector<Out> vecMoneyBarBufferLast(T MoneyBar::* f, MoneyBarBuffer *pbar) {
         output.push_back((Out)(*elem.*f));
     return output;
 }
-
-
-
-
-// standar 1 minute bar since it's easier
-// to do everythin with this first
-
-//#pragma pack(push, 2)
-//struct TimeBar //MqlRates from MT5
-//{
-//    unixtime time;         // Period start time
-//    double   open;         // Open price
-//    double   high;         // The highest price of the period
-//    double   low;          // The lowest price of the period
-//    double   close;        // Close price
-//    int64_t  tickv;        // Tick volume
-//    int      spread;       // Spread
-//    int64_t  realv;        // Trade volume
-//};
-//#pragma pack(pop)
-//
-//class TimeBarBuffer : public buffer<TimeBar>
-//{
-//
-//};
 
 

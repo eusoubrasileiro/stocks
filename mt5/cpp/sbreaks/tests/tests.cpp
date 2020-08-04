@@ -598,3 +598,45 @@ TEST(Indicators, CCumSumSADFIndicator) {
 }
 // need to use DLL Load to Deal with
 // more reallistic enviorment of mt5
+
+
+TEST(StdBarBuffer, AddTicks) {
+    buffer<MqlTick> ticks; // toy data
+    std::vector<double> last = { 100, 120, 110, 100, 130, 120, 80, 100, 90};
+#define SECS12H (unixtime) 12*3600
+    std::vector<unixtime> time = { 0, 30, 55, 60, 180, 200, SECS12H, SECS12H + 60, SECS12H + 70};
+
+    MqlTick tick;
+    for (auto i = 0; i<9; i++) {
+        tick.time = time[i];
+        tick.last = last[i];
+        tick.volume = 10; // must be non-zero
+        ticks.push_back(tick);
+    }
+
+    StdBarBuffer bars(BUFFERSIZE);
+
+    bars.AddTicks(ticks.begin(), ticks.end());
+    bars.AddLast(); // close the last bar - like sending a tick w. time greater >>
+
+    // TODO finish assert of test
+    // use a tupple instead of StdBar?
+    // equallity builtin implemented 
+    //for (auto it = bars.begin(); it < bars.end(); it++) {
+    //    std::cout << " " << (*it).high;
+    //    std::cout << " " << (*it).low;
+    //    std::cout << " " << (*it).time;
+    //    std::cout << std::endl;
+    //}
+    // correct expected
+    // expected output 
+    //  H   L   BARTIME
+    // 120 100       0
+    // 100 100      60
+    // 130 120     180
+    //  80  80   43200
+    // 100  90   43260
+    
+}
+
+

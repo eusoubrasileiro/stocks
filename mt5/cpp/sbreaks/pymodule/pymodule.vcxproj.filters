@@ -23,6 +23,9 @@
     <ClCompile Include="..\..\include\indicators\indicators.cpp">
       <Filter>external\indicators</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\include\datastruct\stdbars.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="external">
@@ -50,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\indicators\indicators.h">
       <Filter>external\indicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\datastruct\stdbars.h">
+      <Filter>external</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

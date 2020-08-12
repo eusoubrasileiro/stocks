@@ -89,8 +89,8 @@ int CppMoneyBarMt5Indicator(double* mt5_ptO, double* mt5_ptH, double* mt5_ptL, d
         for (i = mt5ptsize - maxbarsplot, j = mbarsize - maxbarsplot; i < mt5ptsize; i++, j++) {
             mt5_ptO[i] = m_bars->at(j).wprice10; // average weighted price percentile 10
             mt5_ptC[i] = m_bars->at(j).wprice90; // average weighted price percentile 90
-            mt5_ptH[i] = m_bars->at(j).max; // max value negotiated
-            mt5_ptL[i] = m_bars->at(j).min; // min value negotiated
+            mt5_ptH[i] = m_bars->at(j).low; // max value negotiated
+            mt5_ptL[i] = m_bars->at(j).high; // min value negotiated
             mt5_ptM[i] = m_bars->at(j).wprice; // average weighted price of entire bar
             // needed to replace if existent ? NANs to DBL_NAN_MT5 ...  
             mt5_petimes[i] = (unixtime)(m_bars->at(j).emsc * 0.001);

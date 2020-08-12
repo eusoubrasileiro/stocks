@@ -25,12 +25,12 @@ struct MoneyBar
     tm time; // start time of this bar ... datetime tm struct    
     unixtime_ms    smsc; // start time of this bar - first tick time - timestamp ms
     unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms
-    double min; // min and maximum value negotiated on this bar p0, p100
-    double max;
+    double high; // min and maximum value negotiated on this bar p0, p100
+    double low;
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars
-    double dtp; // time difference to previous bar in seconds (only inside a day)
+    double dtp; // time difference to previous bar in seconds
     double netvol; // number of buy ticks * volume bought + number of sell ticks * volume sold (sell/buy) power (net-volume)
     int inday; // inside operational day information (intra-day) 1 True or False, -1 for undefined
 };

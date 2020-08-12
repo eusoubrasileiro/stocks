@@ -35,7 +35,7 @@ MoneyBarBuffer::MoneyBarBuffer(){
     m_end_hour = 16.5;
     // ctime = 0;
     m_bar.netvol = 0;
-    m_bar.min = m_bar.max = 0;
+    m_bar.high = m_bar.low = 0;
     // m_ticks // has a default constructor that uses MAX_TICKS
 }
 
@@ -72,23 +72,26 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
         // control to not have bars with ticks of different days
         gmtime_s(&ctime, &tick.time);
         auto day_hour = (float) ctime.tm_hour + ctime.tm_min / 60. + ctime.tm_sec / 3600.;
-        // crossed to a new day (comparing with previous)
-        if (ctime.tm_yday != m_bar.time.tm_yday) {
-            // clean up (ignore) previous data
-            // for starting a new bar
-            m_bar.nticks = 0;
-            m_bar.time = ctime;
-            m_bar.inday = (day_hour > m_start_hour && day_hour < m_end_hour)? 1 : 0;
-            m_bar.smsc = tick.time_msc;
-            m_bar.dtp = 0; // no previous bar
-            m_count_money = 0;
-            m_pvs = m_vs = 0;
-            m_bar.netvol = 0;
-            m_bar.min = DBL_MAX;
-            m_bar.max = -DBL_MAX;
-            m_wprices.clear();
-        }
-        else // same day
+        // making a real money bar, MUST cross days!
+        // is a MUST for better statistical properties
+        // commenting this fixes
+        //// crossed to a new day (comparing with previous)
+        //if (ctime.tm_yday != m_bar.time.tm_yday) {
+        //    // clean up (ignore) previous data
+        //    // for starting a new bar
+        //    m_bar.nticks = 0;
+        //    m_bar.time = ctime;
+        //    m_bar.inday = (day_hour > m_start_hour && day_hour < m_end_hour)? 1 : 0;
+        //    m_bar.smsc = tick.time_msc;
+        //    m_bar.dtp = 0; // no previous bar
+        //    m_count_money = 0;
+        //    m_pvs = m_vs = 0;
+        //    m_bar.netvol = 0;
+        //    m_bar.min = DBL_MAX;
+        //    m_bar.max = -DBL_MAX;
+        //    m_wprices.clear();
+        //}
+        //else // same day
         if (m_bar.nticks == 0) { // new bar
             m_bar.time = ctime; // entry time for this bar
             m_bar.inday = (day_hour > m_start_hour && day_hour < m_end_hour) ? 1 : 0;
@@ -97,14 +100,14 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.dtp = 0.001 * (m_bar.smsc - m_bar.emsc);
             m_pvs = m_vs = 0;
             m_bar.netvol = 0;
-            m_bar.min = DBL_MAX;
-            m_bar.max = -DBL_MAX;
+            m_bar.high = DBL_MAX;
+            m_bar.low = -DBL_MAX;
             m_wprices.clear();
         }        
         m_bar.netvol += tick.flags*(tick.volume_real * tick.last * m_point_value); // buy-sell volume 
         m_count_money += tick.volume_real * tick.last * m_point_value;
-        m_bar.min = std::min(m_bar.min, tick.last);
-        m_bar.max = std::max(m_bar.max, tick.last);
+        m_bar.high = std::min(m_bar.high, tick.last);
+        m_bar.low = std::max(m_bar.low, tick.last);
         m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
         m_vs += tick.volume_real; // summing (volumes)
         m_wprices.push_back(m_pvs/m_vs); // current weighted price

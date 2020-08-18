@@ -18,8 +18,7 @@ size_t MoneyBarBuffer::BeginNewBarsIdx() {
     return size()-m_nnew;
 }
 
-MoneyBarBuffer::MoneyBarBuffer(){
-    MoneyBarBuffer(BUFFERSIZE);
+MoneyBarBuffer::MoneyBarBuffer() : MoneyBarBuffer(BUFFERSIZE) {
     cuid = 0;
     m_count_money = 0; // count_money amount to form 1 money bar
     m_nnew = 0;
@@ -36,7 +35,8 @@ MoneyBarBuffer::MoneyBarBuffer(){
     // ctime = 0;
     m_bar.netvol = 0;
     m_bar.high = m_bar.low = 0;
-    // m_ticks // has a default constructor that uses MAX_TICKS
+    m_bar.highfirst = -1;
+    m_bar.nticks = 0;
 }
 
 // copy constructor, incomplete
@@ -102,19 +102,20 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_bar.netvol = 0;
             m_bar.high = DBL_MAX;
             m_bar.low = -DBL_MAX;
+            m_bar.open = tick.last;
+            m_bar.highfirst = -1;
             m_wprices.clear();
+            m_lasts.clear();
         }        
         m_bar.netvol += tick.flags*(tick.volume_real * tick.last * m_point_value); // buy-sell volume 
         m_count_money += tick.volume_real * tick.last * m_point_value;
-        m_bar.high = std::min(m_bar.high, tick.last);
-        m_bar.low = std::max(m_bar.low, tick.last);
         m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
         m_vs += tick.volume_real; // summing (volumes)
         m_wprices.push_back(m_pvs/m_vs); // current weighted price
+        m_lasts.push_back(tick.last);
         m_bar.nticks++;
         auto sametick = false;
         while (m_count_money >= m_moneybarsize) { 
-
             // may need to create many bars for one same tick
             // in this case nticks == 0 for the second one and so forth
             // start/exit time also == 0
@@ -124,6 +125,11 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
                 m_bar.wprice90 = percentile(m_wprices, 0.9, false);
                 m_bar.emsc = tick.time_msc; // exit time
                 m_bar.netvol /= m_pvs * m_point_value; // net volume negotiated divided by total volume (-1/1+)
+                auto minit = std::min_element(m_lasts.begin(), m_lasts.end());
+                auto maxit = std::max_element(m_lasts.begin(), m_lasts.end());
+                m_bar.high = *maxit;
+                m_bar.low = *minit;
+                m_bar.highfirst = (maxit < minit)? 1 : 0; // first was high 1 or else 0
             }
             m_bar.uid = cuid++;
             uidtimes.add(m_bar.uid);

@@ -12,7 +12,7 @@
 
 // Money Bar solves many problems of analysis of stocks data
 // - stationarity first
-// - tick with no volume
+// - ticks with no volume
 // times are (GMT)
 #pragma pack(push, 2)
 struct MoneyBar
@@ -25,8 +25,10 @@ struct MoneyBar
     tm time; // start time of this bar ... datetime tm struct    
     unixtime_ms    smsc; // start time of this bar - first tick time - timestamp ms
     unixtime_ms    emsc; // end time of this bar - last tick time - timestamp ms
+    double open; // open price of this bar - simpler
     double high; // min and maximum value negotiated on this bar p0, p100
     double low;
+    int highfirst; // first was the high 1, first was the low 0
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
     uint64_t uid; // emsc and smsc might repeat on different bars
@@ -50,6 +52,7 @@ class MoneyBarBuffer : public buffer<MoneyBar>
     double m_pvs; // \sum_{0}^{i} prices_i*volumes_i
     double m_vs; // \sum_{0}^{i} volumes_i
     std::vector<double> m_wprices; // store all weighted prices of current bar MAX 10e3 Ticks
+    std::vector<double> m_lasts; // store all last prices of current bar MAX 10e3 Ticks
     MoneyBar m_bar; // temp variable
     // current unique identifier - starts w. 0 and goes forever increasing
     // max size is 18,446,744,073,709,551,615 == 2^64-1

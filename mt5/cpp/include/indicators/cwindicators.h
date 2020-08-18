@@ -252,13 +252,13 @@ public:
 
 
 
-class CTaMAIndicator : public CWindowIndicatorDouble {
+class CTaMA : public CWindowIndicatorDouble {
 
 protected:
     int m_tama_type;
 
 public:
-    CTaMAIndicator(void) {};
+    CTaMA(void) {};
 
     void Init(int window, int tama_type);
 
@@ -296,14 +296,14 @@ public:
 // FracDiff
 //
 
-class CFracDiffIndicator : public CWindowIndicatorDouble
+class CFracDiff : public CWindowIndicatorDouble
 {
 protected:
     double m_dfraction; // fractional difference
 
 public:
 
-    CFracDiffIndicator() { m_dfraction = 1;  };
+    CFracDiff() { m_dfraction = 1;  };
 
     void Init(int window, double dfraction);
 
@@ -313,15 +313,32 @@ public:
 
 
 //
+// Return on MoneyBars price[i+1]/price[i] - 1.
+// weighted return considering h, l and open inside each bar
+//
+
+
+class CMbReturn : public CWindowIndicator<double, MoneyBar, 1>
+{
+
+public:
+
+    CMbReturn() : CWindowIndicator() {};
+
+    void Init();
+
+    void Calculate(MoneyBar* inbars, int size, std::array<std::vector<double>, 1>& outdata) override;
+
+};
+
+//
 // Windowed Augmented Dickey-Fuller test or SADF (supremum) ADF
 // SADF very optimized for GPU using Libtorch C++ Pytorch
 //
 
-
-
 // must be double because of MT5
 // each SADF(t) point have two values associated
-class CSADFIndicator : public CWindowIndicator<float, float, 2>
+class CSADF : public CWindowIndicator<float, float, 2>
 {
 protected:
     int m_minw, m_maxw; // minimum and maximum backward window
@@ -333,7 +350,7 @@ protected:
 
 public:
 
-    CSADFIndicator(int buffersize);
+    CSADF(int buffersize);
 
     void Init(int maxwindow, int minwindow, int order, bool usedrift=false, float gpumemgb=2.0, bool verbose=false);
 
@@ -348,10 +365,9 @@ public:
 
 
 
-
 // Cum Sum filter
 // due numpy/mt5 NAN's usage better use float as storage instead of int
-class CCumSumIndicator : public CWindowIndicator<float, std::pair<float,int>,  1>
+class CCumSum : public CWindowIndicator<float, float, 1>
 {
 protected:
     double m_cum_reset; // cumsum increment and reset level
@@ -360,13 +376,87 @@ protected:
 
 public:
 
-    CCumSumIndicator(int buffersize);
+    CCumSum(int buffersize);
 
     void Init(double cum_reset);
 
-    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1> & outdata) override;
+    void Calculate(float* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
 };
 
+
+// Cum Sum filter
+// due numpy/mt5 NAN's usage better use float as storage instead of int
+class CCumSumSADF : public CCumSum
+{
+protected:
+    int m_sadf_prevn;
+
+public:
+
+    CCumSumSADF(int buffersize);
+
+    void Init(double cum_reset, CSADF* pSADF);
+
+    void Calculate(float* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
+};
+
+
+
+
+
+
+
+
+
+
+// Volatility on Money Bars average Returns - STDEV on Returns
+// also use inside day from money bars for calculation 
+class CStdevMbReturn : public CTaSTDDEV
+{
+
+    int m_mbret_prevn;
+
+public:
+
+    CStdevMbReturn() : CTaSTDDEV() {};
+
+    void Init(int window, CMbReturn* pMbReturns);
+
+    void Calculate(double* indata, int size, std::array<std::vector<double>, 1>& outdata) override;
+};
+
+
+
+
+
+
+
+
+
+
+
+///// previous implementation
+// probably useless but I am unwilling to delete
+// due all effort envolved
+
+
+// Cum Sum filter
+// due numpy/mt5 NAN's usage better use float as storage instead of int
+class CCumSumPair : public CWindowIndicator<float, std::pair<float, int>, 1>
+{
+protected:
+    double m_cum_reset; // cumsum increment and reset level
+    double m_cum_up; // up cumsum
+    double m_cum_down;  // down cumsum
+
+public:
+
+    CCumSumPair(int buffersize);
+
+    void Init(double cum_reset);
+
+    void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
+};
 
 // valid intraday operational window - not needed in fact
 // 0 for not valid 1 for valid
@@ -389,14 +479,14 @@ public:
 
 
 //// Cum Sum filter on SADF
-class CCumSumSADFIndicator : public CCumSumIndicator
+class CCumSumSADFPair : public CCumSumPair
 {
     int m_sadf_prevn;
 public:
 
-    CCumSumSADFIndicator(int buffersize);
+    CCumSumSADFPair(int buffersize);
 
-    void Init(double cum_reset, CSADFIndicator* pSADF, MoneyBarBuffer* pBars);
+    void Init(double cum_reset, CSADF* pSADF, MoneyBarBuffer* pBars);
 
     void Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
 };

@@ -7,12 +7,14 @@
 
 // Indicator SADF
 // just for reload case store these
-extern std::shared_ptr<CSADFIndicator> m_SADFi;
+extern std::shared_ptr<CSADF> m_SADFi;
 extern int m_minw, m_maxw, m_order;
 extern bool m_usedrift;
 
-// Indicator Cum Sum
-extern std::shared_ptr<CCumSumSADFIndicator> m_CumSumi;
+// Indicators
+extern std::shared_ptr<CCumSumSADF> m_CumSumi;
+extern std::shared_ptr<CMbReturn> m_MbReturn; // Standard Deviation of Average Returns of Money Bars
+extern std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
 
 void IndicatorsInit(int maxwindow,
     int minwindow,

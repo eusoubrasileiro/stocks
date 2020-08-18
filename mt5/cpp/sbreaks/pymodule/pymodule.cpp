@@ -76,6 +76,15 @@ py::array GetCumSum() {
     return py::array(vec.size(), vec.data());
 }
 
+py::array GetMbReturns() {
+    auto vec = std::vector<double>(m_MbReturn->Begin(0), m_MbReturn->End(0));
+    return py::array(vec.size(), vec.data());
+}
+
+py::array GetStdevMbReturns() {
+    auto vec = std::vector<double>(m_StdevMbReturn->Begin(0), m_StdevMbReturn->End(0));
+    return py::array(vec.size(), vec.data());
+}
 
 
 // name for EACH column feature on X vector
@@ -109,7 +118,7 @@ PYBIND11_MODULE(explotest, m){
     // pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#structured-types
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
-    PYBIND11_NUMPY_DTYPE(MoneyBar, wprice, wprice90, wprice10, nticks, time, smsc, min, max, uid, dtp, netvol, inday);
+    PYBIND11_NUMPY_DTYPE(MoneyBar, wprice, wprice90, wprice10, nticks, time, smsc, emsc, open, high, low, highfirst, uid, dtp, netvol, inday);
 
     // optional module docstring
     m.doc() = "explosiveness tests - python api pybind11";
@@ -137,6 +146,10 @@ PYBIND11_MODULE(explotest, m){
     m.def("mbars_sadf", &GetSADF, "get SADF MoneyBar buffer as is");
 
     m.def("mbars_sadf_csum", &GetCumSum, "get CumSum on SADF MoneyBar buffer as is");
+
+    m.def("mbars_returns", &GetMbReturns, "get somewhat Average Money Bar Returns");
+
+    m.def("mbars_stdev_returns", &GetStdevMbReturns, "get volatility of Returns as standard deviation");
 
     //m.def("createxyvectors", &CreateXyVectors, "label b.signals and fill out X & y pair vectors");
 

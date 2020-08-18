@@ -14,12 +14,12 @@
 //ENUM_DEFINE(TA_MAType_MAMA, Mama) = 7,
 //ENUM_DEFINE(TA_MAType_T3, T3) = 8
 
-void CTaMAIndicator::Init(int window, int tama_type){
+void CTaMA::Init(int window, int tama_type){
     m_tama_type = tama_type;
     CWindowIndicator::Init(window);
 };
 
-void CTaMAIndicator::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
+void CTaMA::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
 {
     taMA(0, size, indata, m_window, m_tama_type, outdata[0].data());
 }

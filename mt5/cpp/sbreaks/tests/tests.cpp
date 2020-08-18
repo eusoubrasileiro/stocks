@@ -59,7 +59,7 @@
 //ENUM_DEFINE(TA_MAType_KAMA, Kama) = 6,
 //ENUM_DEFINE(TA_MAType_MAMA, Mama) = 7,
 //ENUM_DEFINE(TA_MAType_T3, T3) = 8
-TEST(Indicators, CFracDiffIndicator){
+TEST(Indicators, CFracDiff){
     // from Python size 100
     std::vector<double> in = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
                    0.02537023, 0.7332872 , 0.4622992 , 0.96278162, 0.33838066,   // a
@@ -106,7 +106,7 @@ TEST(Indicators, CFracDiffIndicator){
                     0.11830923 };
         double eps = 0.0001; // error tolerance in comparison
         int fsize = 10;
-        CFracDiffIndicator c_fdiff;
+        CFracDiff c_fdiff;
         c_fdiff.Init(fsize, 0.56);
 
         // partial calls until total array calculated
@@ -132,11 +132,11 @@ TEST(Indicators, CFracDiffIndicator){
         EXPECT_FLOATS_NEARLY_EQ(double, pyfractruth_indicator, c_fdiff.Begin(0), 100, 0.001);
  }
 
-TEST(Indicators, CTaMAIndicator){
+TEST(Indicators, CTaMA){
     double in[] = { 1, 1, 2, 3, 4, 5, 5, 3, 1 };
     int size = 8;
     int window = 2;
-    CTaMAIndicator cta_MA;
+    CTaMA cta_MA;
     cta_MA.Init(window, 0);	 // simple MA
 
     // partial calls until total array calculated
@@ -158,7 +158,7 @@ TEST(Indicators, CTaMAIndicator){
 // rewrite to use vBegin(0)
 TEST(Indicators, vBegin) {
     int window = 2;
-    CTaMAIndicator cta_MA;
+    CTaMA cta_MA;
     cta_MA.Init(window, 0);	 // simple MA
 
     std::vector<double> a = { 1 };
@@ -327,7 +327,44 @@ TEST(MoneyBars, OnTicksSADF) {
 
 }
 
-TEST(Indicators, CSADFIndicator) {
+// TODO
+// re-write since 
+// tick losses are acceptable
+TEST(MoneyBars, OnTicksMbReturns) {
+    std::fstream fh;
+    std::streampos begin, end;
+
+    char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
+    double lost_ticks; // qc for real time
+
+    // load SADF indicator
+    DataBuffersInit(0.01, 0.01, 25E6, symbol);
+    IndicatorsInit(250, 200, 15, false);
+
+    // calculate number of ticks on file
+    std::string user_data = std::string(std::getenv("USERPROFILE")) +
+        std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
+
+    std::vector<MqlTick> ticks;
+
+    // Read a file and simulate CopyTicksRange
+    int64_t nticks = ReadTicks(&ticks, user_data, (size_t)1e6); // 1MM
+    BufferMqlTicks* pticks = GetBufferMqlTicks();
+    // send in chunck of 250k ticks
+    size_t chunck_s = (size_t)250e3;
+
+    auto next_timebg = OnTicks(ticks.data(), chunck_s, &lost_ticks);
+    EXPECT_EQ(pticks->size(), chunck_s);
+
+    for (auto it = m_MbReturn->Begin(0); it < m_MbReturn->End(0); it++) {
+        std::cout << " " << *it;
+        std::cout << std::endl;
+    }  
+
+
+}
+
+TEST(Indicators, CSADF) {
 
     std::vector<float> data = { 56097., 55298., 56865., 56653., 57348., 57701., 57669., 58005.,
        56534., 56754., 57829., 59265., 59365., 58546., 58600., 59083.,
@@ -354,7 +391,7 @@ TEST(Indicators, CSADFIndicator) {
     int maxw = 15;
     int minw = 12;
     int p = 3;
-    auto iSADF = new CSADFIndicator(BUFFERSIZE);
+    auto iSADF = new CSADF(BUFFERSIZE);
 
     iSADF->Init(maxw, minw, p, true);
     // send in 50, 70, 30
@@ -453,7 +490,7 @@ TEST(Indicators, CSADFIndicator) {
 //            sumdw = 0
 //    return cumsum
 
-TEST(Indicators, CCumSumIndicator) {
+TEST(Indicators, CCumSumPair) {
 
     std::vector<float> data = { 1.29018739e-01, -3.72868106e-02,  8.03665072e-02,  1.13388896e-01,
         2.11405158e-01, -1.87389302e+00, -1.49298251e+00, -3.67588133e-01,
@@ -502,7 +539,7 @@ TEST(Indicators, CCumSumIndicator) {
         0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,
         0.,  0.,  0.,  0.,  0. };
 
-    CCumSumIndicator iCumSum(BUFFERSIZE);
+    CCumSumPair iCumSum(BUFFERSIZE);
 
     std::vector<std::pair<float,int>> pairs(data.size());
 
@@ -523,7 +560,7 @@ TEST(Indicators, CCumSumIndicator) {
 }
 
 
-TEST(Indicators, CCumSumSADFIndicator) {
+TEST(Indicators, CCumSumSADF) {
 
     // different from above since 
     // the valid region is set on the input data
@@ -564,8 +601,8 @@ TEST(Indicators, CCumSumSADFIndicator) {
         0.,  0.,  0.,  0.,  0.,  0.,  0. };
 
     MoneyBarBuffer mbars(BUFFERSIZE);
-    CSADFIndicator iSADF(BUFFERSIZE);
-    CCumSumSADFIndicator iCumSum(BUFFERSIZE);
+    CSADF iSADF(BUFFERSIZE);
+    CCumSumSADFPair iCumSum(BUFFERSIZE);
     int maxw = 15;
     int minw = 12;
     int p = 3;
@@ -596,8 +633,7 @@ TEST(Indicators, CCumSumSADFIndicator) {
     EXPECT_FLOATS_NEARLY_EQ(float, cumsum, pytruth, 9, 1e-9);
 
 }
-// need to use DLL Load to Deal with
-// more reallistic enviorment of mt5
+
 
 
 TEST(StdBarBuffer, AddTicks) {
@@ -640,3 +676,5 @@ TEST(StdBarBuffer, AddTicks) {
 }
 
 
+// need to use DLL Load to Deal with
+// more reallistic enviorment of mt5

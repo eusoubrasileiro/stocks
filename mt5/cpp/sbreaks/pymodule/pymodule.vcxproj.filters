@@ -26,6 +26,9 @@
     <ClCompile Include="..\..\include\datastruct\stdbars.cpp">
       <Filter>external</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\include\events\labelling.cpp">
+      <Filter>external\events</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="external">
@@ -33,6 +36,9 @@
     </Filter>
     <Filter Include="external\indicators">
       <UniqueIdentifier>{cd88ee5e-7cfb-4bbb-a135-3416fd573694}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\events">
+      <UniqueIdentifier>{f501dafd-31af-4b4b-8f60-2613e49ac9c4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +62,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\datastruct\stdbars.h">
       <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\events\events.h">
+      <Filter>external\events</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -31,7 +31,7 @@ struct MoneyBar
     int highfirst; // first was the high 1, first was the low 0
     // p10, p50, p90 of ticks.last?
     // unique identifier for this bar - for searching etc..
-    uint64_t uid; // emsc and smsc might repeat on different bars
+    uint64_t uid; // unique identifier since emsc and smsc might repeat on different bars
     double dtp; // time difference to previous bar in seconds
     double netvol; // number of buy ticks * volume bought + number of sell ticks * volume sold (sell/buy) power (net-volume)
     int inday; // inside operational day information (intra-day) 1 True or False, -1 for undefined
@@ -100,11 +100,6 @@ public:
     // add ticks for python support
     size_t AddTicks(const MqlTick* cticks, int size);
 
-    // iterator begin of new bars
-    buffer<MoneyBar>::iterator LastBegin() {
-        return end() - m_nnew;
-    }
-
     // debugging and testing use only
     // insert money bars directly on buffer
     template<class iterator>
@@ -120,11 +115,18 @@ public:
         m_event_newbars.push_back(onnewbars);
     }
 
-    size_t BeginNewBarsIdx();
+    // iterator begin of new bars
+    buffer<MoneyBar>::iterator LastBegin() {
+        return end() - m_nnew;
+    }
 
-    // return buffer index position
+    size_t LastBeginIdx();
+
+    // return buffer index position by uid
     size_t Search(uint64_t uid);
-    
+    // return iterator on buffer by uid
+    buffer<MoneyBar>::iterator BeginbyUid(uint64_t uid);
+
     size_t SearchStime(int64_t emsc);
 };
 

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include "databuffers.h"
+#include "..\events\events.h"
 
 // Indicator SADF
 // just for reload case store these
@@ -15,6 +16,7 @@ extern bool m_usedrift;
 extern std::shared_ptr<CCumSumSADF> m_CumSumi;
 extern std::shared_ptr<CMbReturn> m_MbReturn; // Standard Deviation of Average Returns of Money Bars
 extern std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
+extern std::shared_ptr<std::vector<Event>> m_Events;
 
 void IndicatorsInit(int maxwindow,
     int minwindow,

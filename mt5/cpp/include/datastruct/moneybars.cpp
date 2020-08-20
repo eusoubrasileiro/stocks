@@ -14,7 +14,7 @@ double percentile(std::vector<double> data, double perc, bool sort) {
 }
 
 // index based
-size_t MoneyBarBuffer::BeginNewBarsIdx() {
+size_t MoneyBarBuffer::LastBeginIdx() {
     return size()-m_nnew;
 }
 
@@ -184,6 +184,11 @@ size_t MoneyBarBuffer::Search(uint64_t uid)
 {
     auto iter = std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid);
     return (iter == end()) ? -1 : iter - begin();
+}
+
+buffer<MoneyBar>::iterator MoneyBarBuffer::BeginbyUid(uint64_t uid)
+{
+    return std::lower_bound(begin(), end(), uid, cmpMoneyBarSmallUid); // can be end
 }
 
 // std::lower_bound

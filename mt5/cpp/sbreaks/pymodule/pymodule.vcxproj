@@ -16,6 +16,7 @@
     <ClCompile Include="..\..\include\datastruct\moneybars.cpp" />
     <ClCompile Include="..\..\include\datastruct\stdbars.cpp" />
     <ClCompile Include="..\..\include\datastruct\ticks.cpp" />
+    <ClCompile Include="..\..\include\events\labelling.cpp" />
     <ClCompile Include="..\..\include\indicators\csindicators.cpp" />
     <ClCompile Include="..\..\include\indicators\ctindicators.cpp" />
     <ClCompile Include="..\..\include\indicators\indicators.cpp" />
@@ -27,6 +28,7 @@
     <ClInclude Include="..\..\include\datastruct\moneybars.h" />
     <ClInclude Include="..\..\include\datastruct\stdbars.h" />
     <ClInclude Include="..\..\include\datastruct\ticks.h" />
+    <ClInclude Include="..\..\include\events\events.h" />
     <ClInclude Include="..\..\include\indicators\cwindicators.h" />
     <ClInclude Include="..\..\include\indicators\indicators.h" />
   </ItemGroup>

@@ -678,3 +678,33 @@ TEST(StdBarBuffer, AddTicks) {
 
 // need to use DLL Load to Deal with
 // more reallistic enviorment of mt5
+
+TEST(Labelling, LabelEvents) {
+    std::fstream fh;
+    std::streampos begin, end;
+
+    char symbol[6] = "PETR4"; // is null terminated by default - char* string literal C++
+    double lost_ticks; // qc for real time
+
+    // load SADF indicator
+    DataBuffersInit(0.01, 0.01, 25E6, symbol);
+    IndicatorsInit(250, 200, 15, false);
+
+    // calculate number of ticks on file
+    std::string user_data = std::string(std::getenv("USERPROFILE")) +
+        std::string("\\Projects\\stocks\\data\\PETR4_mqltick.bin");
+
+    std::vector<MqlTick> ticks;
+
+    // Read a file and simulate CopyTicksRange
+    int64_t nticks = ReadTicks(&ticks, user_data, (size_t)1e6); // 1MM
+    BufferMqlTicks* pticks = GetBufferMqlTicks();
+    // send in chunck of 250k ticks
+    size_t chunck_s = (size_t)550e3;
+
+    auto next_timebg = OnTicks(ticks.data(), chunck_s, &lost_ticks);
+    EXPECT_EQ(pticks->size(), chunck_s);
+
+    LabelEvents(m_Events->begin(), m_Events->end(), 10., 10, 2, 50);
+
+}

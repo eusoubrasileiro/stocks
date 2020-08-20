@@ -11,6 +11,7 @@ bool m_usedrift;
 std::shared_ptr<CCumSumSADF> m_CumSumi;
 std::shared_ptr<CMbReturn> m_MbReturn;
 std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
+std::shared_ptr<std::vector<Event>> m_Events;
 
 void RefreshIndicators();
 
@@ -27,6 +28,8 @@ void IndicatorsInit(int maxwindow,
     m_MbReturn.reset(new CMbReturn());
     m_StdevMbReturn.reset(new CStdevMbReturn());
     m_CumSumi.reset(new CCumSumSADF(m_bars->capacity()));
+    m_Events.reset(new std::vector<Event>());
+    
     m_minw = minwindow;
     m_maxw = maxwindow;
     m_order = order;
@@ -34,6 +37,7 @@ void IndicatorsInit(int maxwindow,
     m_SADFi->Init(maxwindow, minwindow, order, usedrift);    
     // automatically refreshed when m_SADFi is refreshed
     m_CumSumi->Init(cum_reset, &(*m_SADFi));
+
     // subscribe to OnNewBars event
     // SADF and MB Returns subscribe 
     m_bars->AddOnNewBars(RefreshIndicators);
@@ -44,7 +48,20 @@ void IndicatorsInit(int maxwindow,
     // 'average return expected around the mean' shows how much return variation expect 
     // on average considering xxx bars
     m_StdevMbReturn->Init(300, &(*m_MbReturn)); // 300 bars moving average stddev of returns
-    
+
+    // Events triggered when CUMSUM SADF != 0
+    auto fillEvents = [pEvents=&*m_Events, pCSum = &*m_CumSumi, pbars=&*m_bars](int  n_){
+         Event event;
+        // add events from new data, only valid data
+         for (auto idx = pCSum->Count()-pCSum->nCalculated(); idx < pCSum->Count(); idx++)
+             if (pCSum->At(idx) != 0.0) {
+                 event.cumsum = pCSum->At(idx);
+                 event.twhen = pbars->at(idx).uid;
+                 pEvents->push_back(event);
+             }        
+    };
+
+    m_CumSumi->addOnRefresh(fillEvents);    
 }
 
 void RefreshIndicators() {

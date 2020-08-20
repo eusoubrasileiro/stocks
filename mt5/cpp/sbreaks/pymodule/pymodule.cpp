@@ -42,25 +42,18 @@ unixtime_ms SendTicks(py::array_t<MqlTick> ticks)
 
 
 py::array_t<MoneyBar> GetMoneyBars() {
-    
-    py::array_t<MoneyBar> pymoney_bars(BufferTotal());
-    MoneyBar* pbuf = (MoneyBar*) pymoney_bars.request().ptr;
-
-    for (size_t idx = 0; idx < m_bars->size(); idx++)
-        pbuf[idx] = m_bars->at(idx);
-
-    // this bellow also works, not sure about the 
+    // this bellow also works, but too much code
+    // probably faster 
     //auto array_one = m_bars->array_one();
     //auto arr1 = std::get<0>(array_one);
     //auto size1 = std::get<1>(array_one);
     //auto array_two = m_bars->array_two();
     //auto arr2 = std::get<0>(array_two);
     //auto size2 = std::get<1>(array_two);
-
     //std::copy(arr1, arr1 + size1, pbuf);
     //std::copy(arr2, arr2 + size2, pbuf+size1);    
-    
-    return pymoney_bars;
+    auto bars = std::vector<MoneyBar>(m_bars->begin(), m_bars->end());
+    return py::array_t<MoneyBar>(bars.size(), bars.data());
 }
 
 // only for doubles needs to convert to real NANS
@@ -86,13 +79,21 @@ py::array GetStdevMbReturns() {
     return py::array(vec.size(), vec.data());
 }
 
+py::array_t<Event> GetEvents() {
+     return py::array_t<Event>(m_Events->size(), m_Events->data());
+}
+
+py::array_t<Event> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc) {
+    auto vec = LabelEvents(m_Events->begin(), m_Events->end(), mtgt, barrier_str, nbarriers, barrier_inc);
+    return py::array_t<Event>(vec.size(), vec.data());
+}
+
 
 // name for EACH column feature on X vector
 // TODO:
 //std::vector<std::string> pyFeatures() {
 //    return m_features;
 //}
-
 
 
 std::tuple<py::array, py::array> thsadf(py::array_t<float> data, int maxw, int minw, int p, bool usedrift, float gpumem_gb, bool verbose) {
@@ -119,6 +120,7 @@ PYBIND11_MODULE(explotest, m){
     PYBIND11_NUMPY_DTYPE(tm, tm_sec, tm_min, tm_hour, tm_mday, tm_mon, tm_year, tm_wday, tm_yday, tm_isdst);
     PYBIND11_NUMPY_DTYPE(MqlTick, time, bid, ask, last, volume, time_msc, flags, volume_real);
     PYBIND11_NUMPY_DTYPE(MoneyBar, wprice, wprice90, wprice10, nticks, time, smsc, emsc, open, high, low, highfirst, uid, dtp, netvol, inday);
+    PYBIND11_NUMPY_DTYPE(Event, time, twhen, tdone, cumsum, side, vertbar, y, ret, sltp, inf_start, inf_end);
 
     // optional module docstring
     m.doc() = "explosiveness tests - python api pybind11";
@@ -159,11 +161,14 @@ PYBIND11_MODULE(explotest, m){
 
     //m.def("minbarsxvector", &MinPrevBars, "number of previous bars needed to form one X vector");
 
-   // m.def("adfuller", &pyadfuller, "augmented dickey fuller test - return statistic");
-
     //thsadf(py::array_t<float> data, int maxw, int p, float gpumem_gb, bool verbose)
     m.def("thsadf", &thsadf, "supremum augmented dickey fuller test torch GPU",
         py::arg("data"), py::arg("maxw"), py::arg("minw"),
         py::arg("order"), py::arg("drift"), py::arg("gpumem_gb"), py::arg("verbose"));
+
+    m.def("get_events", &GetEvents, "get cum sum on sadf money bars events");
+
+    m.def("get_events_lbl", &GetLabelledEvents, "label events", py::arg("mult_tgt"),
+        py::arg("barrier_str"), py::arg("nbarriers"), py::arg("barrier_inc"));
 
 }

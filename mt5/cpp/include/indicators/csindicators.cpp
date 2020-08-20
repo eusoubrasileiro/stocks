@@ -152,7 +152,7 @@ void CCumSumSADF::Init(double cum_reset, CSADF* pSADF){
         this->Refresh(pSADF->LastBegin(0), pSADF->End(0)); // buffer 0 is sadf value
     };
 
-    pSADF->addSonRefresh(std::function<void(int)>(thisrefresh));
+    pSADF->addOnRefresh(std::function<void(int)>(thisrefresh));
 }
 
 void CCumSumSADF::Calculate(float* indata, int size, std::array<std::vector<float>, 1>& outdata) {
@@ -175,7 +175,7 @@ void CStdevMbReturn::Init(int window, CMbReturn* pMbReturns) {
         this->Refresh(pMbReturns->LastBegin(0), pMbReturns->End(0));
     };
 
-    pMbReturns->addSonRefresh(std::function<void(int)>(thisrefresh));
+    pMbReturns->addOnRefresh(std::function<void(int)>(thisrefresh));
 }
 
 
@@ -275,7 +275,7 @@ void CCumSumSADFPair::Init(double cum_reset, CSADF* pSADF, MoneyBarBuffer* pBars
         this->Refresh(sadf_pair.begin(), sadf_pair.end());
     };
 
-    pSADF->addSonRefresh(std::function<void(int)>(thisrefresh));
+    pSADF->addOnRefresh(std::function<void(int)>(thisrefresh));
 }
 
 void CCumSumSADFPair::Calculate(std::pair<float, int>* indata, int size, std::array<std::vector<float>, 1>& outdata) {

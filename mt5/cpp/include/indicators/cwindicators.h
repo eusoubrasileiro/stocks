@@ -40,7 +40,7 @@ protected:
   // where starts non EMPTY values
   size_t m_total_count; // count added samples (like size()) but continues beyound BUFFERSIZE
     // Event on Refresh for Son indicator
-  std::function<void(int)> m_sonRefresh; // pass number of empty samples created or 0 for none
+  std::function<void(int)> m_onRefresh; // pass number of empty samples created or 0 for none
   int m_nempty; // number of dummy/empty samples added on last call
   int m_ndummy; // total dummy/empty on buffer
   int m_ncalculated; // number of samples being calculated or calculated on the last call
@@ -91,8 +91,8 @@ public :
                 m_nempty = count;
                 m_total_count += m_nempty;
                 AddEmpty(m_nempty);
-                if (m_sonRefresh)
-                    m_sonRefresh(m_nempty);
+                if (m_onRefresh)
+                    m_onRefresh(m_nempty);
                 return 0;
             }
             else { // now can calculate 1 or more outputs
@@ -122,8 +122,8 @@ public :
 
         // if exists son indicator you can
         // call its Refresh now
-        if (m_sonRefresh)
-            m_sonRefresh(m_nempty);
+        if (m_onRefresh)
+            m_onRefresh(m_nempty);
 
         return m_ncalculated;
     }
@@ -180,8 +180,8 @@ public :
     }
 
     // add a son indicator 'refresh' function
-    void addSonRefresh(std::function<void(int)> son_indicator_refresh) {
-        m_sonRefresh = son_indicator_refresh;
+    void addOnRefresh(std::function<void(int)> on_refresh) {
+        m_onRefresh = on_refresh;
     }
 
     // size
@@ -398,6 +398,8 @@ public:
     void Init(double cum_reset, CSADF* pSADF);
 
     void Calculate(float* indata, int size, std::array<std::vector<float>, 1>& outdata) override;
+
+    inline double At(size_t index) { return m_buffers[0].at(index); }
 };
 
 
@@ -423,6 +425,8 @@ public:
     void Init(int window, CMbReturn* pMbReturns);
 
     void Calculate(double* indata, int size, std::array<std::vector<double>, 1>& outdata) override;
+
+    inline double At(size_t index) { return m_buffers[0].at(index); }
 };
 
 

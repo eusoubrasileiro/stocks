@@ -68,7 +68,9 @@ void RefreshIndicators() {
     try
     {
         // copying average weighted price from money bars
-        auto bar_wprices = vecMoneyBarBufferLast<double, float>(&MoneyBar::wprice, &(*m_bars));
+        std::vector<float> bar_wprices;
+        for (auto elem = m_bars->LastBegin(); elem != m_bars->end(); elem++)
+            bar_wprices.push_back(std::log(elem->wprice)); // per-book log(prices)
         // altough nice and cool, If I need multiple members so... I loop is imperative
         m_SADFi->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
         m_MbReturn->Refresh<buffer<MoneyBar>::iterator>(m_bars->LastBegin(), m_bars->end());

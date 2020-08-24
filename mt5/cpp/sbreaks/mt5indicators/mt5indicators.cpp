@@ -145,9 +145,9 @@ int CppSADFMoneyBars(double* mt5_SADFline, double* mt5_SADFdots, double* mt5_ima
             for (i = mt5ptsize - maxbarsplot, j = m_SADFi->Count() - maxbarsplot; i < mt5ptsize; i++, j++) {
                 mt5_SADFline[i] = MT5_NAN_REPLACE(float, m_SADFi->SADFt(j)); // sadf on average weighted price of entire bar
                 mt5_SADFdots[i] = mt5_SADFline[i];
-                mt5_imaxadfcolor[i] = (int)((m_numcolors - 1) * (m_SADFi->MaxADFi(j) / m_adfscount));
+                mt5_imaxadfcolor[i] = (int)((m_numcolors - 1) * (m_SADFi->MaxADFdisp(j) / m_adfscount));
             }
-            *mt5_imaxadflast = m_SADFi->MaxADFi(m_SADFi->Count() - 1);
+            *mt5_imaxadflast = m_SADFi->MaxADFdisp(m_SADFi->Count() - 1);
         }
 
 #ifdef  DEBUG

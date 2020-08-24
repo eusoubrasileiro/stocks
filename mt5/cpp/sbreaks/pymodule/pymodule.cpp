@@ -64,6 +64,13 @@ py::array GetSADF(){
     return py::array(vec.size(), vec.data());
 }
 
+// dispersion
+py::array GetSADFdisp() {
+    auto vec = std::vector<float>(m_SADFi->Begin(1), m_SADFi->End(1));
+    return py::array(vec.size(), vec.data());
+}
+
+
 py::array GetCumSum() {
     auto vec = std::vector<float>(m_CumSumi->Begin(0), m_CumSumi->End(0));
     return py::array(vec.size(), vec.data());
@@ -146,6 +153,8 @@ PYBIND11_MODULE(explotest, m){
     m.def("mbars", &GetMoneyBars, "get MoneyBar buffer as is");
 
     m.def("mbars_sadf", &GetSADF, "get SADF MoneyBar buffer as is");
+
+    m.def("mbars_sadfd", &GetSADFdisp, "get SADF ADF max values dispersion MoneyBar buffer as is");
 
     m.def("mbars_sadf_csum", &GetCumSum, "get CumSum on SADF MoneyBar buffer as is");
 

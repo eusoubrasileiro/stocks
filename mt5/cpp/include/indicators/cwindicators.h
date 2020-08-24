@@ -358,8 +358,8 @@ public:
 
     // SADF(t) value - first buffer
     inline float SADFt(size_t index) { return m_buffers[0].at(index); }
-    // index of ADF on backward expanding window with maximum value [0, maxw-minw[ - second buffer
-    inline float MaxADFi(size_t index) { return m_buffers[1].at(index); }
+    // max values percentile dispersion of ADF on backward expanding window 
+    inline float MaxADFdisp(size_t index) { return m_buffers[1].at(index); }
 };
 
 

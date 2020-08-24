@@ -1,7 +1,7 @@
-#include "pytorchcpp.h"
 #include <windows.h>
 #include <iostream>
 #include <vector>
+#include "pytorchcpp.h"
 
 // from Python
 double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
@@ -53,8 +53,8 @@ void test_fracdif() {
 	int insize = 100;
 	double eps = 0.0001; // error tolerance in comparison
 	double frac = 0.56; // fractional derivative
-	setFracDifCoefs(frac, fsize);
-	int outsize = FracDifApply(in, insize, in);
+	setfracdiffcoefs(frac, fsize);
+	int outsize = fracdiffapply(in, insize, in);
     std::cout << "Fracdiff test" << std::endl;
     float dist = 0;
     for (int i = 0; i < outsize; i++) {

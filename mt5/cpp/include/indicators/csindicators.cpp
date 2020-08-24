@@ -8,12 +8,12 @@
 void CFracDiff::Init(int window, double dfraction){
     m_dfraction = dfraction;
     CWindowIndicator::Init(window);
-    setFracDifCoefs(m_dfraction, window);
+    setfracdiffcoefs(m_dfraction, window);
 };
 
 void CFracDiff::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
 {
-    FracDifApply(indata, size, outdata[0].data());
+    fracdiffapply(indata, size, outdata[0].data());
 }
 
 

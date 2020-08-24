@@ -63,7 +63,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>pytorchcpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pytorchcpp.lib</AdditionalDependencies>
       <SuppressStartupBanner />
       <AllowIsolation />
       <CLRImageType />

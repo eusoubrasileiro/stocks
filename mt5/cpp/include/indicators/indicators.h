@@ -17,6 +17,7 @@ extern std::shared_ptr<CCumSumSADF> m_CumSumi;
 extern std::shared_ptr<CMbReturn> m_MbReturn; // Standard Deviation of Average Returns of Money Bars
 extern std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
 extern std::shared_ptr<std::vector<Event>> m_Events;
+extern std::shared_ptr<CFracDiff> m_FdMb;
 
 void IndicatorsInit(int maxwindow,
     int minwindow,

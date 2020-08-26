@@ -5,13 +5,13 @@
 
 
 
-void CFracDiff::Init(int window, double dfraction){
+void CFracDiff::Init(int window, float dfraction){
     m_dfraction = dfraction;
     CWindowIndicator::Init(window);
     setfracdiffcoefs(m_dfraction, window);
 };
 
-void CFracDiff::Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata)
+void CFracDiff::Calculate(float* indata, int size, std::array<std::vector<float>, 1> &outdata)
 {
     fracdiffapply(indata, size, outdata[0].data());
 }

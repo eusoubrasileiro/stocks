@@ -96,6 +96,11 @@ py::array_t<Event> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers
 }
 
 
+py::array GetFracDiff() {
+    auto vec = std::vector<float>(m_FdMb->Begin(0), m_FdMb->End(0));
+    return py::array(vec.size(), vec.data());
+}
+
 // name for EACH column feature on X vector
 // TODO:
 //std::vector<std::string> pyFeatures() {
@@ -157,6 +162,8 @@ PYBIND11_MODULE(explotest, m){
     m.def("mbars_sadfd", &GetSADFdisp, "get SADF ADF max values dispersion MoneyBar buffer as is");
 
     m.def("mbars_sadf_csum", &GetCumSum, "get CumSum on SADF MoneyBar buffer as is");
+
+    m.def("mbars_fdiff", &GetFracDiff, "get Fracitional Differation of Money Bars");
 
     m.def("mbars_returns", &GetMbReturns, "get somewhat Average Money Bar Returns");
 

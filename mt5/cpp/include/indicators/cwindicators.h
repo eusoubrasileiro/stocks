@@ -296,18 +296,18 @@ public:
 // FracDiff
 //
 
-class CFracDiff : public CWindowIndicatorDouble
+class CFracDiff : public CWindowIndicator<float, float, 1>
 {
 protected:
-    double m_dfraction; // fractional difference
+    float m_dfraction; // fractional difference
 
 public:
 
     CFracDiff() { m_dfraction = 1;  };
 
-    void Init(int window, double dfraction);
+    void Init(int window, float dfraction);
 
-    void Calculate(double* indata, int size, std::array<std::vector<double>, 1> &outdata) override;
+    void Calculate(float* indata, int size, std::array<std::vector<float>, 1> &outdata) override;
 
 };
 

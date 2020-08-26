@@ -9,6 +9,7 @@ bool m_usedrift;
 
 // Indicator Cum Sum
 std::shared_ptr<CCumSumSADF> m_CumSumi;
+std::shared_ptr<CFracDiff> m_FdMb;
 std::shared_ptr<CMbReturn> m_MbReturn;
 std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
 std::shared_ptr<std::vector<Event>> m_Events;
@@ -26,6 +27,7 @@ void IndicatorsInit(int maxwindow,
         return;
     m_SADFi.reset(new CSADF(m_bars->capacity()));
     m_MbReturn.reset(new CMbReturn());
+    m_FdMb.reset(new CFracDiff());
     m_StdevMbReturn.reset(new CStdevMbReturn());
     m_CumSumi.reset(new CCumSumSADF(m_bars->capacity()));
     m_Events.reset(new std::vector<Event>());
@@ -37,6 +39,7 @@ void IndicatorsInit(int maxwindow,
     m_SADFi->Init(maxwindow, minwindow, order, usedrift);    
     // automatically refreshed when m_SADFi is refreshed
     m_CumSumi->Init(cum_reset, &(*m_SADFi));
+    m_FdMb->Init(128, 0.56);
 
     // subscribe to OnNewBars event
     // SADF and MB Returns subscribe 
@@ -74,6 +77,7 @@ void RefreshIndicators() {
         // altough nice and cool, If I need multiple members so... I loop is imperative
         m_SADFi->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
         m_MbReturn->Refresh<buffer<MoneyBar>::iterator>(m_bars->LastBegin(), m_bars->end());
+        m_FdMb->Refresh<vec_iterator<float>>(bar_wprices.begin(), bar_wprices.end());
         if (m_SADFi->nCalculated() > 0)
             debugfile << "number of bars " << m_bars->size()
             << " calculated SADF: " << m_SADFi->nCalculated()

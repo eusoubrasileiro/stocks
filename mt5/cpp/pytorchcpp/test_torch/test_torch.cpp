@@ -4,7 +4,7 @@
 #include "pytorchcpp.h"
 
 // from Python
-double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
+float in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, // a
 			   0.02537023, 0.7332872 , 0.4622992 , 0.96278162, 0.33838066,   // a
 			   0.89851506, 0.90982346, 0.54238173, 0.68145741, 0.95061314,  // b
 			   0.93442722, 0.2614748 , 0.00405999, 0.75008525, 0.64118048,  // b
@@ -26,7 +26,7 @@ double in[100] = { 0.23575223, 0.89348613, 0.43196633, 0.86018474, 0.59765737, /
 			   0.01621923, 0.04200219, 0.93858386, 0.88837139, 0.20881766, // d
 			   0.77023781, 0.30574534, 0.74073346, 0.62654889, 0.64183077 }; // d
 
-double pyfractruth[91] = { -0.35131172,
+float pyfractruth[91] = { -0.35131172,
 				0.49928454,  0.25017423, -0.17289674,  0.15147366,
 				0.37461599,  0.1987023 , -0.49814806, -0.39431162,  0.57265172,
 				0.10862605, -0.19898058,  0.42240801, -0.4724218 ,  0.28296601,
@@ -51,8 +51,8 @@ double pyfractruth[91] = { -0.35131172,
 void test_fracdif() {
 	int fsize = 10; // or window size
 	int insize = 100;
-	double eps = 0.0001; // error tolerance in comparison
-	double frac = 0.56; // fractional derivative
+	float eps = 0.0001; // error tolerance in comparison
+	float frac = 0.56; // fractional derivative
 	setfracdiffcoefs(frac, fsize);
 	int outsize = fracdiffapply(in, insize, in);
     std::cout << "Fracdiff test" << std::endl;

@@ -12,7 +12,14 @@ std::shared_ptr<CCumSumSADF> m_CumSumi;
 std::shared_ptr<CFracDiff> m_FdMb;
 std::shared_ptr<CMbReturn> m_MbReturn;
 std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
-std::shared_ptr<std::vector<Event>> m_Events;
+
+// Events classification
+std::shared_ptr<std::vector<Event>> m_Events; // events YET to be labbeled and filled with features
+// feature vector needed for training, only exists for those comming out of LabelEvents
+// same size as m_Events_feat
+std::shared_ptr<std::vector<std::vector<double>>> m_X_feat;
+std::shared_ptr<std::vector<Event>> m_Events_feat; // events labelled and with features
+
 
 void RefreshIndicators();
 
@@ -31,7 +38,11 @@ void IndicatorsInit(int maxwindow,
     m_StdevMbReturn.reset(new CStdevMbReturn());
     m_CumSumi.reset(new CCumSumSADF(m_bars->capacity()));
     m_Events.reset(new std::vector<Event>());
-    
+
+    // not exacly indicators
+    m_Events_feat.reset(new std::vector<Event>());
+    m_X_feat.reset(new std::vector<std::vector<double>>());
+
     m_minw = minwindow;
     m_maxw = maxwindow;
     m_order = order;

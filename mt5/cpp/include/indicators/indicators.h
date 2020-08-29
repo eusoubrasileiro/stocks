@@ -16,7 +16,9 @@ extern bool m_usedrift;
 extern std::shared_ptr<CCumSumSADF> m_CumSumi;
 extern std::shared_ptr<CMbReturn> m_MbReturn; // Standard Deviation of Average Returns of Money Bars
 extern std::shared_ptr<CStdevMbReturn> m_StdevMbReturn;
-extern std::shared_ptr<std::vector<Event>> m_Events;
+extern std::shared_ptr<std::vector<Event>> m_Events; // events to be labbeled and filled with features
+extern std::shared_ptr<std::vector<Event>> m_Events_feat; // events labelled and with features
+extern std::shared_ptr<std::vector<std::vector<double>>> m_X_feat;
 extern std::shared_ptr<CFracDiff> m_FdMb;
 
 void IndicatorsInit(int maxwindow,

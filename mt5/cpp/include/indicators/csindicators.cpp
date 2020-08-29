@@ -86,6 +86,13 @@ void CSADF::Calculate(float* indata, int size, std::array<std::vector<float>, 2>
 
     // convert ADF_ERROR to FLT_NAN, so all NANS are consistent FLT_NAN
     std::replace(sadf_out->begin(), sadf_out->end(), ADF_ERROR, FLT_NAN);
+
+    // fill forward where there are nans, nans are useless specially for feature X vector assembly
+    for (auto prevv = sadf_out->begin(), currv = prevv + 1; currv != sadf_out->end(); currv++)
+        if (std::isnan(*currv))
+            *currv = *prevv;
+        else
+            prevv = currv;
 }
 
 

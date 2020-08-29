@@ -705,6 +705,6 @@ TEST(Labelling, LabelEvents) {
     auto next_timebg = OnTicks(ticks.data(), chunck_s, &lost_ticks);
     EXPECT_EQ(pticks->size(), chunck_s);
 
-    LabelEvents(m_Events->begin(), m_Events->end(), 10., 10, 2, 50);
+    LabelEvents(*m_Events, 10., 10, 2, 50, 5);
 
 }

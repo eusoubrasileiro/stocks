@@ -24,9 +24,9 @@ class CWindowIndicator
 protected:
 
   std::array<buffer<TypeSt>, NumberBuffers>  m_buffers;
-  int m_buffersize;
-  int m_window; // minimum number of input samples to produce 1 output sample
-  int m_prev_needed;   // m_prev_need + 1 = 1  to produce 1 output sample
+  size_t m_buffersize;
+  size_t m_window; // minimum number of input samples to produce 1 output sample
+  size_t m_prev_needed;   // m_prev_need + 1 = 1  to produce 1 output sample
   // last data
   // used to make previous calculations size window
   // needed to calculate next batch of new samples
@@ -35,15 +35,15 @@ protected:
   std::vector<TypeIn> m_calculating; // now calculating
   // just calculated, can have multiple outputs due multiple buffers  
   std::array<std::vector<TypeSt>, NumberBuffers> m_calculated; // outputs have storage type
-  int m_nprev; // size of already stored data previous
-  int m_new; // size of recent call new data
+  size_t m_nprev; // size of already stored data previous
+  size_t m_new; // size of recent call new data
   // where starts non EMPTY values
   size_t m_total_count; // count added samples (like size()) but continues beyound BUFFERSIZE
     // Event on Refresh for Son indicator
   std::function<void(int)> m_onRefresh; // pass number of empty samples created or 0 for none
-  int m_nempty; // number of dummy/empty samples added on last call
-  int m_ndummy; // total dummy/empty on buffer
-  int m_ncalculated; // number of samples being calculated or calculated on the last call
+  size_t m_nempty; // number of dummy/empty samples added on last call
+  size_t m_ndummy; // total dummy/empty on buffer
+  size_t m_ncalculated; // number of samples being calculated or calculated on the last call
 
 public :
 
@@ -129,10 +129,10 @@ public :
     }
 
     // number of samples being calculated or calculated on the last Refresh() call
-    int nCalculated() { return m_ncalculated;  }
+    size_t nCalculated() { return m_ncalculated;  }
 
     // samples needed to calculated 1 output sample
-    int Window() { return m_window;  }
+    size_t Window() { return m_window;  }
 
     // using vBegin()
     // you dont need to keep track of valid indexes etc.
@@ -141,6 +141,7 @@ public :
         // this wont be called that many times
         // correction wether circular buffer is full or not
         size_t offset = (m_total_count > m_buffersize) ? 0 : m_ndummy;
+        // it will be end() if dont have any valid samples
         return m_buffers[buffer_index].begin() + offset;
     }
 
@@ -154,8 +155,13 @@ public :
         return m_buffers[buffer_index].end();
     }
 
-    // return the buffer by index
+    // return the buffer by index, default to first buffer
     typename buffer<TypeSt> & operator [](int buffer_index) {
+        return m_buffers[buffer_index];
+    }
+
+    // return the buffer by index - no check, default to first buffer
+    typename buffer<TypeSt>& Buffer(int buffer_index=0) {
         return m_buffers[buffer_index];
     }
 

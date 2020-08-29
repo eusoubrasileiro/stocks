@@ -21,9 +21,9 @@ struct Event { // cumsum +1/-1 on sadf signal on money bars
     int vertbar; // vertical barrier in money bars used
     int y = 0; // y label value, 1 sucess, -1 failure or 
     // 0 Stopped by vertical barrier number of bars:
-    // 1. must get the sign of the return to label as 1 or -1
+    // 1. use the sign of the return to label as 1 or -1 or 0 nonetheless
     // 2. stopped by end of operational day  (not very good statistically)
-    // -7 : I will not use this since it has not meaning relation 
+    // -7 : I will not use this since it has not meaningfull relation 
     // with money bars (volume of money being negotiated - buy or sell intention)
     // better create another classifier to test if an entry will cross to another day
     // sample weight simpler 0 is bad 1 is good - 1 have higher weight?
@@ -37,13 +37,14 @@ struct Event { // cumsum +1/-1 on sadf signal on money bars
 };
 #pragma pack(pop)
 
-// single element needed for training
-struct XyPair : Event
-{
-    std::vector<double> X;
-};
 
-std::vector<Event> LabelEvent(Event& event, double mtgt, int barrier_str, int nbarriers, int barrier_inc);
+std::pair<std::vector<Event>, bool> LabelEvent(Event& event, double mtgt, int barrier_str, int nbarriers, int barrier_inc);
 
-std::vector<Event> LabelEvents(std::vector<Event>::iterator begin, std::vector<Event>::iterator end, double mtgt,
-    int barrier_str, int nbarriers, int barrier_inc);
+bool FillinXFeatures(Event& event, std::vector<double>& X, int batch_size);
+
+// return labelled and featured events
+std::vector<Event> LabelEvents(std::vector<Event>& events, double mtgt,
+    int barrier_str, int nbarriers, int barrier_inc, int batch_size);
+
+
+

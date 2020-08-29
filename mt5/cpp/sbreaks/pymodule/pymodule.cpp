@@ -90,10 +90,16 @@ py::array_t<Event> GetEvents() {
      return py::array_t<Event>(m_Events->size(), m_Events->data());
 }
 
-py::array_t<Event> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc) {
-    auto vec = LabelEvents(m_Events->begin(), m_Events->end(), mtgt, barrier_str, nbarriers, barrier_inc);
-    return py::array_t<Event>(vec.size(), vec.data());
+std::pair<py::array_t<Event>, py::array> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc, int back_batch_size) {
+    auto vec = LabelEvents(*m_Events, mtgt, barrier_str, nbarriers, barrier_inc, back_batch_size);
+    
+    std::vector<double> X_flat; // flatten nested vector
+    for (auto& sub : *m_X_feat)
+        X_flat.insert(end(X_flat), begin(sub), end(sub));
+    
+    return std::make_pair(py::array_t<Event>(vec.size(), vec.data()), py::array(X_flat.size(), X_flat.data()));
 }
+
 
 
 py::array GetFracDiff() {
@@ -184,7 +190,7 @@ PYBIND11_MODULE(explotest, m){
 
     m.def("get_events", &GetEvents, "get cum sum on sadf money bars events");
 
-    m.def("get_events_lbl", &GetLabelledEvents, "label events", py::arg("mult_tgt"),
-        py::arg("barrier_str"), py::arg("nbarriers"), py::arg("barrier_inc"));
+    m.def("get_events_lbl", &GetLabelledEvents, "get labeled events and X feature vector", py::arg("mult_tgt"),
+        py::arg("barrier_str"), py::arg("nbarriers"), py::arg("barrier_inc"), py::arg("back_batch_size"));
 
 }

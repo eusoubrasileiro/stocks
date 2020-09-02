@@ -143,15 +143,19 @@ uint64_t min_bars = 1;
 // m_bfoffset = m_bars->at(0).uid - m_bars->Search(m_bars->at(0).uid);
 
 // return labelled and featured events
-std::vector<Event> LabelEvents(std::vector<Event> & events, double mtgt,
+std::pair<std::vector<Event>, std::vector<std::vector<double>>> 
+LabelEvents(std::vector<Event> & events, double mtgt,
                                int barrier_str, int nbarriers, int barrier_inc, int batch_size){
+
+    std::vector<std::vector<double>> X_feats;
+    std::vector<Event> Events_feats;
 
     // update, further use on FillinXFeatures
     uid_offset = BUFFER_UID_OFFSET; 
     bufsize = m_bars->size();
     // at least one valid sample on indicator w. wider window
     if (m_CumSumi->vCount()==0)
-        return *m_Events_feat; // cannot label because cannot created features
+        return make_pair(Events_feats, X_feats); // cannot label because cannot created features
 
     // widest window needed should be here 
     // CumSum on SADF has the widest window 
@@ -176,15 +180,15 @@ std::vector<Event> LabelEvents(std::vector<Event> & events, double mtgt,
         
         for (auto evl = labeleds.begin(); evl != labeleds.end(); evl++) {
             if (FillinXFeatures(*evl, X_feat, batch_size)) {
-                m_Events_feat->push_back(*evl);
-                m_X_feat->push_back(X_feat);
+                Events_feats.push_back(*evl);
+                X_feats.push_back(X_feat);
                 X_feat.clear();
             }
         }
 
     }
 
-    return *m_Events_feat;
+    return make_pair(Events_feats, X_feats);
 }
 
 

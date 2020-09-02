@@ -43,7 +43,8 @@ std::pair<std::vector<Event>, bool> LabelEvent(Event& event, double mtgt, int ba
 bool FillinXFeatures(Event& event, std::vector<double>& X, int batch_size);
 
 // return labelled and featured events
-std::vector<Event> LabelEvents(std::vector<Event>& events, double mtgt,
+std::pair<std::vector<Event>, std::vector<std::vector<double>>> 
+LabelEvents(std::vector<Event>& events, double mtgt,
     int barrier_str, int nbarriers, int barrier_inc, int batch_size);
 
 

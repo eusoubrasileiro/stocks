@@ -90,14 +90,21 @@ py::array_t<Event> GetEvents() {
      return py::array_t<Event>(m_Events->size(), m_Events->data());
 }
 
-std::pair<py::array_t<Event>, py::array> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc, int back_batch_size) {
-    auto vec = LabelEvents(*m_Events, mtgt, barrier_str, nbarriers, barrier_inc, back_batch_size);
+std::pair<py::array_t<Event>, py::array> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc, int back_batch_size){
+    // since I want to play with parameters on this, I need to keep m_Events intact
+    // so I send a copy of m_Events
+    // TODO: find a better way for this
+    auto events_xvec = LabelEvents(std::vector<Event>(*m_Events), mtgt, barrier_str, nbarriers, barrier_inc, back_batch_size);
+    auto Events_feat = std::get<0>(events_xvec);
+    auto X_feat = std::get<1>(events_xvec);
     
     std::vector<double> X_flat; // flatten nested vector
-    for (auto& sub : *m_X_feat)
+    for (auto& sub : X_feat)
         X_flat.insert(end(X_flat), begin(sub), end(sub));
     
-    return std::make_pair(py::array_t<Event>(vec.size(), vec.data()), py::array(X_flat.size(), X_flat.data()));
+    auto Xfeat = py::array(X_flat.size(), X_flat.data());
+    Xfeat.resize({ (int)Events_feat.size(), back_batch_size * 11 + 3 });
+    return std::make_pair(py::array_t<Event>(Events_feat.size(), Events_feat.data()), Xfeat);
 }
 
 

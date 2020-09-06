@@ -37,6 +37,11 @@ struct Event { // cumsum +1/-1 on sadf signal on money bars
 };
 #pragma pack(pop)
 
+#define FEATURES_B 11 // features forming backward batch
+#define FEATURES_B_A 3 // features unique for classifier of entry accuracy
+
+extern std::vector<std::string> m_features; // features forming backward batch
+extern std::vector<std::string> m_features_a; // features unique for classifier of entry accuracy
 
 std::pair<std::vector<Event>, bool> LabelEvent(Event& event, double mtgt, int barrier_str, int nbarriers, int barrier_inc);
 

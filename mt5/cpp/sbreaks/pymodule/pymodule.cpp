@@ -22,6 +22,9 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/numpy.h"
 #include "pybind11/cast.h"
+#include "pybind11/stl.h"
+#include "pybind11/functional.h"
+#include "pybind11/stl_bind.h"
 #include "indicators.h"
 
 
@@ -91,6 +94,14 @@ py::array_t<Event> GetEvents() {
 }
 
 std::pair<py::array_t<Event>, py::array> GetLabelledEvents(double mtgt, int barrier_str, int nbarriers, int barrier_inc, int back_batch_size){
+
+    // make feature on batch names 
+    m_features.resize(FEATURES_B); // reset to column names, trim end
+    // add as many names as batch size
+    for (auto i = back_batch_size-1; i >= 0 ; i--)
+        for (auto j = 0; j < FEATURES_B; j++)
+            m_features.push_back(m_features[j] + "_" + std::to_string(i));
+
     // since I want to play with parameters on this, I need to keep m_Events intact
     // so I send a copy of m_Events
     // TODO: find a better way for this
@@ -107,18 +118,25 @@ std::pair<py::array_t<Event>, py::array> GetLabelledEvents(double mtgt, int barr
     return std::make_pair(py::array_t<Event>(Events_feat.size(), Events_feat.data()), Xfeat);
 }
 
+// name for EACH column feature on X vector
+std::vector<py::str> GetFeaturesBNames() {
+    std::vector<py::str> py_vecstr;
+    for (auto& std_str : m_features) // convert to py::str null terminated auto-conversion
+        py_vecstr.push_back(std_str);
+    return py_vecstr;
+}
+
+// return feature dimensions of X vector
+// tuple : batch features, adititional features
+std::pair<int,int> GetFeaturesNums() {
+    return std::make_pair(FEATURES_B, FEATURES_B_A);
+}
 
 
 py::array GetFracDiff() {
     auto vec = std::vector<float>(m_FdMb->Begin(0), m_FdMb->End(0));
     return py::array(vec.size(), vec.data());
 }
-
-// name for EACH column feature on X vector
-// TODO:
-//std::vector<std::string> pyFeatures() {
-//    return m_features;
-//}
 
 
 std::tuple<py::array, py::array> thsadf(py::array_t<float> data, int maxw, int minw, int p, bool usedrift, float gpumem_gb, bool verbose) {
@@ -196,6 +214,10 @@ PYBIND11_MODULE(explotest, m){
         py::arg("order"), py::arg("drift"), py::arg("gpumem_gb"), py::arg("verbose"));
 
     m.def("get_events", &GetEvents, "get cum sum on sadf money bars events");
+
+    m.def("get_featureb_names", &GetFeaturesBNames, "get features names on batch");
+
+    m.def("get_feature_nums", &GetFeaturesNums, "get features tuple : batch features, adititional features");
 
     m.def("get_events_lbl", &GetLabelledEvents, "get labeled events and X feature vector", py::arg("mult_tgt"),
         py::arg("barrier_str"), py::arg("nbarriers"), py::arg("barrier_inc"), py::arg("back_batch_size"));

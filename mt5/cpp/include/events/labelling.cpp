@@ -191,6 +191,10 @@ LabelEvents(std::vector<Event> & events, double mtgt,
     return make_pair(Events_feats, X_feats);
 }
 
+// feature names mandatory for feature exploration on python
+
+std::vector<std::string> m_features = { "mbdtp", "wprice", "fd", "sadf", "csum", "stdevmb", "emsc_smsc", "nticks", "netvol", "demsc_smsc", "dntick"};
+std::vector<std::string> m_features_a = { "side", "sltp", "vertbar" };
 
 bool FillinXFeatures(Event &event, std::vector<double>& X, int batch_size){
     // find when current position on all buffers (have same size)

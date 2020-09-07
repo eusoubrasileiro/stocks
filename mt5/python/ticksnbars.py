@@ -1,26 +1,45 @@
-# Making Bars 1M from Ticks to be used on backtesting
-# 'Every tick based on real tick'
-#
-# Creates *.csv to be loaded on MT5 Symbol:
-#    - 1M Bars
-#    - Ticks
-#
-# - To fix creation of fake ticks by Metatrader 5 (everytick)
-#   - Will remove
-#       - start of day ticks without volume - only requotes
-#       - end of day ticks without volume - only requotes
-#  - Mt5 creates new ticks because of those
-#       using the stupid 'EveryTick' methodology
-#
-#  - After market also data cannot be included
-#  - MT5 also creates fake ticks because of empty bars (in the end of day)
-#     - created because there is a gap between end of market and after market
-#     - get minute bounds of days when there is the last non 0 volume bar
-#     - use those bounds to clip Ticks already cleaned-up
-#
-#   Note:
-#   OHLC are on executed prices (deals) that means tick.last when volume > 0
-#   Otherwise bars would be crazy up and down on ask or bid nonsense.
+"""
+Creates Ticks and 1M Bars cleaned (*.csv) Metatrader 5 format.
+
+--file / -f: file path of Tick file (*.csv)
+    Metatrader 5->View->Symbols->
+    [Select desired symbol - must be colored yellow]
+    Ticks->Export Ticks
+
+-mqltick / -m: [optional]
+    additionally creates binary file with Tick in
+    Metatrader 5 `MqlTick struct` format
+    suffix *_mql5tick.bin
+
+Output:
+  Creates 2 *.csv files on same folder path of input file:
+   - Ticks [inputfilename]_tickmt5.csv
+   - 1M Bars [inputfilename]_m1barmt5.csv
+
+- Can be used to create clean ticks for further processing.
+- Used for backtesting 'Every tick based on real tick'.
+
+Metatrader 5 backtesting problems solved using this:
+
+- To fix creation of fake ticks by Metatrader 5 (everytick)
+- Mt5 creates new ticks because of those
+  using the stupid 'EveryTick' methodology
+- MT5 creates fake ticks because of empty bars (in the end of day)
+
+Implementation Details:
+
+- Will remove
+  - start of day ticks without volume - only requotes
+  - end of day ticks without volume - only requotes
+- After market also data cannot be included
+Because there is a gap between end of market and after market
+- get minute bounds of days when there is the last non 0 volume bar
+- use those bounds to clip Ticks already cleaned-up
+
+Reminder:
+- OHLC are on executed prices (deals) that means tick.last when volume > 0
+Otherwise bars would be crazy up and down on ask or bid nonsense.
+"""
 #
 #
 
@@ -29,6 +48,7 @@ import numpy as np
 import datetime
 import argparse
 import util
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", "-f", type=str, required=True)
@@ -36,6 +56,7 @@ parser.add_argument("-mqltick", "-m", dest="mqltick", default=False, action="sto
                     help="also creates binary file of array of mt5 mqltick suffix _mql5tick.bin")
 args = parser.parse_args()
 tickfileinput = args.file
+tickfileinput = os.path.abspath(tickfileinput) # get the absolute file path in case
 
 ticks, bars = util.ticksnbars(tickfileinput, verbose=True)
 outfilename = tickfileinput.split('.')[0]

@@ -107,10 +107,10 @@ size_t MoneyBarBuffer::AddTick(MqlTick tick) {
             m_wprices.clear();
             m_lasts.clear();
         }        
-        m_bar.netvol += tick.flags*(tick.volume_real * tick.last * m_point_value); // buy-sell volume 
-        m_count_money += tick.volume_real * tick.last * m_point_value;
-        m_pvs += tick.volume_real * tick.last; // summing (prices * volumes)
-        m_vs += tick.volume_real; // summing (volumes)
+        m_bar.netvol += tick.flags*(tick.volume * tick.last * m_point_value); // buy-sell volume 
+        m_count_money += tick.volume * tick.last * m_point_value;
+        m_pvs += tick.volume * tick.last; // summing (prices * volumes)
+        m_vs += tick.volume; // summing (volumes)
         m_wprices.push_back(m_pvs/m_vs); // current weighted price
         m_lasts.push_back(tick.last);
         m_bar.nticks++;

@@ -254,7 +254,7 @@ bool FillinXFeatures(Event &event, std::vector<double>& X, int batch_size){
     // First classifier gives the side buy or sell
     // Last 3 - features based on event 
     // These only be used for Second classifier 
-    // should I go in or not? Binary classifier
+    // 'should I go in or not?' Binary classifier
     X.push_back(event.side);
     X.push_back(event.sltp);
     X.push_back(event.vertbar);

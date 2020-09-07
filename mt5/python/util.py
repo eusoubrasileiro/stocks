@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import numpy as np
 import sys
+import os
 
 def progressbar(it, prefix="", size=80):
     count = len(it)
@@ -63,39 +64,56 @@ moneybar_dtype = np.dtype([
 ])
 
 
-def ticksnbars(tickfileinput, verbose=False):
-    """Making Bars 1M from Ticks to be used on backtesting
-    'Every tick based on real tick'
+def ticksnbars(tickfilepath, verbose=False):
+    """
+    Creates DataFrames of Ticks and 1M Bars cleaned.
 
-    Creates dataframes (to be converted to *.csv bellow)
-    to be loaded on MT5 Symbol:
-    - 1M Bars
-    - Ticks
+    * tickfilepath: file path of Tick file (*.csv)
+        Metatrader 5->View->Symbols->
+        [Select desired symbol - must be colored yellow]
+        Ticks->Export Ticks
+
+    * Returns: 2 data frames:
+     - Ticks
+     - 1M Bars
+
+    - Can be used to create clean ticks for further processing.
+    - Used for backtesting 'Every tick based on real tick'.
+
+    Metatrader 5 backtesting problems solved using this:
 
     - To fix creation of fake ticks by Metatrader 5 (everytick)
+    - Mt5 creates new ticks because of those
+      using the stupid 'EveryTick' methodology
+    - MT5 creates fake ticks because of empty bars (in the end of day)
+
+    Implementation Details:
+
     - Will remove
       - start of day ticks without volume - only requotes
       - end of day ticks without volume - only requotes
-    - Mt5 creates new ticks because of those
-      using the stupid 'EveryTick' methodology
-
     - After market also data cannot be included
-    - MT5 also creates fake ticks because of empty bars (in the end of day)
-    - created because there is a gap between end of market and after market
+    Because there is a gap between end of market and after market
     - get minute bounds of days when there is the last non 0 volume bar
     - use those bounds to clip Ticks already cleaned-up
 
-    Note:
-    OHLC are on executed prices (deals) that means tick.last when volume > 0
+    Reminder:
+    - OHLC are on executed prices (deals) that means tick.last when volume > 0
     Otherwise bars would be crazy up and down on ask or bid nonsense.
+
     """
     if verbose:
         print('Reading and Parsing...')
 
-    ticks = pd.read_csv(tickfileinput,
-            names=['date', 'time', 'bid', 'ask', 'last', 'vol'], skiprows=1, delimiter='\t',
-                   parse_dates={'dtindex' : [0, 1]}, infer_datetime_format=True, keep_date_col=True)
-    # 10x faster if use pare_dates here to convert (on reading) to ms to_datetime
+    tickfilepath = os.path.abspath(tickfilepath) # get the absolute file path in case
+    try:
+        ticks = pd.read_csv(tickfilepath,
+                names=['date', 'time', 'bid', 'ask', 'last', 'vol', 'flags'], skiprows=1, delimiter='\t',
+                       parse_dates={'dtindex' : [0, 1]}, infer_datetime_format=True, keep_date_col=True)
+        # 10x faster if use pare_dates here to convert (on reading) to ms to_datetime
+    except NotImplementedError as e:
+        print("Wrong number of columns!")
+        raise(e)
 
     newticks = pd.DataFrame()
 
@@ -189,7 +207,7 @@ def writecsv_tickmt5(dfticks, ticksfilename):
     ### Write Ticks Csv
     ### Make it metatrader 5 Format
     dfticks = dfticks.copy() # avoid modifications on orignal
-    mt5colnames = "<DATE>	<TIME>	<BID>	<ASK>	<LAST>	<VOLUME>".split('\t')
+    mt5colnames = "<DATE>	<TIME>	<BID>	<ASK>	<LAST>	<VOLUME>	<FLAGS>".split('\t')
     dfticks.columns = mt5colnames
     dfticks.to_csv(ticksfilename+'_tickmt5.csv',
                  index=False, sep='\t')

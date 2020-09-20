@@ -156,7 +156,7 @@ def plot_region(minplot=None, maxplot=None):
     day_end = np.argwhere(np.array(day_sep)<0).flatten()
     day_str = np.argwhere(np.array(day_sep)>0).flatten()
     # with rectangles
-    w = day_end - day_str # width of rectangles
+    w = day_end - day_str[:len(day_end)] # width of rectangles
     miny, maxy = sadf_percs
     rc_x = day_str[:-1] # rectangle x coordinate
     rc_y = np.repeat(miny, len(w)) # rectangle y coordinate

@@ -20,9 +20,14 @@ a bit more of self learning wisdom:
 2. Write unit tests! (lessons learned months wasted)
   Simple and nailing the failure.
 
-### Summary of book guided implementation:
+### Summary of book (`Advances in Financial Machine Learning`) guided implementation:
 
 Book snippet examples are in Python (Pandas mostly).
+The idea of working with Dollar Bars (2.3.1.4) made it mandatory to use C++ language due performance reasons. 
+Also C++ using [`pybind11`](https://github.com/pybind/pybind11) makes Python integration awesome. Why Python integration?
+Because while you develop you can research and explore ideas using jupyter notebooks (following the book). 
+
+So evertyhing 
 
 - Chapter 2 - Financial Data Structures
   - 2.3.1.4 Dollar Bars
@@ -54,4 +59,4 @@ Book snippet examples are in Python (Pandas mostly).
   - 17.4.2 Supremum Augmented Dickey-Fuller
   - C++ : a approximated version `CSADF class` GPU optimized w. Libtorch API (CUDA)
 
-C++ is 11/17
+

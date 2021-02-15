@@ -22,10 +22,10 @@ a bit more of self learning wisdom:
 
 ### Summary of book (`Advances in Financial Machine Learning`) guided implementation:
 
-Book snippet examples are in Python (Pandas mostly).
-The idea of working with Dollar Bars (2.3.1.4) made it mandatory to use C++ language due performance reasons. 
-Also C++ using [`pybind11`](https://github.com/pybind/pybind11) makes Python integration awesome. Why Python integration?
-Because while you develop you can research and explore ideas using jupyter notebooks (following the book). 
+The idea of working with Dollar Bars (2.3.1.4) made it mandatory to use C++ language due performance reasons.   
+Also C++ using [`pybind11`](https://github.com/pybind/pybind11) makes Python integration awesome. Why Python integration?  
+Because while you develop you can research and explore ideas using jupyter notebooks.   
+Also because the book snippet examples are in Python (Pandas mostly).  
 
 So evertyhing 
 

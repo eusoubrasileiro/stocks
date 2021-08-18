@@ -1,6 +1,9 @@
 ## Stocks Prediction
 System for Stock Inefficiency Identification and Movement Prediction
 
+*I no longer work on this personal project. Keeping it here as my portfolio and for knowledge sharing with whoever might find it usefull. 
+Here I used Python, C++ 11, Sklearn, Tensorflow to Pytorch and Libtorch Api (mostly).*
+
 Several tentatives by my head, lots of learning and a little experience on financial market.
 Have used from sklearn, tensorflow to pytorch. Binary options, future contracts and stocks.
 Pandas and written a bunch of code starting in April 2018.
